@@ -1,0 +1,14 @@
+{
+  "name": "finance-system",
+  "private": true,
+  "version": "0.1.0",
+  "packageManager": "pnpm@9.15.4",
+  "scripts": {
+    "dev": "pnpm -r --parallel dev",
+    "dev:web": "pnpm --filter @finance-system/web dev",
+    "dev:api": "pnpm --filter @finance-system/api dev",
+    "dev:desktop": "pnpm --filter @finance-system/desktop dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck"
+  }
+}

@@ -1,0 +1,24 @@
+# dependencies
+node_modules/
+.pnpm-store/
+
+# env
+.env
+.env.local
+.env.*.local
+
+# build
+.next/
+out/
+dist/
+build/
+coverage/
+*.tsbuildinfo
+
+# desktop artifacts
+apps/desktop/src-tauri/target/
+apps/desktop/dist/
+
+# misc
+.DS_Store
+*.log
