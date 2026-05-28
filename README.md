@@ -1,82 +1,75 @@
 # Finance System
 
-Sistema financiero/contable personal en monorepo (web + desktop + API).
+Sistema financiero/contable en monorepo con stack completo para desarrollo en PC:
 
-## Alcance
+- Web (Next.js)
+- API (Fastify + PostgreSQL)
+- Desktop (React/Vite)
+- Portfolio financiero
+- Copilot financiero (sesiones + mensajes + respuesta asistida)
 
-Este repositorio es el producto activo para evolucionar el dominio financiero sin dependencias de trading.
+## Qué incluye hoy
 
-Incluye:
-
-- API financiera (Fastify + PostgreSQL)
-- Cliente web (Next.js)
-- Cliente desktop (React / Vite, Tauri-ready)
+- Cuentas y saldos
+- Transacciones
+- Portfolio de inversiones
+- Copilot financiero persistente
 - Migraciones SQL versionadas
-- Puente de importacion de datos legacy (`trading-journal`)
+- Scripts de bootstrap y migración legacy
 
 ## Estructura
 
-- `apps/web`: frontend web
+- `apps/web`: interfaz web principal
 - `apps/api`: backend financiero
 - `apps/desktop`: cliente desktop
-- `packages/shared`: tipos compartidos
-- `db/migrations`: esquema y migraciones
-- `docs`: documentacion tecnica
+- `db/migrations`: esquema y evolutivos
+- `scripts`: utilidades de migración y setup
+- `docs`: documentación técnica
 
-## Requisitos
+## Flujo único para PC (rápido)
 
-- Node 20+
-- pnpm 9+
-- Docker (opcional, para Postgres local)
-
-## Inicio rapido local
-
-1. Instalar dependencias:
+1. Instalar dependencias y levantar DB local:
 
 ```bash
-pnpm install
-```
-
-2. Configurar variables:
-
-```bash
+corepack enable
+corepack pnpm install
 cp .env.example .env.local
+corepack pnpm db:up
 ```
 
-3. Levantar PostgreSQL local (opcional pero recomendado):
+2. Aplicar migraciones:
 
 ```bash
-make up
+corepack pnpm db:migrate
 ```
 
-4. Ejecutar migraciones (`001` y `002`) en tu DB.
-
-5. Levantar apps:
+3. (Opcional) Importar datos legacy:
 
 ```bash
-pnpm dev
+corepack pnpm db:import:legacy -- --dry-run
+corepack pnpm db:import:legacy
 ```
 
-## Endpoints API principales
+4. Levantar todo:
+
+```bash
+corepack pnpm dev
+```
+
+## Endpoints relevantes
 
 - `GET /health`
-- `GET /v1/meta`
-- `GET /v1/accounts`
-- `POST /v1/accounts`
-- `PATCH /v1/accounts/:id`
-- `GET /v1/transactions`
-- `POST /v1/transactions`
+- `GET /ready`
 - `GET /v1/summary`
+- `GET/POST/PATCH /v1/accounts`
+- `GET/POST /v1/transactions`
+- `GET/POST/PATCH /v1/investments`
+- `GET /v1/copilot/sessions`
+- `POST /v1/copilot/sessions`
+- `GET /v1/copilot/sessions/:id/messages`
+- `POST /v1/copilot/chat`
 
-## Migracion desde trading-journal
+## Notas
 
-Revisa:
-
-- `db/migrations/002_legacy_finance_bridge.sql`
-- `docs/migration-from-trading-journal.md`
-
-La migracion importa cuentas/transacciones legacy de forma idempotente y sin arrastrar modulos de trading.
-
-## Estado
-
-Baseline funcional listo para desarrollo real en PC.
+- El API carga variables automáticamente desde `.env.local` en modo `dev`.
+- `OPENAI_API_KEY` es opcional. Si no existe, el Copilot usa respuesta basada en reglas + contexto financiero real.

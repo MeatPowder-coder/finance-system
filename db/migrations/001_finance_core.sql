@@ -66,6 +66,4 @@ CREATE TABLE IF NOT EXISTS recurring_rules (
 
 CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(transaction_date DESC);
 CREATE INDEX IF NOT EXISTS idx_transactions_account_date ON transactions(account_id, transaction_date DESC);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_external_ref_unique
-  ON transactions(external_ref)
-  WHERE external_ref IS NOT NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_transactions_external_ref_unique ON transactions(external_ref);
