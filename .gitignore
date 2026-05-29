@@ -22,3 +22,6 @@ apps/desktop/dist/
 # misc
 .DS_Store
 *.log
+
+# hasura local artifacts
+hasura/metadata/metadata.export.json

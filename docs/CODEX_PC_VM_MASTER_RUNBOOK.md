@@ -1,17 +1,27 @@
 # CODEX Master Runbook (PC + VM)
 
 ## Objetivo
-Tener un flujo único, completo y sin pasos ambiguos para desarrollar `finance-system` en PC con paridad suficiente en VM.
+Tener un flujo único, completo y sin pasos ambiguos para desarrollar `finance-system` en PC y validar/desplegar en VM, sin mezclar dominio financiero nuevo con trading legacy.
 
-## Estado del repositorio
+## Estado actual del repositorio
 Este repositorio ya incluye:
 
-- Web con tabs: dashboard, cuentas, transacciones, portfolio, copilot.
-- API con módulos completos de cuentas/transacciones/inversiones/copilot.
-- Desktop con tabs funcionales para inspección operativa.
-- Scripts de bootstrap, migración e importación legacy.
+- Web (dashboard, cuentas, transacciones, portfolio, copilot).
+- API (`/v1`) con módulos de cuentas, transacciones, inversiones y copilot.
+- Desktop con vistas funcionales conectadas al mismo backend.
+- Migraciones y scripts para importar datos legacy.
+- Hasura con metadata versionada (`hasura/metadata/metadata.json`).
 
-## Flujo recomendado para PC (principal)
+## Arquitectura recomendada de datos (la que debes mantener)
+
+- Un solo motor PostgreSQL en VM: contenedor `servidor-db` (`5432`).
+- Dos bases separadas dentro de ese motor:
+  - `finanzas` (legacy/trading, solo lectura o importaciones puntuales).
+  - `finance_system` (nuevo sistema financiero, desarrollo activo).
+
+No mezclar escritura operativa del nuevo sistema en `finanzas`.
+
+## Flujo principal para PC (desarrollo diario)
 
 1. Sincronizar código:
 
@@ -28,7 +38,7 @@ corepack pnpm install
 cp .env.example .env.local
 ```
 
-3. Levantar PostgreSQL local:
+3. Levantar PostgreSQL local de desarrollo:
 
 ```bash
 corepack pnpm db:up
@@ -47,38 +57,79 @@ corepack pnpm db:import:legacy -- --dry-run
 corepack pnpm db:import:legacy
 ```
 
-6. Ejecutar apps:
+6. (Recomendado) Levantar Hasura + metadata:
+
+```bash
+corepack pnpm hasura:up
+corepack pnpm hasura:apply
+```
+
+7. Ejecutar apps:
 
 ```bash
 corepack pnpm dev
 ```
 
-## Flujo recomendado para VM (motor único, 2 bases)
+## Flujo de VM (paridad y validación)
 
-Escenario recomendado:
-
-- Motor PostgreSQL único: `servidor-db` (`5432`)
-- Base legacy intacta: `finanzas`
-- Base nueva de producto: `finance_system`
-
-Configurar `.env.local` de VM para apuntar a `finance_system`:
+En VM, usa `.env.local` apuntando al motor real `servidor-db:5432`:
 
 ```env
 DATABASE_URL=postgresql://root:passwordseguro@localhost:5432/finance_system
 LEGACY_DATABASE_URL=postgresql://root:passwordseguro@localhost:5432/finanzas
+HASURA_GRAPHQL_ENDPOINT=http://localhost:8086
+HASURA_GRAPHQL_ADMIN_SECRET=change_me
+HASURA_GRAPHQL_DATABASE_URL=postgresql://root:passwordseguro@host.docker.internal:5432/finance_system
 ```
 
-Luego:
+Comandos:
 
 ```bash
 corepack pnpm install
 corepack pnpm db:migrate
+corepack pnpm hasura:up
+corepack pnpm hasura:apply
 corepack pnpm dev
 ```
 
+## Verificaciones rápidas (obligatorias)
+
+1. API:
+
+```bash
+curl -s http://localhost:4100/health
+curl -s http://localhost:4100/ready
+```
+
+2. Hasura:
+
+```bash
+curl -s http://localhost:8086/healthz
+```
+
+3. DB nueva (si estás en VM):
+
+```bash
+docker exec -i servidor-db psql -U root -d finance_system -c "\\dt"
+```
+
+## Qué sí está cubierto y qué no
+
+Cubierto en este repo para desarrollar ya:
+
+- Web/API/Desktop financiero.
+- Portfolio financiero.
+- Copilot financiero (sesiones + mensajes + endpoint chat).
+- Hasura con metadata versionada.
+
+No cubierto como requisito bloqueante de desarrollo base:
+
+- Flujos productivos de NocoDB/n8n específicos de trading legacy.
+- Hardening final de permisos Hasura para producción (ahora son permisos amplios de desarrollo).
+
 ## Prompts listos para Codex en PC
 
-### Prompt 1: Iteración UI financiera
+### Prompt A: Iteración UI
 
 ```text
 Trabaja solo en finance-system.
@@ -90,7 +141,7 @@ Reglas:
 4) Al final: correr typecheck y build; listar archivos modificados.
 ```
 
-### Prompt 2: Copilot financiero
+### Prompt B: Copilot financiero
 
 ```text
 Trabaja solo en finance-system.
@@ -103,10 +154,10 @@ Incluye:
 No agregues nada de trading.
 ```
 
-## Checklist de salida por bloque
+## Checklist de cierre por cada bloque
 
 1. `corepack pnpm -r typecheck`
 2. `corepack pnpm -r build`
-3. Verificar `/health` y `/ready`
-4. Validar `/v1/summary`
+3. `curl /health` y `curl /ready`
+4. `curl /healthz` de Hasura
 5. Confirmar que no se introdujo lógica de trading

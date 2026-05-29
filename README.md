@@ -7,6 +7,7 @@ Sistema financiero/contable en monorepo con stack completo para desarrollo en PC
 - Desktop (React/Vite)
 - Portfolio financiero
 - Copilot financiero (sesiones + mensajes + respuesta asistida)
+- Hasura (metadata versionada)
 
 ## Qué incluye hoy
 
@@ -16,6 +17,7 @@ Sistema financiero/contable en monorepo con stack completo para desarrollo en PC
 - Copilot financiero persistente
 - Migraciones SQL versionadas
 - Scripts de bootstrap y migración legacy
+- Stack Hasura local + metadata en repo
 
 ## Estructura
 
@@ -23,6 +25,7 @@ Sistema financiero/contable en monorepo con stack completo para desarrollo en PC
 - `apps/api`: backend financiero
 - `apps/desktop`: cliente desktop
 - `db/migrations`: esquema y evolutivos
+- `hasura/metadata`: metadata versionada
 - `scripts`: utilidades de migración y setup
 - `docs`: documentación técnica
 
@@ -50,16 +53,24 @@ corepack pnpm db:import:legacy -- --dry-run
 corepack pnpm db:import:legacy
 ```
 
-4. Levantar todo:
+4. (Opcional recomendado) Levantar Hasura y aplicar metadata:
+
+```bash
+corepack pnpm hasura:up
+corepack pnpm hasura:apply
+```
+
+5. Levantar apps:
 
 ```bash
 corepack pnpm dev
 ```
 
-## Endpoints relevantes
+## Endpoints API principales
 
 - `GET /health`
 - `GET /ready`
+- `GET /v1/meta`
 - `GET /v1/summary`
 - `GET/POST/PATCH /v1/accounts`
 - `GET/POST /v1/transactions`
@@ -68,6 +79,19 @@ corepack pnpm dev
 - `POST /v1/copilot/sessions`
 - `GET /v1/copilot/sessions/:id/messages`
 - `POST /v1/copilot/chat`
+
+## Hasura
+
+Guía completa:
+
+- `docs/hasura-setup.md`
+
+Comandos:
+
+- `corepack pnpm hasura:up`
+- `corepack pnpm hasura:apply`
+- `corepack pnpm hasura:export`
+- `corepack pnpm hasura:down`
 
 ## Notas
 

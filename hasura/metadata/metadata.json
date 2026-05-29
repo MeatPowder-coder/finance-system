@@ -1,0 +1,426 @@
+{
+  "version": 3,
+  "sources": [
+    {
+      "name": "default",
+      "kind": "postgres",
+      "configuration": {
+        "connection_info": {
+          "database_url": {
+            "from_env": "HASURA_GRAPHQL_DATABASE_URL"
+          },
+          "isolation_level": "read-committed",
+          "use_prepared_statements": true
+        }
+      },
+      "tables": [
+        {
+          "table": { "schema": "public", "name": "accounts" },
+          "array_relationships": [
+            {
+              "name": "transactions",
+              "using": {
+                "foreign_key_constraint_on": {
+                  "table": { "schema": "public", "name": "transactions" },
+                  "column": "account_id"
+                }
+              }
+            }
+          ],
+          "select_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["id", "code", "name", "currency", "account_type", "balance_current", "is_active", "created_at", "updated_at"],
+                "filter": {},
+                "allow_aggregations": true
+              }
+            }
+          ],
+          "insert_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["code", "name", "currency", "account_type", "balance_current", "is_active"],
+                "check": {}
+              }
+            }
+          ],
+          "update_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["name", "currency", "account_type", "balance_current", "is_active"],
+                "filter": {},
+                "check": {}
+              }
+            }
+          ],
+          "delete_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "filter": {}
+              }
+            }
+          ]
+        },
+        {
+          "table": { "schema": "public", "name": "categories" },
+          "select_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["id", "code", "name", "direction", "created_at"],
+                "filter": {},
+                "allow_aggregations": true
+              }
+            }
+          ],
+          "insert_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["code", "name", "direction"],
+                "check": {}
+              }
+            }
+          ],
+          "update_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["code", "name", "direction"],
+                "filter": {},
+                "check": {}
+              }
+            }
+          ],
+          "delete_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "filter": {}
+              }
+            }
+          ]
+        },
+        {
+          "table": { "schema": "public", "name": "transactions" },
+          "object_relationships": [
+            {
+              "name": "account",
+              "using": {
+                "foreign_key_constraint_on": "account_id"
+              }
+            }
+          ],
+          "select_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["id", "transaction_date", "description", "amount", "currency", "direction", "status", "account_id", "category_id", "external_ref", "created_at", "updated_at"],
+                "filter": {},
+                "allow_aggregations": true
+              }
+            }
+          ],
+          "insert_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["transaction_date", "description", "amount", "currency", "direction", "status", "account_id", "category_id", "external_ref"],
+                "check": {}
+              }
+            }
+          ],
+          "update_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["transaction_date", "description", "amount", "currency", "direction", "status", "account_id", "category_id", "external_ref"],
+                "filter": {},
+                "check": {}
+              }
+            }
+          ],
+          "delete_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "filter": {}
+              }
+            }
+          ]
+        },
+        {
+          "table": { "schema": "public", "name": "budgets" },
+          "select_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["id", "name", "period", "currency", "start_date", "end_date", "created_at"],
+                "filter": {},
+                "allow_aggregations": true
+              }
+            }
+          ],
+          "insert_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["name", "period", "currency", "start_date", "end_date"],
+                "check": {}
+              }
+            }
+          ],
+          "update_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["name", "period", "currency", "start_date", "end_date"],
+                "filter": {},
+                "check": {}
+              }
+            }
+          ],
+          "delete_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "filter": {}
+              }
+            }
+          ]
+        },
+        {
+          "table": { "schema": "public", "name": "budget_lines" },
+          "select_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["id", "budget_id", "category_id", "limit_amount"],
+                "filter": {},
+                "allow_aggregations": true
+              }
+            }
+          ],
+          "insert_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["budget_id", "category_id", "limit_amount"],
+                "check": {}
+              }
+            }
+          ],
+          "update_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["budget_id", "category_id", "limit_amount"],
+                "filter": {},
+                "check": {}
+              }
+            }
+          ],
+          "delete_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "filter": {}
+              }
+            }
+          ]
+        },
+        {
+          "table": { "schema": "public", "name": "recurring_rules" },
+          "select_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["id", "name", "cadence", "next_run_at", "is_active", "payload", "created_at"],
+                "filter": {},
+                "allow_aggregations": true
+              }
+            }
+          ],
+          "insert_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["name", "cadence", "next_run_at", "is_active", "payload"],
+                "check": {}
+              }
+            }
+          ],
+          "update_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["name", "cadence", "next_run_at", "is_active", "payload"],
+                "filter": {},
+                "check": {}
+              }
+            }
+          ],
+          "delete_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "filter": {}
+              }
+            }
+          ]
+        },
+        {
+          "table": { "schema": "public", "name": "investments" },
+          "object_relationships": [
+            {
+              "name": "account",
+              "using": {
+                "foreign_key_constraint_on": "account_id"
+              }
+            }
+          ],
+          "select_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["id", "symbol", "name", "asset_type", "quantity", "avg_cost", "currency", "account_id", "legacy_ref", "notes", "is_active", "created_at", "updated_at"],
+                "filter": {},
+                "allow_aggregations": true
+              }
+            }
+          ],
+          "insert_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["symbol", "name", "asset_type", "quantity", "avg_cost", "currency", "account_id", "legacy_ref", "notes", "is_active"],
+                "check": {}
+              }
+            }
+          ],
+          "update_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["symbol", "name", "asset_type", "quantity", "avg_cost", "currency", "account_id", "legacy_ref", "notes", "is_active"],
+                "filter": {},
+                "check": {}
+              }
+            }
+          ],
+          "delete_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "filter": {}
+              }
+            }
+          ]
+        },
+        {
+          "table": { "schema": "public", "name": "copilot_sessions" },
+          "array_relationships": [
+            {
+              "name": "messages",
+              "using": {
+                "foreign_key_constraint_on": {
+                  "table": { "schema": "public", "name": "copilot_messages" },
+                  "column": "session_id"
+                }
+              }
+            }
+          ],
+          "select_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["id", "title", "mode", "created_at", "updated_at"],
+                "filter": {},
+                "allow_aggregations": true
+              }
+            }
+          ],
+          "insert_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["title", "mode"],
+                "check": {}
+              }
+            }
+          ],
+          "update_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["title", "mode"],
+                "filter": {},
+                "check": {}
+              }
+            }
+          ],
+          "delete_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "filter": {}
+              }
+            }
+          ]
+        },
+        {
+          "table": { "schema": "public", "name": "copilot_messages" },
+          "object_relationships": [
+            {
+              "name": "session",
+              "using": {
+                "foreign_key_constraint_on": "session_id"
+              }
+            }
+          ],
+          "select_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["id", "session_id", "role", "content", "created_at"],
+                "filter": {},
+                "allow_aggregations": true
+              }
+            }
+          ],
+          "insert_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["session_id", "role", "content"],
+                "check": {}
+              }
+            }
+          ],
+          "update_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["session_id", "role", "content"],
+                "filter": {},
+                "check": {}
+              }
+            }
+          ],
+          "delete_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "filter": {}
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
