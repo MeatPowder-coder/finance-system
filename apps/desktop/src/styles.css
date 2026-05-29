@@ -1,6 +1,6 @@
 :root {
+  color-scheme: dark;
   --bg: #05090f;
-  --bg-soft: #08111d;
   --panel: rgba(8, 15, 25, 0.92);
   --panel-2: rgba(11, 21, 35, 0.94);
   --line: #1d3147;
@@ -8,19 +8,18 @@
   --text: #edf4ff;
   --muted: #9bb1c8;
   --primary: #38bdf8;
-  --primary-strong: #0284c7;
   --ok: #22c55e;
   --danger: #ef4444;
 }
 
-* {
-  box-sizing: border-box;
-}
+* { box-sizing: border-box; }
 
 html,
-body {
+body,
+#root {
   margin: 0;
-  padding: 0;
+  width: 100%;
+  min-height: 100%;
 }
 
 body {
@@ -32,10 +31,6 @@ body {
     linear-gradient(180deg, #07111d 0%, #05090f 52%, #04070c 100%);
 }
 
-a {
-  color: inherit;
-}
-
 main {
   max-width: 1400px;
   margin: 0 auto;
@@ -44,14 +39,10 @@ main {
 
 h1,
 h2,
-h3 {
-  margin: 0;
-}
+h3,
+p { margin: 0; }
 
-p {
-  margin: 0;
-  color: var(--muted);
-}
+p { color: var(--muted); }
 
 .header {
   border: 1px solid var(--line);
@@ -122,13 +113,8 @@ p {
   gap: 12px;
 }
 
-.layout-grid.two {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-}
-
-.layout-grid.three {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
+.layout-grid.two { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.layout-grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
 
 .card {
   background: var(--panel);
@@ -136,10 +122,6 @@ p {
   border-radius: 16px;
   padding: 14px;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02);
-}
-
-.card.alt {
-  background: var(--panel-2);
 }
 
 .kpi strong {
@@ -156,65 +138,8 @@ p {
   letter-spacing: 0.08em;
 }
 
-.text-ok {
-  color: var(--ok);
-}
-
-.text-danger {
-  color: var(--danger);
-}
-
-form {
-  display: grid;
-  gap: 10px;
-}
-
-label {
-  display: grid;
-  gap: 6px;
-  font-size: 12px;
-  color: var(--muted);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-input,
-select,
-textarea,
-button {
-  font: inherit;
-}
-
-input,
-select,
-textarea {
-  border: 1px solid var(--line-strong);
-  border-radius: 10px;
-  width: 100%;
-  padding: 10px 11px;
-  background: #071321;
-  color: #eef6ff;
-}
-
-button {
-  border: 1px solid #0ea5e9;
-  border-radius: 10px;
-  padding: 10px 12px;
-  color: #eef6ff;
-  background: linear-gradient(180deg, #0284c7, #075985);
-  cursor: pointer;
-}
-
-button.secondary {
-  border-color: var(--line-strong);
-  background: #0d2135;
-  color: #eef6ff;
-}
-
-button:disabled {
-  opacity: 0.55;
-  cursor: not-allowed;
-}
+.text-ok { color: var(--ok); }
+.text-danger { color: var(--danger); }
 
 .table-wrap {
   overflow: auto;
@@ -226,7 +151,6 @@ table {
   width: 100%;
   min-width: 680px;
   border-collapse: collapse;
-  background: transparent;
 }
 
 th,
@@ -252,21 +176,7 @@ th {
   font-weight: 700;
 }
 
-.muted {
-  color: var(--muted);
-}
-
-.filters {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-  margin-bottom: 8px;
-}
-
-.filters input,
-.filters select {
-  max-width: 240px;
-}
+.muted { color: var(--muted); }
 
 .portfolio-grid {
   display: grid;
@@ -279,12 +189,6 @@ th {
   border-radius: 12px;
   padding: 10px;
   background: rgba(10, 20, 34, 0.85);
-}
-
-.chat-layout {
-  display: grid;
-  grid-template-columns: 320px 1fr;
-  gap: 10px;
 }
 
 .chat-sessions {
@@ -310,55 +214,6 @@ th {
   font-weight: 700;
 }
 
-.chat-panel {
-  border: 1px solid var(--line);
-  border-radius: 10px;
-  background: rgba(6, 14, 24, 0.88);
-  display: grid;
-  grid-template-rows: 1fr auto;
-  min-height: 72vh;
-}
-
-.messages {
-  overflow: auto;
-  padding: 10px;
-  display: grid;
-  gap: 8px;
-}
-
-.message {
-  max-width: 86%;
-  border-radius: 10px;
-  padding: 8px 10px;
-  white-space: pre-wrap;
-  line-height: 1.35;
-  font-size: 13px;
-}
-
-.message.user {
-  justify-self: end;
-  background: #0a6ab3;
-  color: #fff;
-}
-
-.message.assistant {
-  justify-self: start;
-  background: rgba(8, 23, 41, 0.95);
-  color: #d8ecff;
-}
-
-.chat-input {
-  border-top: 1px solid var(--line);
-  padding: 10px;
-  display: grid;
-  gap: 8px;
-}
-
-.chat-input textarea {
-  min-height: 88px;
-  resize: vertical;
-}
-
 .error {
   border: 1px solid rgba(239, 68, 68, 0.45);
   color: #fecaca;
@@ -367,18 +222,7 @@ th {
 
 @media (max-width: 1040px) {
   .layout-grid.two,
-  .layout-grid.three,
-  .chat-layout {
+  .layout-grid.three {
     grid-template-columns: 1fr;
-  }
-
-  .chat-sessions,
-  .chat-panel {
-    max-height: none;
-    min-height: 0;
-  }
-
-  .messages {
-    max-height: 60vh;
   }
 }

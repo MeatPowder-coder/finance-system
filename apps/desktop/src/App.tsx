@@ -1,5 +1,4 @@
 import { useEffect, useMemo, useState } from "react";
-import type { CSSProperties } from "react";
 
 type TabId = "dashboard" | "accounts" | "transactions" | "portfolio" | "copilot";
 
@@ -27,6 +26,7 @@ type Transaction = {
   amount: string | number;
   currency: string;
   direction: "INFLOW" | "OUTFLOW";
+  status: string;
   account_name: string;
 };
 
@@ -50,6 +50,14 @@ type CopilotSession = {
 
 const API_BASE = (import.meta as any).env?.VITE_API_BASE_URL || "http://localhost:4100";
 
+const tabs: { id: TabId; label: string }[] = [
+  { id: "dashboard", label: "Dashboard" },
+  { id: "accounts", label: "Cuentas" },
+  { id: "transactions", label: "Transacciones" },
+  { id: "portfolio", label: "Portfolio" },
+  { id: "copilot", label: "Copilot" },
+];
+
 function num(value: unknown) {
   const n = Number(value ?? 0);
   return Number.isFinite(n) ? n : 0;
@@ -62,27 +70,6 @@ function money(value: unknown, currency = "COP") {
     return `${currency} ${num(value).toFixed(2)}`;
   }
 }
-
-const page: CSSProperties = {
-  fontFamily: "IBM Plex Sans, Segoe UI, sans-serif",
-  color: "#0f172a",
-  background: "#f4f7fb",
-  minHeight: "100vh",
-  padding: 16,
-};
-
-const card: CSSProperties = {
-  background: "#fff",
-  border: "1px solid #dbe4ef",
-  borderRadius: 12,
-  padding: 12,
-};
-
-const table: CSSProperties = {
-  width: "100%",
-  borderCollapse: "collapse",
-  minWidth: 560,
-};
 
 export function App() {
   const [tab, setTab] = useState<TabId>("dashboard");
@@ -136,85 +123,79 @@ export function App() {
   }, []);
 
   return (
-    <main style={page}>
-      <header style={{ display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, marginBottom: 10 }}>
+    <main>
+      <section className="header">
         <div>
-          <h1 style={{ margin: 0 }}>Finance Desktop</h1>
-          <p style={{ margin: 0, color: "#475569" }}>Paridad funcional para desarrollo: cuentas, transacciones, portfolio y copilot.</p>
+          <h1>Finance Desktop</h1>
+          <p>Paridad funcional y visual: cuentas, transacciones, portfolio y copilot.</p>
         </div>
-        <button
-          style={{ borderRadius: 9, border: "1px solid #0b3d91", background: "#0b3d91", color: "#fff", padding: "8px 12px" }}
-          onClick={load}
-          disabled={loading}
-        >
-          {loading ? "Sincronizando..." : "Actualizar"}
-        </button>
-      </header>
+        <div className="header-actions">
+          <span className="badge">API {API_BASE}</span>
+          <button className="secondary" onClick={load} disabled={loading}>
+            {loading ? "Sincronizando..." : "Actualizar"}
+          </button>
+        </div>
+      </section>
 
-      <div style={{ display: "flex", gap: 8, flexWrap: "wrap", marginBottom: 10 }}>
-        {(["dashboard", "accounts", "transactions", "portfolio", "copilot"] as TabId[]).map((id) => (
-          <button
-            key={id}
-            onClick={() => setTab(id)}
-            style={{
-              borderRadius: 8,
-              border: `1px solid ${tab === id ? "#0b3d91" : "#cbd5e1"}`,
-              background: tab === id ? "#0b3d91" : "#fff",
-              color: tab === id ? "#fff" : "#0f172a",
-              padding: "7px 10px",
-              textTransform: "capitalize",
-            }}
-          >
-            {id}
+      <section className="tabs">
+        {tabs.map((t) => (
+          <button key={t.id} className={`tab-btn ${tab === t.id ? "active" : ""}`} onClick={() => setTab(t.id)}>
+            {t.label}
           </button>
         ))}
-      </div>
+      </section>
 
-      {error ? <section style={{ ...card, borderColor: "#f5c2bd", color: "#b42318", marginBottom: 10 }}>{error}</section> : null}
+      {error ? (
+        <section className="card error" style={{ marginBottom: 10 }}>
+          {error}
+        </section>
+      ) : null}
 
       {tab === "dashboard" && (
-        <section style={{ display: "grid", gap: 10, gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
-          <article style={card}>
-            <small style={{ color: "#64748b", textTransform: "uppercase" }}>Saldo total</small>
-            <h2 style={{ margin: "6px 0 0" }}>{money(summary?.totalBalance || 0, "COP")}</h2>
-          </article>
-          <article style={card}>
-            <small style={{ color: "#64748b", textTransform: "uppercase" }}>Flujo neto del mes</small>
-            <h2 style={{ margin: "6px 0 0", color: net >= 0 ? "#0f7a4b" : "#b42318" }}>{money(net, "COP")}</h2>
-          </article>
-          <article style={card}>
-            <small style={{ color: "#64748b", textTransform: "uppercase" }}>Portfolio activo</small>
-            <h2 style={{ margin: "6px 0 0" }}>{money(summary?.investedTotal || 0, "USD")}</h2>
-            <p style={{ margin: "4px 0 0", color: "#475569" }}>{summary?.activePositions || 0} posiciones</p>
-          </article>
+        <section className="layout-grid" style={{ gap: 12 }}>
+          <div className="layout-grid three">
+            <article className="card kpi">
+              <span className="label">Saldo total</span>
+              <strong>{money(summary?.totalBalance || 0, "COP")}</strong>
+            </article>
+            <article className="card kpi">
+              <span className="label">Flujo del mes</span>
+              <strong className={net >= 0 ? "text-ok" : "text-danger"}>{money(net, "COP")}</strong>
+            </article>
+            <article className="card kpi">
+              <span className="label">Portfolio activo</span>
+              <strong>{money(summary?.investedTotal || 0, "USD")}</strong>
+              <p>{summary?.activePositions || 0} posiciones activas</p>
+            </article>
+          </div>
         </section>
       )}
 
       {tab === "accounts" && (
-        <section style={card}>
-          <h3 style={{ marginTop: 0 }}>Cuentas</h3>
-          <div style={{ overflowX: "auto" }}>
-            <table style={table}>
+        <section className="card">
+          <h3 style={{ marginBottom: 8 }}>Cuentas</h3>
+          <div className="table-wrap">
+            <table>
               <thead>
                 <tr>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #e2e8f0", padding: "8px 6px" }}>Codigo</th>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #e2e8f0", padding: "8px 6px" }}>Nombre</th>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #e2e8f0", padding: "8px 6px" }}>Tipo</th>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #e2e8f0", padding: "8px 6px" }}>Saldo</th>
+                  <th>Código</th>
+                  <th>Nombre</th>
+                  <th>Tipo</th>
+                  <th>Saldo</th>
                 </tr>
               </thead>
               <tbody>
                 {accounts.map((account) => (
                   <tr key={account.id}>
-                    <td style={{ padding: "8px 6px", borderBottom: "1px solid #f1f5f9" }}>{account.code}</td>
-                    <td style={{ padding: "8px 6px", borderBottom: "1px solid #f1f5f9" }}>{account.name}</td>
-                    <td style={{ padding: "8px 6px", borderBottom: "1px solid #f1f5f9" }}>{account.account_type}</td>
-                    <td style={{ padding: "8px 6px", borderBottom: "1px solid #f1f5f9" }}>{money(account.balance_current, account.currency)}</td>
+                    <td>{account.code}</td>
+                    <td>{account.name}</td>
+                    <td>{account.account_type}</td>
+                    <td>{money(account.balance_current, account.currency)}</td>
                   </tr>
                 ))}
                 {accounts.length === 0 && (
                   <tr>
-                    <td colSpan={4} style={{ padding: "8px 6px", color: "#64748b" }}>
+                    <td colSpan={4} className="muted">
                       Sin cuentas
                     </td>
                   </tr>
@@ -226,32 +207,34 @@ export function App() {
       )}
 
       {tab === "transactions" && (
-        <section style={card}>
-          <h3 style={{ marginTop: 0 }}>Transacciones</h3>
-          <div style={{ overflowX: "auto" }}>
-            <table style={table}>
+        <section className="card">
+          <h3 style={{ marginBottom: 8 }}>Transacciones</h3>
+          <div className="table-wrap">
+            <table>
               <thead>
                 <tr>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #e2e8f0", padding: "8px 6px" }}>Fecha</th>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #e2e8f0", padding: "8px 6px" }}>Descripcion</th>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #e2e8f0", padding: "8px 6px" }}>Cuenta</th>
-                  <th style={{ textAlign: "left", borderBottom: "1px solid #e2e8f0", padding: "8px 6px" }}>Monto</th>
+                  <th>Fecha</th>
+                  <th>Descripción</th>
+                  <th>Cuenta</th>
+                  <th>Estado</th>
+                  <th>Monto</th>
                 </tr>
               </thead>
               <tbody>
                 {transactions.map((tx) => (
                   <tr key={tx.id}>
-                    <td style={{ padding: "8px 6px", borderBottom: "1px solid #f1f5f9" }}>{tx.transaction_date}</td>
-                    <td style={{ padding: "8px 6px", borderBottom: "1px solid #f1f5f9" }}>{tx.description || "Sin descripcion"}</td>
-                    <td style={{ padding: "8px 6px", borderBottom: "1px solid #f1f5f9" }}>{tx.account_name}</td>
-                    <td style={{ padding: "8px 6px", borderBottom: "1px solid #f1f5f9", color: tx.direction === "INFLOW" ? "#0f7a4b" : "#b42318" }}>
+                    <td>{tx.transaction_date}</td>
+                    <td>{tx.description || "Sin descripción"}</td>
+                    <td>{tx.account_name}</td>
+                    <td>{tx.status}</td>
+                    <td className={`amount ${tx.direction === "INFLOW" ? "in" : "out"}`}>
                       {tx.direction === "INFLOW" ? "+" : "-"} {money(tx.amount, tx.currency)}
                     </td>
                   </tr>
                 ))}
                 {transactions.length === 0 && (
                   <tr>
-                    <td colSpan={4} style={{ padding: "8px 6px", color: "#64748b" }}>
+                    <td colSpan={5} className="muted">
                       Sin transacciones
                     </td>
                   </tr>
@@ -263,42 +246,42 @@ export function App() {
       )}
 
       {tab === "portfolio" && (
-        <section style={card}>
-          <h3 style={{ marginTop: 0 }}>Portfolio</h3>
-          <div style={{ display: "grid", gap: 8, gridTemplateColumns: "repeat(auto-fit, minmax(220px, 1fr))" }}>
-            {investments.map((investment) => (
-              <article key={investment.id} style={{ border: "1px solid #e2e8f0", borderRadius: 10, padding: 10 }}>
+        <section className="card">
+          <h3 style={{ marginBottom: 8 }}>Portfolio</h3>
+          <div className="portfolio-grid">
+            {investments.map((item) => (
+              <div className="portfolio-item" key={item.id}>
                 <strong>
-                  {investment.symbol} · {investment.name}
+                  {item.symbol} · {item.name}
                 </strong>
-                <p style={{ margin: "4px 0 0", color: "#475569" }}>{investment.asset_type}</p>
-                <p style={{ margin: "4px 0 0", color: "#475569" }}>
-                  Cantidad {num(investment.quantity).toLocaleString("es-CO")} · Avg {money(investment.avg_cost, investment.currency)}
+                <p>{item.asset_type}</p>
+                <p>
+                  Cantidad: {num(item.quantity).toLocaleString("es-CO")} · Avg: {money(item.avg_cost, item.currency)}
                 </p>
-                <p style={{ margin: "4px 0 0", color: "#0f172a" }}>Invertido {money(investment.invested_amount, investment.currency)}</p>
-              </article>
+                <p>Invertido: {money(item.invested_amount, item.currency)}</p>
+              </div>
             ))}
-            {investments.length === 0 && <p style={{ color: "#64748b" }}>Sin posiciones registradas</p>}
+            {investments.length === 0 && <p className="muted">No hay inversiones registradas.</p>}
           </div>
         </section>
       )}
 
       {tab === "copilot" && (
-        <section style={card}>
-          <h3 style={{ marginTop: 0 }}>Copilot</h3>
-          <p style={{ margin: "4px 0 8px", color: "#475569" }}>
-            Sesiones detectadas: {sessions.length}. Para chat completo usa la vista web y endpoint /v1/copilot/chat.
+        <section className="card">
+          <h3 style={{ marginBottom: 8 }}>Copilot</h3>
+          <p style={{ marginBottom: 8 }}>
+            Sesiones detectadas: {sessions.length}. Para chat completo usa la vista web y endpoint `/v1/copilot/chat`.
           </p>
-          <div style={{ display: "grid", gap: 6 }}>
+          <div className="chat-sessions">
             {sessions.map((session) => (
-              <article key={session.id} style={{ border: "1px solid #e2e8f0", borderRadius: 8, padding: 8 }}>
-                <strong>{session.title}</strong>
-                <p style={{ margin: "2px 0 0", color: "#475569" }}>
+              <button key={session.id} className="session-item">
+                <div>{session.title}</div>
+                <small className="muted">
                   {session.mode} · {session.message_count} mensajes
-                </p>
-              </article>
+                </small>
+              </button>
             ))}
-            {sessions.length === 0 && <p style={{ color: "#64748b" }}>Sin sesiones de copilot</p>}
+            {sessions.length === 0 && <p className="muted" style={{ padding: 10 }}>Sin sesiones</p>}
           </div>
         </section>
       )}

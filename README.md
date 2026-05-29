@@ -18,6 +18,7 @@ Sistema financiero/contable en monorepo con stack completo para desarrollo en PC
 - Migraciones SQL versionadas
 - Scripts de bootstrap y migración legacy
 - Stack Hasura local + metadata en repo
+- Apariencia visual unificada web/desktop (estilo dashboard técnico)
 
 ## Estructura
 
@@ -92,6 +93,12 @@ Comandos:
 - `corepack pnpm hasura:apply`
 - `corepack pnpm hasura:export`
 - `corepack pnpm hasura:down`
+
+## Documentación recomendada
+
+- `docs/CODEX_PC_VM_MASTER_RUNBOOK.md`
+- `docs/hasura-setup.md`
+- `docs/PC_DEVELOPMENT_ASSETS_INVENTORY.md`
 
 ## Notas
 
