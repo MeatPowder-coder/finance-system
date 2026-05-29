@@ -74,6 +74,37 @@ const tabs: { id: TabId; label: string }[] = [
   { id: "copilot", label: "Copilot" },
 ];
 
+const sidebarItems: { id: TabId; label: string; icon: string }[] = [
+  { id: "dashboard", label: "Dashboard", icon: "▦" },
+  { id: "accounts", label: "Cuentas", icon: "◷" },
+  { id: "transactions", label: "Transacciones", icon: "¤" },
+  { id: "portfolio", label: "Portfolio", icon: "↗" },
+  { id: "copilot", label: "Copilot", icon: "✦" },
+];
+
+const tabMeta: Record<TabId, { title: string; subtitle: string }> = {
+  dashboard: {
+    title: "Dashboard",
+    subtitle: "Monitor your active positions and performance.",
+  },
+  accounts: {
+    title: "Cuentas",
+    subtitle: "Control operativo de saldos, tipos de cuenta y estructura base.",
+  },
+  transactions: {
+    title: "Historial de Transacciones",
+    subtitle: "Movimientos recientes en tus cuentas.",
+  },
+  portfolio: {
+    title: "Portfolio",
+    subtitle: "Visión consolidada de posiciones e inversión activa.",
+  },
+  copilot: {
+    title: "Agentame Chat",
+    subtitle: "Asistente financiero con sesiones y contexto persistente.",
+  },
+};
+
 function num(value: unknown) {
   const n = Number(value ?? 0);
   return Number.isFinite(n) ? n : 0;
@@ -163,6 +194,7 @@ export default function HomePage() {
   const dashboardNet = num(summary?.monthInflow) - num(summary?.monthOutflow);
 
   const activeSession = copilotSessions.find((s) => s.id === activeSessionId) || null;
+  const currentMeta = tabMeta[tab];
 
   async function fetchJson(url: string, options?: RequestInit) {
     const res = await fetch(url, options);
@@ -386,36 +418,77 @@ export default function HomePage() {
   }
 
   return (
-    <main>
-      <section className="header">
-        <div>
-          <h1>Finance System</h1>
-          <p>Base completa de desarrollo: cuentas, transacciones, portfolio e IA copilot.</p>
-        </div>
-        <div className="header-actions">
-          <span className="badge">API {API_BASE}</span>
-          <button className="secondary" onClick={loadCoreData} disabled={loading}>
-            {loading ? "Sincronizando..." : "Actualizar"}
+    <div className="journal-shell">
+      <aside className="journal-sidebar">
+        <div className="sidebar-head">
+          <button type="button" className="sidebar-hamburger" aria-label="Menú">
+            ≡
+          </button>
+          <button type="button" className="sidebar-bolt" aria-label="Modo">
+            ⚡
           </button>
         </div>
-      </section>
 
-      <section className="tabs">
-        {tabs.map((t) => (
-          <button key={t.id} className={`tab-btn ${tab === t.id ? "active" : ""}`} onClick={() => setTab(t.id)}>
-            {t.label}
+        <nav className="sidebar-nav" aria-label="Navegación principal">
+          {sidebarItems.map((item) => (
+            <button
+              key={item.id}
+              type="button"
+              className={`sidebar-item ${tab === item.id ? "active" : ""}`}
+              onClick={() => setTab(item.id)}
+              title={item.label}
+              aria-label={item.label}
+            >
+              <span>{item.icon}</span>
+            </button>
+          ))}
+        </nav>
+
+        <div className="sidebar-foot">
+          <button type="button" className="sidebar-item" title="Tema" aria-label="Tema">
+            ◌
           </button>
-        ))}
-      </section>
+          <button type="button" className="sidebar-item" title="Salir" aria-label="Salir">
+            ↳
+          </button>
+        </div>
+      </aside>
 
-      {error ? (
-        <section className="card error" style={{ marginBottom: 10 }}>
-          {error}
-        </section>
-      ) : null}
+      <div className="journal-main">
+        <div className="journal-grid-bg" aria-hidden />
+        <main>
+          <section className="header">
+            <div>
+              <h1>{currentMeta.title}</h1>
+              <p>{currentMeta.subtitle}</p>
+            </div>
+            <div className="header-actions">
+              <span className="badge">API {API_BASE}</span>
+              <button className="primary-action" type="button">
+                ↗ Nueva Operación
+              </button>
+              <button className="secondary" onClick={loadCoreData} disabled={loading}>
+                {loading ? "Sincronizando..." : "Actualizar"}
+              </button>
+            </div>
+          </section>
 
-      {tab === "dashboard" && (
-        <section className="layout-grid" style={{ gap: 12 }}>
+          <section className="tabs">
+            {tabs.map((t) => (
+              <button key={t.id} type="button" className={`tab-btn ${tab === t.id ? "active" : ""}`} onClick={() => setTab(t.id)}>
+                {t.label}
+              </button>
+            ))}
+          </section>
+
+          {error ? (
+            <section className="card error" style={{ marginBottom: 10 }}>
+              {error}
+            </section>
+          ) : null}
+
+          {tab === "dashboard" && (
+            <section className="layout-grid" style={{ gap: 12 }}>
           <div className="layout-grid three">
             <article className="card kpi">
               <span className="label">Saldo total</span>
@@ -497,11 +570,11 @@ export default function HomePage() {
               </div>
             </article>
           </div>
-        </section>
-      )}
+            </section>
+          )}
 
-      {tab === "accounts" && (
-        <section className="layout-grid two">
+          {tab === "accounts" && (
+            <section className="layout-grid two">
           <article className="card alt">
             <h3 style={{ marginBottom: 8 }}>Nueva cuenta</h3>
             <form onSubmit={createAccount}>
@@ -594,11 +667,11 @@ export default function HomePage() {
               </table>
             </div>
           </article>
-        </section>
-      )}
+            </section>
+          )}
 
-      {tab === "transactions" && (
-        <section className="layout-grid two">
+          {tab === "transactions" && (
+            <section className="layout-grid two">
           <article className="card alt">
             <h3 style={{ marginBottom: 8 }}>Nueva transacción</h3>
             <form onSubmit={createTransaction}>
@@ -727,11 +800,11 @@ export default function HomePage() {
               </table>
             </div>
           </article>
-        </section>
-      )}
+            </section>
+          )}
 
-      {tab === "portfolio" && (
-        <section className="layout-grid two">
+          {tab === "portfolio" && (
+            <section className="layout-grid two">
           <article className="card alt">
             <h3 style={{ marginBottom: 8 }}>Nueva posición</h3>
             <form onSubmit={createInvestment}>
@@ -834,11 +907,11 @@ export default function HomePage() {
               {investments.length === 0 && <p className="muted">No hay inversiones registradas.</p>}
             </div>
           </article>
-        </section>
-      )}
+            </section>
+          )}
 
-      {tab === "copilot" && (
-        <section className="chat-layout">
+          {tab === "copilot" && (
+            <section className="chat-layout">
           <article className="card alt">
             <h3 style={{ marginBottom: 8 }}>Sesiones</h3>
             <form onSubmit={createSession} style={{ marginBottom: 8 }}>
@@ -898,8 +971,10 @@ export default function HomePage() {
               </button>
             </form>
           </article>
-        </section>
-      )}
-    </main>
+            </section>
+          )}
+        </main>
+      </div>
+    </div>
   );
 }
