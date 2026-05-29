@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type Account = {
   id: number;
@@ -37,12 +37,43 @@ function asNumber(value: string | number | null | undefined) {
   return Number.isFinite(n) ? n : 0;
 }
 
+function formatMoney(value: string | number | null | undefined, currency = "COP") {
+  const amount = asNumber(value);
+  const safeCurrency = (currency || "COP").toUpperCase();
+
+  try {
+    return new Intl.NumberFormat("es-CO", {
+      style: "currency",
+      currency: safeCurrency,
+      maximumFractionDigits: 0,
+    }).format(amount);
+  } catch {
+    return `${safeCurrency} ${amount.toLocaleString("es-CO")}`;
+  }
+}
+
+function statusClass(status: string) {
+  const value = status.toUpperCase();
+  if (value === "POSTED") return "posted";
+  if (value === "RECONCILED") return "reconciled";
+  if (value === "PENDING") return "pending";
+  return "void";
+}
+
 export default function HomePage() {
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [accountSearch, setAccountSearch] = useState("");
+  const [accountTypeFilter, setAccountTypeFilter] = useState("ALL");
+
+  const [txSearch, setTxSearch] = useState("");
+  const [txDirectionFilter, setTxDirectionFilter] = useState("ALL");
+  const [txStatusFilter, setTxStatusFilter] = useState("ALL");
+  const [txAccountFilter, setTxAccountFilter] = useState("ALL");
 
   const [accountForm, setAccountForm] = useState({
     code: "",
@@ -67,6 +98,51 @@ export default function HomePage() {
     return summary.monthInflow - summary.monthOutflow;
   }, [summary]);
 
+  const filteredAccounts = useMemo(() => {
+    const search = accountSearch.trim().toLowerCase();
+
+    return accounts
+      .filter((account) => {
+        const matchesType = accountTypeFilter === "ALL" || account.account_type === accountTypeFilter;
+        if (!matchesType) return false;
+        if (!search) return true;
+
+        return (
+          account.name.toLowerCase().includes(search) ||
+          account.code.toLowerCase().includes(search) ||
+          account.currency.toLowerCase().includes(search)
+        );
+      })
+      .sort((a, b) => asNumber(b.balance_current) - asNumber(a.balance_current));
+  }, [accounts, accountSearch, accountTypeFilter]);
+
+  const filteredTransactions = useMemo(() => {
+    const search = txSearch.trim().toLowerCase();
+
+    return transactions.filter((tx) => {
+      if (txDirectionFilter !== "ALL" && tx.direction !== txDirectionFilter) return false;
+      if (txStatusFilter !== "ALL" && tx.status !== txStatusFilter) return false;
+      if (txAccountFilter !== "ALL" && String(tx.account_id) !== txAccountFilter) return false;
+
+      if (!search) return true;
+      return (
+        (tx.description || "").toLowerCase().includes(search) ||
+        tx.account_name.toLowerCase().includes(search) ||
+        tx.transaction_date.includes(search) ||
+        tx.status.toLowerCase().includes(search) ||
+        tx.direction.toLowerCase().includes(search)
+      );
+    });
+  }, [transactions, txSearch, txDirectionFilter, txStatusFilter, txAccountFilter]);
+
+  const accountTypes = useMemo(() => {
+    return Array.from(new Set(accounts.map((account) => account.account_type))).sort();
+  }, [accounts]);
+
+  const transactionStatuses = useMemo(() => {
+    return Array.from(new Set(transactions.map((tx) => tx.status))).sort();
+  }, [transactions]);
+
   async function fetchAll() {
     setLoading(true);
     setError(null);
@@ -74,7 +150,7 @@ export default function HomePage() {
     try {
       const [accountsRes, transactionsRes, summaryRes] = await Promise.all([
         fetch(`${API_BASE}/v1/accounts`),
-        fetch(`${API_BASE}/v1/transactions?limit=100`),
+        fetch(`${API_BASE}/v1/transactions?limit=200`),
         fetch(`${API_BASE}/v1/summary`),
       ]);
 
@@ -86,12 +162,13 @@ export default function HomePage() {
       const transactionsJson = await transactionsRes.json();
       const summaryJson = await summaryRes.json();
 
-      setAccounts(accountsJson.data || []);
+      const nextAccounts = accountsJson.data || [];
+      setAccounts(nextAccounts);
       setTransactions(transactionsJson.data || []);
       setSummary(summaryJson.data || null);
 
-      if ((accountsJson.data || []).length > 0 && !transactionForm.accountId) {
-        setTransactionForm((prev) => ({ ...prev, accountId: String(accountsJson.data[0].id) }));
+      if (nextAccounts.length > 0 && !transactionForm.accountId) {
+        setTransactionForm((prev) => ({ ...prev, accountId: String(nextAccounts[0].id) }));
       }
     } catch (err: any) {
       setError(err?.message || "Error cargando datos");
@@ -105,7 +182,7 @@ export default function HomePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function createAccount(event: React.FormEvent<HTMLFormElement>) {
+  async function createAccount(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
 
@@ -131,13 +208,14 @@ export default function HomePage() {
         accountType: "CHECKING",
         balanceCurrent: "0",
       });
+
       await fetchAll();
     } catch (err: any) {
       setError(err?.message || "No se pudo crear la cuenta");
     }
   }
 
-  async function createTransaction(event: React.FormEvent<HTMLFormElement>) {
+  async function createTransaction(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
 
@@ -173,10 +251,10 @@ export default function HomePage() {
     <main>
       <section className="toolbar">
         <div>
-          <h1>Finance System</h1>
-          <p>Base operativa financiera migrada desde legacy, sin dependencias de trading.</p>
+          <h1>Finance Dashboard</h1>
+          <p>Monitoreo diario de cuentas y movimientos financieros.</p>
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div className="toolbar-actions">
           <span className="badge">API: {API_BASE}</span>
           <button className="secondary" onClick={fetchAll} disabled={loading}>
             {loading ? "Sincronizando..." : "Actualizar"}
@@ -185,35 +263,31 @@ export default function HomePage() {
       </section>
 
       {error ? (
-        <section className="card" style={{ marginBottom: 16, borderColor: "#f7d4d0" }}>
-          <strong style={{ color: "#c0392b" }}>Error</strong>
+        <section className="card error-card">
+          <strong>Error</strong>
           <p>{error}</p>
         </section>
       ) : null}
 
-      <section className="grid top" style={{ marginBottom: 16 }}>
+      <section className="grid top">
         <article className="card kpi">
           <span className="label">Saldo total</span>
-          <strong>COP {asNumber(summary?.totalBalance).toLocaleString("es-CO")}</strong>
+          <strong>{formatMoney(summary?.totalBalance, "COP")}</strong>
         </article>
         <article className="card kpi">
-          <span className="label">Ingresos mes</span>
-          <strong style={{ color: "#0f7a4b" }}>COP {asNumber(summary?.monthInflow).toLocaleString("es-CO")}</strong>
+          <span className="label">Ingresos del mes</span>
+          <strong className="kpi-positive">{formatMoney(summary?.monthInflow, "COP")}</strong>
         </article>
         <article className="card kpi">
-          <span className="label">Flujo neto mes</span>
-          <strong style={{ color: netFlow >= 0 ? "#0f7a4b" : "#c0392b" }}>
-            COP {netFlow.toLocaleString("es-CO")}
-          </strong>
-          <span className={`badge ${netFlow >= 0 ? "ok" : "warn"}`}>
-            {netFlow >= 0 ? "Positivo" : "Negativo"}
-          </span>
+          <span className="label">Flujo neto mensual</span>
+          <strong className={netFlow >= 0 ? "kpi-positive" : "kpi-negative"}>{formatMoney(netFlow, "COP")}</strong>
+          <span className={`badge ${netFlow >= 0 ? "ok" : "warn"}`}>{netFlow >= 0 ? "Positivo" : "Negativo"}</span>
         </article>
       </section>
 
-      <section className="grid forms" style={{ marginBottom: 16 }}>
+      <section className="grid forms">
         <article className="card">
-          <h2 style={{ marginBottom: 10 }}>Nueva Cuenta</h2>
+          <h2>Nueva Cuenta</h2>
           <form onSubmit={createAccount}>
             <label>
               Codigo
@@ -248,7 +322,7 @@ export default function HomePage() {
                 <option value="OTHER">OTHER</option>
               </select>
             </label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div className="form-row">
               <label>
                 Moneda
                 <input
@@ -273,7 +347,7 @@ export default function HomePage() {
         </article>
 
         <article className="card">
-          <h2 style={{ marginBottom: 10 }}>Nueva Transaccion</h2>
+          <h2>Nueva Transaccion</h2>
           <form onSubmit={createTransaction}>
             <label>
               Fecha
@@ -292,12 +366,14 @@ export default function HomePage() {
                 placeholder="Mercado del mes"
               />
             </label>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div className="form-row">
               <label>
                 Tipo
                 <select
                   value={transactionForm.direction}
-                  onChange={(e) => setTransactionForm((prev) => ({ ...prev, direction: e.target.value as "INFLOW" | "OUTFLOW" }))}
+                  onChange={(e) =>
+                    setTransactionForm((prev) => ({ ...prev, direction: e.target.value as "INFLOW" | "OUTFLOW" }))
+                  }
                 >
                   <option value="OUTFLOW">OUTFLOW</option>
                   <option value="INFLOW">INFLOW</option>
@@ -316,7 +392,7 @@ export default function HomePage() {
                 </select>
               </label>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+            <div className="form-row">
               <label>
                 Moneda
                 <input
@@ -360,33 +436,58 @@ export default function HomePage() {
 
       <section className="grid tables">
         <article className="card">
-          <h3 style={{ marginBottom: 10 }}>Cuentas</h3>
+          <div className="table-header">
+            <h3>Cuentas</h3>
+            <span className="muted">{filteredAccounts.length} resultados</span>
+          </div>
+          <div className="table-filters">
+            <input
+              value={accountSearch}
+              onChange={(e) => setAccountSearch(e.target.value)}
+              placeholder="Buscar por nombre, codigo o moneda..."
+            />
+            <select value={accountTypeFilter} onChange={(e) => setAccountTypeFilter(e.target.value)}>
+              <option value="ALL">Todos los tipos</option>
+              {accountTypes.map((type) => (
+                <option key={type} value={type}>
+                  {type}
+                </option>
+              ))}
+            </select>
+          </div>
           <div className="table-wrap">
             <table>
               <thead>
                 <tr>
-                  <th>ID</th>
-                  <th>Codigo</th>
-                  <th>Nombre</th>
+                  <th>Cuenta</th>
                   <th>Tipo</th>
                   <th>Moneda</th>
+                  <th>Estado</th>
                   <th>Saldo</th>
                 </tr>
               </thead>
               <tbody>
-                {accounts.length === 0 ? (
+                {filteredAccounts.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="muted">Sin cuentas registradas</td>
+                    <td colSpan={5} className="muted">
+                      Sin cuentas que coincidan con el filtro
+                    </td>
                   </tr>
                 ) : (
-                  accounts.map((account) => (
+                  filteredAccounts.map((account) => (
                     <tr key={account.id}>
-                      <td>{account.id}</td>
-                      <td>{account.code}</td>
-                      <td>{account.name}</td>
-                      <td>{account.account_type}</td>
-                      <td>{account.currency}</td>
-                      <td>{asNumber(account.balance_current).toLocaleString("es-CO")}</td>
+                      <td data-label="Cuenta">
+                        <strong>{account.name}</strong>
+                        <div className="muted code-line">{account.code}</div>
+                      </td>
+                      <td data-label="Tipo">{account.account_type}</td>
+                      <td data-label="Moneda">{account.currency}</td>
+                      <td data-label="Estado">
+                        <span className={`status-pill ${account.is_active ? "active" : "inactive"}`}>
+                          {account.is_active ? "ACTIVE" : "INACTIVE"}
+                        </span>
+                      </td>
+                      <td data-label="Saldo">{formatMoney(account.balance_current, account.currency)}</td>
                     </tr>
                   ))
                 )}
@@ -396,7 +497,40 @@ export default function HomePage() {
         </article>
 
         <article className="card">
-          <h3 style={{ marginBottom: 10 }}>Transacciones</h3>
+          <div className="table-header">
+            <h3>Transacciones</h3>
+            <span className="muted">{filteredTransactions.length} resultados</span>
+          </div>
+          <div className="table-filters">
+            <input
+              value={txSearch}
+              onChange={(e) => setTxSearch(e.target.value)}
+              placeholder="Buscar por descripcion, cuenta, fecha..."
+            />
+            <div className="filters-row">
+              <select value={txDirectionFilter} onChange={(e) => setTxDirectionFilter(e.target.value)}>
+                <option value="ALL">Todos los tipos</option>
+                <option value="INFLOW">INFLOW</option>
+                <option value="OUTFLOW">OUTFLOW</option>
+              </select>
+              <select value={txStatusFilter} onChange={(e) => setTxStatusFilter(e.target.value)}>
+                <option value="ALL">Todos los estados</option>
+                {transactionStatuses.map((status) => (
+                  <option key={status} value={status}>
+                    {status}
+                  </option>
+                ))}
+              </select>
+              <select value={txAccountFilter} onChange={(e) => setTxAccountFilter(e.target.value)}>
+                <option value="ALL">Todas las cuentas</option>
+                {accounts.map((account) => (
+                  <option key={account.id} value={String(account.id)}>
+                    {account.name}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
           <div className="table-wrap">
             <table>
               <thead>
@@ -404,24 +538,30 @@ export default function HomePage() {
                   <th>Fecha</th>
                   <th>Descripcion</th>
                   <th>Cuenta</th>
+                  <th>Estado</th>
                   <th>Direccion</th>
                   <th>Monto</th>
                 </tr>
               </thead>
               <tbody>
-                {transactions.length === 0 ? (
+                {filteredTransactions.length === 0 ? (
                   <tr>
-                    <td colSpan={5} className="muted">Sin transacciones</td>
+                    <td colSpan={6} className="muted">
+                      Sin transacciones que coincidan con el filtro
+                    </td>
                   </tr>
                 ) : (
-                  transactions.map((tx) => (
+                  filteredTransactions.map((tx) => (
                     <tr key={tx.id}>
-                      <td>{tx.transaction_date}</td>
-                      <td>{tx.description || "Sin descripcion"}</td>
-                      <td>{tx.account_name}</td>
-                      <td>{tx.direction}</td>
-                      <td className={`amount ${tx.direction === "INFLOW" ? "in" : "out"}`}>
-                        {tx.direction === "INFLOW" ? "+" : "-"} {tx.currency} {asNumber(tx.amount).toLocaleString("es-CO")}
+                      <td data-label="Fecha">{tx.transaction_date}</td>
+                      <td data-label="Descripcion">{tx.description || "Sin descripcion"}</td>
+                      <td data-label="Cuenta">{tx.account_name}</td>
+                      <td data-label="Estado">
+                        <span className={`status-pill ${statusClass(tx.status)}`}>{tx.status}</span>
+                      </td>
+                      <td data-label="Direccion">{tx.direction}</td>
+                      <td data-label="Monto" className={`amount ${tx.direction === "INFLOW" ? "in" : "out"}`}>
+                        {tx.direction === "INFLOW" ? "+" : "-"} {formatMoney(tx.amount, tx.currency)}
                       </td>
                     </tr>
                   ))
