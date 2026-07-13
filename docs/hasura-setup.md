@@ -1,17 +1,17 @@
 # Hasura Setup (Finance System)
 
-Guía para habilitar Hasura sobre `finance_system` con metadata versionada.
+Guia para habilitar Hasura sobre `finance_system`/`finanzas` con metadata versionada.
 
-## Perfil 1: PC local (recomendado para desarrollo)
-
-1. Levanta Postgres local del repo:
+## Perfil 1: PC local
 
 ```bash
-corepack pnpm db:up
-corepack pnpm db:migrate
+pnpm db:up
+pnpm db:migrate
+pnpm hasura:up
+pnpm hasura:apply
 ```
 
-2. Variables en `.env.local`:
+Variables minimas en `.env.local`:
 
 ```env
 HASURA_GRAPHQL_ENDPOINT=http://localhost:8086
@@ -19,75 +19,45 @@ HASURA_GRAPHQL_ADMIN_SECRET=change_me
 HASURA_GRAPHQL_DATABASE_URL=postgresql://postgres:postgres@host.docker.internal:5434/finance_system
 ```
 
-3. Levanta Hasura y aplica metadata:
-
-```bash
-corepack pnpm hasura:up
-corepack pnpm hasura:apply
-```
-
 Consola: `http://localhost:8086/console`
 
-## Perfil 2: VM (usando motor `servidor-db` en 5432)
-
-Si en VM usas el Postgres ya existente del host (`servidor-db`), cambia solo la URL de DB:
+## Perfil 2: VM
 
 ```env
-HASURA_GRAPHQL_DATABASE_URL=postgresql://root:passwordseguro@host.docker.internal:5432/finance_system
+HASURA_GRAPHQL_ENDPOINT=http://hasura:8080
+HASURA_GRAPHQL_ADMIN_SECRET=CHANGE_ME
+HASURA_GRAPHQL_DATABASE_URL=postgresql://root:CHANGE_ME@servidor-db:5432/finanzas
 ```
 
-Luego:
+Aplicacion metadata:
 
 ```bash
-corepack pnpm hasura:down
-corepack pnpm hasura:up
-corepack pnpm hasura:apply
+pnpm hasura:up
+pnpm hasura:apply
 ```
 
-## Metadata versionada
+El script `hasura:apply` ahora incluye reintentos (para evitar fallos por arranque parcial/`ECONNRESET`).
 
-- Fuente: `hasura/metadata/metadata.json`
-- Export viva (auditoría):
+## Tablas principales trackeadas
+
+- financieras: `accounts`, `transactions`, `categories`, `investments`, `budgets`, `budget_lines`
+- copilot: `copilot_sessions`, `copilot_messages`
+- agenticas: `agent_runs`, `agent_steps`, `agent_tool_calls`, `agent_proposals`, `agent_approvals`, `generated_views`, `generated_view_widgets`, `agent_schedules`, `agent_reminders`, `projection_scenarios`
+
+## Realtime de producto (Fase 6)
+
+Suscripciones recomendadas para UI:
+
+- propuestas pendientes (`agent_proposals` status `PENDING`)
+- recordatorios (`agent_reminders`)
+- dashboards generados (`generated_views`)
+
+## Export versionado
 
 ```bash
-corepack pnpm hasura:export
+pnpm hasura:export
 ```
 
 Salida:
 
 - `hasura/metadata/metadata.export.json`
-
-## Qué tablas se trackean
-
-- `accounts`
-- `categories`
-- `transactions`
-- `budgets`
-- `budget_lines`
-- `recurring_rules`
-- `investments`
-- `copilot_sessions`
-- `copilot_messages`
-
-Incluye relaciones base y permisos `user` amplios de desarrollo.
-
-## Troubleshooting rápido
-
-1. Si Hasura reinicia en loop:
-
-```bash
-corepack pnpm hasura:logs
-```
-
-2. Error `connection refused` en `5434`:
-
-- Estás apuntando al perfil local sin Postgres local arriba.
-- O cambia a perfil VM (`5432`) o levanta `pnpm db:up`.
-
-3. Health check:
-
-```bash
-curl -s http://localhost:8086/healthz
-```
-
-Debe devolver `OK`.

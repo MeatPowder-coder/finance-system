@@ -1,0 +1,13 @@
+.git
+.github
+.cargo-target
+node_modules
+**/node_modules
+apps/**/.next
+apps/**/dist
+apps/**/src-tauri/target
+packages/**/dist
+*.dump
+*.tar.gz
+.env.local
+.env.vm

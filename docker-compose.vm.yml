@@ -1,0 +1,63 @@
+services:
+  finance-api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: finance-api
+    restart: unless-stopped
+    env_file:
+      - .env.vm
+    environment:
+      API_HOST: 0.0.0.0
+      API_PORT: 4100
+    ports:
+      - "4100:4100"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:4100/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+    networks:
+      - infra-net
+
+  finance-web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/v1}
+        NEXT_PUBLIC_WEB_APP_URL: ${NEXT_PUBLIC_WEB_APP_URL:-https://finance.agentame.xyz}
+        API_PROXY_TARGET: ${API_PROXY_TARGET:-http://finance-api:4100}
+    container_name: finance-web
+    restart: unless-stopped
+    env_file:
+      - .env.vm
+    environment:
+      NEXT_PUBLIC_API_BASE_URL: ${NEXT_PUBLIC_API_BASE_URL:-/v1}
+      API_PROXY_TARGET: ${API_PROXY_TARGET:-http://finance-api:4100}
+    ports:
+      - "3005:3005"
+    depends_on:
+      finance-api:
+        condition: service_healthy
+    networks:
+      - infra-net
+
+  finance-agent-worker:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    container_name: finance-agent-worker
+    restart: unless-stopped
+    env_file:
+      - .env.vm
+    command: ["pnpm", "--filter", "@finance-system/api", "start"]
+    depends_on:
+      finance-api:
+        condition: service_healthy
+    networks:
+      - infra-net
+
+networks:
+  infra-net:
+    external: true

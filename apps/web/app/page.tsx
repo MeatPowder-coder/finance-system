@@ -1,145 +1,207 @@
-"use client";
+﻿"use client";
 
-import { useMemo, useState, useEffect, useRef } from "react";
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import ChatInterfaceFinance from "@/components/ChatInterfaceFinance";
+import { AuthCallbackScreen, AuthLoginScreen } from "@/components/AuthLogin";
+import PlanningSegmentedNav from "@/components/PlanningSegmentedNav";
+import { AccountsView, type AccountFormState } from "@/src/views/AccountsView";
+import {
+  TransactionsView,
+  type TxFormState as TransactionsTxFormState,
+  type CategoryFormState,
+  type CounterpartyFormState,
+  type TagFormState,
+} from "@/src/views/TransactionsView";
+import { ReportsView } from "@/src/views/ReportsView";
+import { InvestmentsView } from "@/src/views/InvestmentsView";
+import { PlanningView } from "@/src/views/PlanningView";
+import { DashboardView } from "@/src/views/DashboardView";
+import { SettingsView } from "@/src/views/SettingsView";
+import { buildFinanceHeaders, resolveFinanceApiBaseUrl } from "@/lib/runtime-config";
+import {
+  AlertTriangle,
+  ArrowDownLeft,
+  ArrowUpRight,
+  BarChart3,
+  Bot,
+  Briefcase,
+  CalendarDays,
+  Clock3,
+  CreditCard,
+  Filter,
+  LayoutDashboard,
+  PieChart,
+  Plus,
+  RefreshCw,
+  Search,
+  Settings,
+  Sparkles,
+  Wallet,
+} from "lucide-react";
 
-type TabId = "dashboard" | "accounts" | "transactions" | "portfolio" | "copilot";
+import type {
+  TabKey,
+  PlanningSectionKey,
+  AccountType,
+  TxDirection,
+  TxStatus,
+  CategoryDirection,
+  Summary,
+  Account,
+  Category,
+  Counterparty,
+  TxTag,
+  TxSplit,
+  TxAttachment,
+  Transaction,
+  Investment,
+  CopilotSession,
+  CopilotMessage,
+  CopilotModelsConfig,
+  CashflowReportItem,
+  CategoryBreakdownItem,
+  BudgetLine,
+  Budget,
+  Commitment,
+  ProjectionScenario,
+  BudgetTransactionContext,
+  MonthlyFinanceSummary,
+  BudgetDeficitEvent,
+  BudgetStatus,
+  SplitDraft,
+  AttachmentDraft,
+} from "@/lib/types";
+import {
+  TABS,
+  MOBILE_TABS,
+  NONE_VALUE,
+  DASHBOARD_BUDGET_PAGE_SIZE,
+} from "@/lib/types";
+import {
+  toNumber,
+  formatMoney,
+  formatDate,
+  formatMonthLabel,
+  getAccountTypeLabel,
+  getDirectionLabel,
+  getDirectionHint,
+  getCadenceLabel,
+  getCounterpartyTypeLabel,
+  getCategoryDirectionLabel,
+  getBudgetStatusLabel,
+  getBudgetStatusTone,
+  getBudgetStatusAccent,
+  getDeficitEventLabel,
+  getStatusTone,
+  downloadCsv,
+} from "@/lib/format";
 
-type Account = {
-  id: number;
-  code: string;
-  name: string;
-  currency: string;
-  account_type: string;
-  balance_current: string | number;
-  is_active: boolean;
-};
-
-type Transaction = {
-  id: number;
-  transaction_date: string;
-  description: string | null;
-  amount: string | number;
-  currency: string;
-  direction: "INFLOW" | "OUTFLOW";
-  status: string;
-  account_id: number;
-  account_name: string;
-};
-
-type Investment = {
-  id: number;
-  symbol: string;
-  name: string;
-  asset_type: string;
-  quantity: string | number;
-  avg_cost: string | number;
-  currency: string;
-  account_id: number | null;
-  account_name?: string | null;
-  notes?: string | null;
-  is_active: boolean;
-  invested_amount: string | number;
-};
-
-type CopilotSession = {
-  id: string;
-  title: string;
-  mode: "ACCOUNTANT" | "ANALYST";
-  message_count: number;
-  updated_at: string;
-};
-
-type CopilotMessage = {
-  id: number;
-  role: "user" | "assistant" | "system";
-  content: string;
-  created_at: string;
-};
-
-type Summary = {
-  totalBalance: number;
-  monthInflow: number;
-  monthOutflow: number;
-  investedTotal: number;
-  activePositions: number;
-};
-
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4100";
-
-const tabs: { id: TabId; label: string }[] = [
-  { id: "dashboard", label: "Dashboard" },
-  { id: "accounts", label: "Cuentas" },
-  { id: "transactions", label: "Transacciones" },
-  { id: "portfolio", label: "Portfolio" },
-  { id: "copilot", label: "Copilot" },
+const API_BASE = resolveFinanceApiBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4100");
+const PLANNING_SECTIONS: Array<{
+  key: PlanningSectionKey;
+  label: string;
+  caption: string;
+  icon: typeof Wallet;
+}> = [
+  { key: "budgets", label: "Presupuestos", caption: "Control del gasto", icon: Wallet },
+  { key: "deficits", label: "Deficits", caption: "Alertas e historial", icon: AlertTriangle },
+  { key: "commitments", label: "Compromisos", caption: "Pagos recurrentes", icon: Clock3 },
+  { key: "projections", label: "Proyecciones", caption: "Escenarios futuros", icon: BarChart3 },
 ];
 
-const sidebarItems: { id: TabId; label: string; icon: string }[] = [
-  { id: "dashboard", label: "Dashboard", icon: "▦" },
-  { id: "accounts", label: "Cuentas", icon: "◷" },
-  { id: "transactions", label: "Transacciones", icon: "¤" },
-  { id: "portfolio", label: "Portfolio", icon: "↗" },
-  { id: "copilot", label: "Copilot", icon: "✦" },
-];
-
-const tabMeta: Record<TabId, { title: string; subtitle: string }> = {
-  dashboard: {
-    title: "Dashboard",
-    subtitle: "Monitor your active positions and performance.",
-  },
-  accounts: {
-    title: "Cuentas",
-    subtitle: "Control operativo de saldos, tipos de cuenta y estructura base.",
-  },
-  transactions: {
-    title: "Historial de Transacciones",
-    subtitle: "Movimientos recientes en tus cuentas.",
-  },
-  portfolio: {
-    title: "Portfolio",
-    subtitle: "Visión consolidada de posiciones e inversión activa.",
-  },
-  copilot: {
-    title: "Agentame Chat",
-    subtitle: "Asistente financiero con sesiones y contexto persistente.",
-  },
-};
-
-function num(value: unknown) {
-  const n = Number(value ?? 0);
-  return Number.isFinite(n) ? n : 0;
-}
-
-function money(value: unknown, currency = "COP") {
-  try {
-    return new Intl.NumberFormat("es-CO", { style: "currency", currency }).format(num(value));
-  } catch {
-    return `${currency} ${num(value).toFixed(2)}`;
+const TAB_META: Record<
+  TabKey,
+  {
+    label: string;
+    caption: string;
+    icon: typeof LayoutDashboard;
   }
+> = {
+  dashboard: { label: "Dashboard", caption: "Vision general", icon: LayoutDashboard },
+  accounts: { label: "Cuentas", caption: "Bancos y creditos", icon: Wallet },
+  transactions: { label: "Transacciones", caption: "Movimiento diario", icon: CreditCard },
+  reports: { label: "Reportes", caption: "Cashflow y categorias", icon: BarChart3 },
+  investments: { label: "Inversiones", caption: "Portafolio y posicion", icon: PieChart },
+  planning: { label: "Planificacion", caption: "Presupuesto y proyecciones", icon: CalendarDays },
+  copilot: { label: "Copilot", caption: "Asistente financiero", icon: Bot },
+  settings: { label: "Configuracion", caption: "Perfil, temas y accesos", icon: Settings },
+};
+
+async function apiGet<T>(path: string) {
+  const res = await fetch(`${API_BASE}${path}`, { cache: "no-store", headers: buildFinanceHeaders() });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+  return json.data as T;
 }
 
-export default function HomePage() {
-  const [tab, setTab] = useState<TabId>("dashboard");
-  const [loading, setLoading] = useState(false);
+async function apiPost<T>(path: string, body: unknown) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "POST",
+    headers: buildFinanceHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(body),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+  return json.data as T;
+}
+
+async function apiPatch<T>(path: string, body: unknown) {
+  const res = await fetch(`${API_BASE}${path}`, {
+    method: "PATCH",
+    headers: buildFinanceHeaders({ "Content-Type": "application/json" }),
+    body: JSON.stringify(body),
+  });
+  const json = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+  return json.data as T;
+}
+
+function HomeContent() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const tab = (searchParams.get("tab") as TabKey) || "dashboard";
+  const planningSection = (searchParams.get("planningSection") as PlanningSectionKey) || "budgets";
+
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const [summary, setSummary] = useState<Summary | null>(null);
   const [accounts, setAccounts] = useState<Account[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [investments, setInvestments] = useState<Investment[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [counterparties, setCounterparties] = useState<Counterparty[]>([]);
+  const [tags, setTags] = useState<TxTag[]>([]);
 
-  const [copilotSessions, setCopilotSessions] = useState<CopilotSession[]>([]);
-  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
-  const [copilotMessages, setCopilotMessages] = useState<CopilotMessage[]>([]);
-  const [copilotSending, setCopilotSending] = useState(false);
-
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
+  const [txSearch, setTxSearch] = useState("");
+  const [txDirection, setTxDirection] = useState<"ALL" | TxDirection>("ALL");
+  const [txStatus, setTxStatus] = useState<"ALL" | TxStatus>("ALL");
+  const [txCategoryFilter, setTxCategoryFilter] = useState("ALL");
+  const [txCounterpartyFilter, setTxCounterpartyFilter] = useState("ALL");
+  const [txTagFilter, setTxTagFilter] = useState("ALL");
 
   const [accountForm, setAccountForm] = useState({
     code: "",
     name: "",
     currency: "COP",
-    accountType: "CHECKING",
+    accountType: "CHECKING" as AccountType,
     balanceCurrent: "0",
   });
 
@@ -148,833 +210,1418 @@ export default function HomePage() {
     description: "",
     amount: "",
     currency: "COP",
-    direction: "OUTFLOW",
-    status: "POSTED",
+    direction: "OUTFLOW" as TxDirection,
+    status: "POSTED" as TxStatus,
     accountId: "",
-  });
-
-  const [txFilter, setTxFilter] = useState({
-    search: "",
-    direction: "ALL",
-    status: "ALL",
-  });
-
-  const [investmentForm, setInvestmentForm] = useState({
-    symbol: "",
-    name: "",
-    assetType: "CRYPTO",
-    quantity: "1",
-    avgCost: "0",
-    currency: "USD",
-    accountId: "",
+    categoryId: "",
+    counterpartyId: "",
     notes: "",
+    tagIds: [] as string[],
   });
 
-  const [sessionForm, setSessionForm] = useState({
-    title: "",
-    mode: "ACCOUNTANT",
+  const [useSplits, setUseSplits] = useState(false);
+  const [splitDrafts, setSplitDrafts] = useState<SplitDraft[]>([
+    { description: "", amount: "", categoryId: "", counterpartyId: "" },
+  ]);
+
+  const [useAttachments, setUseAttachments] = useState(false);
+  const [attachmentDrafts, setAttachmentDrafts] = useState<AttachmentDraft[]>([
+    { fileName: "", fileUrl: "", mimeType: "", fileSize: "" },
+  ]);
+
+  const [categoryForm, setCategoryForm] = useState({
+    code: "",
+    name: "",
+    direction: "BOTH" as CategoryDirection,
+  });
+  const [counterpartyForm, setCounterpartyForm] = useState({
+    name: "",
+    type: "OTHER" as Counterparty["type"],
+  });
+  const [tagForm, setTagForm] = useState({
+    name: "",
+    color: "",
   });
 
-  const [chatInput, setChatInput] = useState("");
+  const [sessions, setSessions] = useState<CopilotSession[]>([]);
+  const [activeSessionId, setActiveSessionId] = useState("");
+  const [messages, setMessages] = useState<CopilotMessage[]>([]);
+  const [copilotInput, setCopilotInput] = useState("");
+  const [copilotBusy, setCopilotBusy] = useState(false);
+  const [copilotModels, setCopilotModels] = useState<CopilotModelsConfig | null>(null);
+  const [copilotModel, setCopilotModel] = useState("");
+  const [cashflowReport, setCashflowReport] = useState<CashflowReportItem[]>([]);
+  const [categoryBreakdown, setCategoryBreakdown] = useState<CategoryBreakdownItem[]>([]);
+  const [reportsLoading, setReportsLoading] = useState(false);
+  const [planningLoading, setPlanningLoading] = useState(false);
+  const [budgets, setBudgets] = useState<Budget[]>([]);
+  const [budgetDeficitEvents, setBudgetDeficitEvents] = useState<BudgetDeficitEvent[]>([]);
+  const [commitments, setCommitments] = useState<Commitment[]>([]);
+  const [projectionScenarios, setProjectionScenarios] = useState<ProjectionScenario[]>([]);
+  const [monthlyFinanceSummary, setMonthlyFinanceSummary] = useState<MonthlyFinanceSummary | null>(null);
+  const [budgetDialogOpen, setBudgetDialogOpen] = useState(false);
+  const [budgetDialogMode, setBudgetDialogMode] = useState<"create" | "edit">("create");
+  const [budgetEditingBudgetId, setBudgetEditingBudgetId] = useState<number | null>(null);
+  const [budgetCategoryComposerOpen, setBudgetCategoryComposerOpen] = useState(false);
+  const [commitmentDialogOpen, setCommitmentDialogOpen] = useState(false);
+  const [projectionDialogOpen, setProjectionDialogOpen] = useState(false);
+  const [accountDialogOpen, setAccountDialogOpen] = useState(false);
+  const [transactionDialogOpen, setTransactionDialogOpen] = useState(false);
+  const [budgetTxContext, setBudgetTxContext] = useState<BudgetTransactionContext | null>(null);
+  const [reportRange, setReportRange] = useState({
+    from: new Date(new Date().getFullYear(), 0, 1).toISOString().slice(0, 10),
+    to: new Date().toISOString().slice(0, 10),
+  });
+  const [planningMonth, setPlanningMonth] = useState(new Date().toISOString().slice(0, 7));
+  const [dashboardBudgetStart, setDashboardBudgetStart] = useState(0);
+  const [budgetForm, setBudgetForm] = useState({
+    name: "",
+    categoryId: "",
+    limitAmount: "",
+  });
+  const [commitmentForm, setCommitmentForm] = useState({
+    name: "",
+    amount: "",
+    cadence: "MONTHLY" as Commitment["cadence"],
+    dayOfMonth: "1",
+  });
+  const [projectionForm, setProjectionForm] = useState({
+    horizonMonths: "6",
+    monthlySavingsGoal: "0",
+    monthlyInvestmentGoal: "0",
+  });
 
-  const filteredTransactions = useMemo(() => {
-    return transactions.filter((tx) => {
-      const matchesSearch =
-        txFilter.search.trim() === "" ||
-        (tx.description || "").toLowerCase().includes(txFilter.search.toLowerCase()) ||
-        tx.account_name.toLowerCase().includes(txFilter.search.toLowerCase());
-
-      const matchesDirection = txFilter.direction === "ALL" || tx.direction === txFilter.direction;
-      const matchesStatus = txFilter.status === "ALL" || tx.status === txFilter.status;
-
-      return matchesSearch && matchesDirection && matchesStatus;
-    });
-  }, [transactions, txFilter]);
-
-  const dashboardNet = num(summary?.monthInflow) - num(summary?.monthOutflow);
-
-  const activeSession = copilotSessions.find((s) => s.id === activeSessionId) || null;
-  const currentMeta = tabMeta[tab];
-
-  async function fetchJson(url: string, options?: RequestInit) {
-    const res = await fetch(url, options);
-    const body = await res.json().catch(() => ({}));
-    if (!res.ok) {
-      throw new Error(body?.error || `Request failed (${res.status})`);
-    }
-    return body;
-  }
-
-  async function loadCoreData() {
+  async function refreshData() {
     setLoading(true);
     setError(null);
-
     try {
-      const [summaryRes, accountsRes, txRes, invRes, sessionsRes] = await Promise.all([
-        fetchJson(`${API_BASE}/v1/summary`),
-        fetchJson(`${API_BASE}/v1/accounts`),
-        fetchJson(`${API_BASE}/v1/transactions?limit=200`),
-        fetchJson(`${API_BASE}/v1/investments`),
-        fetchJson(`${API_BASE}/v1/copilot/sessions`),
+      const [summaryData, accountData, txData, invData, categoryData, counterpartyData, tagData] = await Promise.all([
+        apiGet<Summary>("/v1/summary"),
+        apiGet<Account[]>("/v1/accounts"),
+        apiGet<Transaction[]>("/v1/transactions?limit=250"),
+        apiGet<Investment[]>("/v1/investments"),
+        apiGet<Category[]>("/v1/categories"),
+        apiGet<Counterparty[]>("/v1/counterparties"),
+        apiGet<TxTag[]>("/v1/tags"),
       ]);
-
-      setSummary(summaryRes.data || null);
-      setAccounts(accountsRes.data || []);
-      setTransactions(txRes.data || []);
-      setInvestments(invRes.data || []);
-      const sessions = sessionsRes.data || [];
-      setCopilotSessions(sessions);
-
-      if (!txForm.accountId && (accountsRes.data || []).length > 0) {
-        setTxForm((prev) => ({ ...prev, accountId: String(accountsRes.data[0].id) }));
-      }
-
-      if (activeSessionId) {
-        const exists = sessions.some((s: CopilotSession) => s.id === activeSessionId);
-        if (!exists) {
-          setActiveSessionId(sessions[0]?.id || null);
-        }
-      } else if (sessions.length > 0) {
-        setActiveSessionId(sessions[0].id);
-      }
-    } catch (err: any) {
-      setError(err?.message || "Error cargando datos");
+      setSummary(summaryData);
+      setAccounts(accountData);
+      setTransactions(txData);
+      setInvestments(invData);
+      setCategories(categoryData);
+      setCounterparties(counterpartyData);
+      setTags(tagData);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "No se pudo cargar la data.";
+      setError(message);
     } finally {
       setLoading(false);
     }
   }
 
-  async function loadMessages(sessionId: string) {
+  async function refreshSessions() {
+    const list = await apiGet<CopilotSession[]>("/v1/copilot/sessions");
+    setSessions(list);
+    if (!activeSessionId && list[0]) setActiveSessionId(list[0].id);
+  }
+
+  async function refreshMessages(sessionId: string) {
+    if (!sessionId) return;
+    const list = await apiGet<CopilotMessage[]>(`/v1/copilot/sessions/${sessionId}/messages`);
+    setMessages(list);
+  }
+
+  async function refreshCopilotModels() {
+    const cfg = await apiGet<CopilotModelsConfig>("/v1/copilot/models");
+    setCopilotModels(cfg);
+    if (!copilotModel) {
+      setCopilotModel(cfg.defaultModel);
+    }
+  }
+
+  async function refreshReports() {
+    setReportsLoading(true);
+    setError(null);
     try {
-      const data = await fetchJson(`${API_BASE}/v1/copilot/sessions/${sessionId}/messages`);
-      setCopilotMessages(data.data || []);
-    } catch (err: any) {
-      setError(err?.message || "Error cargando mensajes");
+      const qs = new URLSearchParams();
+      if (reportRange.from) qs.set("from", reportRange.from);
+      if (reportRange.to) qs.set("to", reportRange.to);
+      const query = qs.toString();
+      const [cashflowData, breakdownData] = await Promise.all([
+        apiGet<CashflowReportItem[]>(`/v1/reports/cashflow${query ? `?${query}` : ""}`),
+        apiGet<CategoryBreakdownItem[]>(`/v1/reports/category-breakdown${query ? `?${query}` : ""}`),
+      ]);
+      setCashflowReport(cashflowData);
+      setCategoryBreakdown(breakdownData);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "No se pudieron cargar reportes.";
+      setError(message);
+    } finally {
+      setReportsLoading(false);
+    }
+  }
+
+  async function refreshPlanning() {
+    setPlanningLoading(true);
+    setError(null);
+    try {
+      const [budgetData, deficitData, commitmentData, scenarioData, monthlySummaryData] = await Promise.all([
+        apiGet<Budget[]>(`/v1/budgets?month=${planningMonth}`),
+        apiGet<BudgetDeficitEvent[]>(`/v1/budget-deficits?month=${planningMonth}`),
+        apiGet<Commitment[]>(`/v1/commitments?month=${planningMonth}`),
+        apiGet<ProjectionScenario[]>("/v1/projections/scenarios"),
+        apiGet<MonthlyFinanceSummary>(`/v1/reports/monthly-finance-summary?month=${planningMonth}`),
+      ]);
+      setBudgets(budgetData);
+      setBudgetDeficitEvents(deficitData);
+      setCommitments(commitmentData);
+      setProjectionScenarios(scenarioData);
+      setMonthlyFinanceSummary(monthlySummaryData);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "No se pudo cargar planificacion.";
+      setError(message);
+    } finally {
+      setPlanningLoading(false);
+    }
+  }
+
+  function resetBudgetDialogState() {
+    setBudgetDialogMode("create");
+    setBudgetEditingBudgetId(null);
+    setBudgetCategoryComposerOpen(false);
+    setBudgetForm({ name: "", categoryId: "", limitAmount: "" });
+  }
+
+  function openCreateBudgetDialog() {
+    resetBudgetDialogState();
+    setBudgetDialogOpen(true);
+  }
+
+  function openEditBudgetDialog(budgetId: number) {
+    const budget = budgets.find((item) => item.id === budgetId);
+    if (!budget) return;
+
+    setBudgetDialogMode("edit");
+    setBudgetEditingBudgetId(budget.id);
+    setBudgetCategoryComposerOpen(false);
+    setBudgetForm({
+      name: budget.name,
+      categoryId: String(budget.lines[0]?.category_id || ""),
+      limitAmount: String(budget.lines[0]?.limit_amount || budget.allocated_amount || 0),
+    });
+    setBudgetDialogOpen(true);
+  }
+
+  async function saveBudget() {
+    if (!budgetForm.name.trim() || !budgetForm.categoryId || Number(budgetForm.limitAmount) <= 0) return;
+    setSaving(true);
+    setError(null);
+    try {
+      const startDate = `${planningMonth}-01`;
+      const d = new Date(`${planningMonth}-01T00:00:00Z`);
+      const endDate = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).toISOString().slice(0, 10);
+      const payload = {
+        name: budgetForm.name.trim(),
+        period: "MONTHLY" as const,
+        currency: "COP",
+        startDate,
+        endDate,
+        lines: [{ categoryId: Number(budgetForm.categoryId), limitAmount: Number(budgetForm.limitAmount) }],
+      };
+
+      if (budgetDialogMode === "edit" && budgetEditingBudgetId) {
+        await apiPatch(`/v1/budgets/${budgetEditingBudgetId}`, payload);
+      } else {
+        await apiPost("/v1/budgets", payload);
+      }
+
+      resetBudgetDialogState();
+      setBudgetDialogOpen(false);
+      await refreshPlanning();
+    } catch (err: unknown) {
+      const message = err instanceof Error
+        ? err.message
+        : budgetDialogMode === "edit"
+          ? "No se pudo actualizar presupuesto."
+          : "No se pudo crear presupuesto.";
+      setError(message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function createCommitment() {
+    if (!commitmentForm.name.trim() || Number(commitmentForm.amount) <= 0) return;
+    setSaving(true);
+    setError(null);
+    try {
+      await apiPost("/v1/commitments", {
+        name: commitmentForm.name.trim(),
+        amount: Number(commitmentForm.amount),
+        cadence: commitmentForm.cadence,
+        dayOfMonth: Number(commitmentForm.dayOfMonth || "1"),
+        direction: "OUTFLOW",
+      });
+      setCommitmentForm({ name: "", amount: "", cadence: "MONTHLY", dayOfMonth: "1" });
+      setCommitmentDialogOpen(false);
+      await refreshPlanning();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "No se pudo crear compromiso.";
+      setError(message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function runProjection() {
+    setSaving(true);
+    setError(null);
+    try {
+      await apiPost("/v1/projections/run", {
+        horizonMonths: Number(projectionForm.horizonMonths || "6"),
+        monthlySavingsGoal: Number(projectionForm.monthlySavingsGoal || "0"),
+        monthlyInvestmentGoal: Number(projectionForm.monthlyInvestmentGoal || "0"),
+        includeCommitments: true,
+      });
+      setProjectionDialogOpen(false);
+      await refreshPlanning();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "No se pudo ejecutar proyeccion.";
+      setError(message);
+    } finally {
+      setSaving(false);
     }
   }
 
   useEffect(() => {
-    loadCoreData();
+    void refreshData();
   }, []);
 
   useEffect(() => {
-    if (!activeSessionId) {
-      setCopilotMessages([]);
-      return;
+    if (tab === "copilot") {
+      void refreshSessions();
+      void refreshCopilotModels();
     }
-    loadMessages(activeSessionId);
+  }, [tab]);
+
+  useEffect(() => {
+    if (activeSessionId) {
+      void refreshMessages(activeSessionId);
+    }
   }, [activeSessionId]);
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [copilotMessages]);
-
-  async function createAccount(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-
-    try {
-      await fetchJson(`${API_BASE}/v1/accounts`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...accountForm,
-          balanceCurrent: Number(accountForm.balanceCurrent || 0),
-        }),
-      });
-
-      setAccountForm({
-        code: "",
-        name: "",
-        currency: "COP",
-        accountType: "CHECKING",
-        balanceCurrent: "0",
-      });
-      await loadCoreData();
-    } catch (err: any) {
-      setError(err?.message || "No se pudo crear la cuenta");
+    if (tab === "reports") {
+      void refreshReports();
     }
-  }
+  }, [tab]);
 
-  async function createTransaction(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-
-    try {
-      await fetchJson(`${API_BASE}/v1/transactions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...txForm,
-          amount: Number(txForm.amount || 0),
-          accountId: Number(txForm.accountId),
-        }),
-      });
-
-      setTxForm((prev) => ({ ...prev, description: "", amount: "" }));
-      await loadCoreData();
-    } catch (err: any) {
-      setError(err?.message || "No se pudo crear la transacción");
+  useEffect(() => {
+    if (tab === "planning" || tab === "dashboard") {
+      void refreshPlanning();
     }
-  }
+  }, [tab, planningMonth]);
 
-  async function createInvestment(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
+  useEffect(() => {
+    if (tab !== "dashboard") return;
 
-    try {
-      await fetchJson(`${API_BASE}/v1/investments`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          ...investmentForm,
-          quantity: Number(investmentForm.quantity || 0),
-          avgCost: Number(investmentForm.avgCost || 0),
-          accountId: investmentForm.accountId ? Number(investmentForm.accountId) : undefined,
-        }),
-      });
-
-      setInvestmentForm({
-        symbol: "",
-        name: "",
-        assetType: "CRYPTO",
-        quantity: "1",
-        avgCost: "0",
-        currency: "USD",
-        accountId: "",
-        notes: "",
-      });
-
-      await loadCoreData();
-    } catch (err: any) {
-      setError(err?.message || "No se pudo crear la inversión");
-    }
-  }
-
-  async function createSession(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-
-    try {
-      const data = await fetchJson(`${API_BASE}/v1/copilot/sessions`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          title: sessionForm.title.trim() || undefined,
-          mode: sessionForm.mode,
-        }),
-      });
-
-      const session = data.data as CopilotSession;
-      setSessionForm({ title: "", mode: "ACCOUNTANT" });
-      await loadCoreData();
-      setActiveSessionId(session.id);
-    } catch (err: any) {
-      setError(err?.message || "No se pudo crear la sesión");
-    }
-  }
-
-  async function sendCopilotMessage(e: React.FormEvent) {
-    e.preventDefault();
-
-    if (!activeSessionId) {
-      setError("Crea o selecciona una sesión de Copilot primero");
-      return;
-    }
-
-    const text = chatInput.trim();
-    if (!text) return;
-
-    setCopilotSending(true);
-    setError(null);
-
-    const optimistic: CopilotMessage = {
-      id: Date.now(),
-      role: "user",
-      content: text,
-      created_at: new Date().toISOString(),
+    const refreshLive = () => {
+      void refreshData();
+      void refreshPlanning();
     };
 
-    setCopilotMessages((prev) => [...prev, optimistic]);
-    setChatInput("");
+    const intervalId = window.setInterval(refreshLive, 12000);
+    const onFocus = () => refreshLive();
+    window.addEventListener("focus", onFocus);
 
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [tab, planningMonth]);
+
+  const filteredTx = useMemo(() => {
+    const q = txSearch.trim().toLowerCase();
+    return transactions.filter((tx) => {
+      const textTags = tx.tags.map((item) => item.name.toLowerCase()).join(" ");
+      const matchSearch =
+        !q ||
+        (tx.description || "").toLowerCase().includes(q) ||
+        tx.account_name.toLowerCase().includes(q) ||
+        (tx.category_name || "").toLowerCase().includes(q) ||
+        (tx.counterparty_name || "").toLowerCase().includes(q) ||
+        textTags.includes(q);
+      const matchDirection = txDirection === "ALL" || tx.direction === txDirection;
+      const matchStatus = txStatus === "ALL" || tx.status === txStatus;
+      const matchCategory = txCategoryFilter === "ALL" || String(tx.category_id || "") === txCategoryFilter;
+      const matchCounterparty = txCounterpartyFilter === "ALL" || String(tx.counterparty_id || "") === txCounterpartyFilter;
+      const matchTag = txTagFilter === "ALL" || tx.tags.some((tag) => String(tag.id) === txTagFilter);
+      return matchSearch && matchDirection && matchStatus && matchCategory && matchCounterparty && matchTag;
+    });
+  }, [transactions, txSearch, txDirection, txStatus, txCategoryFilter, txCounterpartyFilter, txTagFilter]);
+
+  const reportTotals = useMemo(() => {
+    return cashflowReport.reduce(
+      (acc, row) => {
+        acc.inflow += Number(row.inflow || 0);
+        acc.outflow += Number(row.outflow || 0);
+        acc.net += Number(row.net || 0);
+        return acc;
+      },
+      { inflow: 0, outflow: 0, net: 0 }
+    );
+  }, [cashflowReport]);
+
+  const accountTotals = useMemo(() => {
+    return accounts.reduce(
+      (acc, account) => {
+        const amount = toNumber(account.balance_current);
+        if (amount >= 0) acc.positive += amount;
+        else acc.negative += Math.abs(amount);
+        if (account.is_active) acc.active += 1;
+        else acc.inactive += 1;
+        return acc;
+      },
+      { positive: 0, negative: 0, active: 0, inactive: 0 }
+    );
+  }, [accounts]);
+
+  const txMetrics = useMemo(() => {
+    return filteredTx.reduce(
+      (acc, tx) => {
+        const amount = toNumber(tx.amount);
+        if (tx.direction === "INFLOW") {
+          acc.inflowCount += 1;
+          acc.inflowTotal += amount;
+        } else {
+          acc.outflowCount += 1;
+          acc.outflowTotal += amount;
+        }
+        if (tx.status === "PENDING") acc.pending += 1;
+        if (tx.splits.length > 0) acc.withSplits += 1;
+        if (tx.attachments.length > 0) acc.withAttachments += 1;
+        return acc;
+      },
+      {
+        inflowCount: 0,
+        inflowTotal: 0,
+        outflowCount: 0,
+        outflowTotal: 0,
+        pending: 0,
+        withSplits: 0,
+        withAttachments: 0,
+      }
+    );
+  }, [filteredTx]);
+
+  const recentTransactions = useMemo(() => {
+    return [...transactions]
+      .sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime())
+      .slice(0, 4);
+  }, [transactions]);
+
+  const topAccounts = useMemo(() => {
+    return [...accounts]
+      .sort((a, b) => Math.abs(toNumber(b.balance_current)) - Math.abs(toNumber(a.balance_current)))
+      .slice(0, 3);
+  }, [accounts]);
+
+  const dashboardBudgets = useMemo(() => {
+    const rank = (status: Budget["deficit_summary"]["status"]) => {
+      switch (status) {
+        case "over_budget":
+          return 0;
+        case "underfunded":
+          return 1;
+        case "warning":
+          return 2;
+        default:
+          return 3;
+      }
+    };
+
+    return [...budgets].sort((a, b) => {
+      const statusDiff = rank(a.deficit_summary.status) - rank(b.deficit_summary.status);
+      if (statusDiff !== 0) return statusDiff;
+
+      const aAllocated = Math.max(1, toNumber(a.allocated_amount));
+      const bAllocated = Math.max(1, toNumber(b.allocated_amount));
+      const aRatio = toNumber(a.actual_amount) / aAllocated;
+      const bRatio = toNumber(b.actual_amount) / bAllocated;
+      if (aRatio !== bRatio) return bRatio - aRatio;
+
+      return toNumber(b.actual_amount) - toNumber(a.actual_amount);
+    });
+  }, [budgets]);
+
+  const dashboardBudgetWindow = useMemo(() => {
+    if (dashboardBudgets.length <= DASHBOARD_BUDGET_PAGE_SIZE) {
+      return dashboardBudgets;
+    }
+    const maxStart = Math.max(0, dashboardBudgets.length - DASHBOARD_BUDGET_PAGE_SIZE);
+    const start = Math.min(dashboardBudgetStart, maxStart);
+    return dashboardBudgets.slice(start, start + DASHBOARD_BUDGET_PAGE_SIZE);
+  }, [dashboardBudgetStart, dashboardBudgets]);
+
+  const dashboardMonthOptions = useMemo(() => {
+    const base = new Date(`${planningMonth}-01T00:00:00`);
+    if (Number.isNaN(base.getTime())) return [planningMonth];
+    return Array.from({ length: 12 }, (_, index) => {
+      const date = new Date(base);
+      date.setMonth(base.getMonth() - 5 + index);
+      return date.toISOString().slice(0, 7);
+    });
+  }, [planningMonth]);
+  const dashboardBudgetMaxStart = Math.max(0, dashboardBudgets.length - DASHBOARD_BUDGET_PAGE_SIZE);
+  const dashboardBudgetCanPrev = dashboardBudgetStart > 0;
+  const dashboardBudgetCanNext = dashboardBudgetStart < dashboardBudgetMaxStart;
+
+  useEffect(() => {
+    setDashboardBudgetStart((prev) => Math.min(prev, dashboardBudgetMaxStart));
+  }, [dashboardBudgetMaxStart]);
+
+  const upcomingCommitments = useMemo(() => {
+    return [...commitments]
+      .filter((item) => item.is_active)
+      .sort((a, b) => new Date(a.next_run_at).getTime() - new Date(b.next_run_at).getTime())
+      .slice(0, 3);
+  }, [commitments]);
+
+  const maxCategoryTotal = useMemo(() => {
+    return Math.max(...categoryBreakdown.map((row) => Math.abs(Number(row.totalAmount || 0))), 1);
+  }, [categoryBreakdown]);
+
+  function goTab(nextTab: TabKey) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", nextTab);
+    router.replace(`/?${params.toString()}`, { scroll: false });
+  }
+
+  function goPlanningSection(nextSection: PlanningSectionKey) {
+    const params = new URLSearchParams(searchParams.toString());
+    params.set("tab", "planning");
+    params.set("planningSection", nextSection);
+    router.replace(`/?${params.toString()}`, { scroll: false });
+  }
+
+  const monthNet = (summary?.monthInflow || 0) - (summary?.monthOutflow || 0);
+  const positiveMonth = monthNet >= 0;
+  const latestTransaction = recentTransactions[0];
+  const nextCommitment = upcomingCommitments[0];
+  const monthCoach = positiveMonth
+    ? {
+        badge: "Mes respirando",
+        title: "Vas con margen para decidir.",
+        amount: formatMoney(monthNet, "COP"),
+        caption: "disponible despues de ingresos y egresos",
+        detail: "Buen momento para mover una parte a ahorro, inversion o dejarla como colchon.",
+      }
+    : {
+        badge: "Atencion suave",
+        title: "Hay que equilibrar el mes.",
+        amount: formatMoney(Math.abs(monthNet), "COP"),
+        caption: "por recuperar para cerrar en cero",
+        detail: "Empieza por revisar gastos recientes y los presupuestos con menos disponible.",
+      };
+  const planningSummaryCards = [
+    { label: "Entradas a deficit", value: String(monthlyFinanceSummary?.deficitEntryCount || 0), tone: "text-zinc-100" },
+    { label: "Maximo deficit", value: formatMoney(monthlyFinanceSummary?.maxDeficitAmount || 0, "COP"), tone: "text-rose-100" },
+    { label: "Deficit acumulado", value: formatMoney(monthlyFinanceSummary?.totalRecordedDeficitAmount || 0, "COP"), tone: "text-amber-100" },
+    { label: "Saldo activo", value: formatMoney(monthlyFinanceSummary?.totalBalance || 0, "COP"), tone: "text-cyan-100" },
+  ] as const;
+  const dashboardActions = [
+    { key: "tx", label: "Nueva transaccion", caption: "Movimiento diario", icon: CreditCard, onClick: () => { setBudgetTxContext(null); setTransactionDialogOpen(true); }, tone: "primary" as const },
+    { key: "account", label: "Nueva cuenta", caption: "Alta breve", icon: Wallet, onClick: () => setAccountDialogOpen(true) },
+    { key: "budget", label: "Nuevo presupuesto", caption: "Control del mes", icon: CalendarDays, onClick: () => openCreateBudgetDialog() },
+    { key: "commitment", label: "Nuevo compromiso", caption: "Pago recurrente", icon: Clock3, onClick: () => setCommitmentDialogOpen(true) },
+    { key: "projection", label: "Nueva proyeccion", caption: "Escenario futuro", icon: BarChart3, onClick: () => setProjectionDialogOpen(true) },
+  ];
+
+  function toggleTag(tagId: string) {
+    setTxForm((prev) => {
+      const exists = prev.tagIds.includes(tagId);
+      return {
+        ...prev,
+        tagIds: exists ? prev.tagIds.filter((item) => item !== tagId) : [...prev.tagIds, tagId],
+      };
+    });
+  }
+
+  function startBudgetExpense(budget: Budget) {
+    const firstCategoryId = budget.lines[0]?.category_id ? String(budget.lines[0].category_id) : "";
+    setBudgetTxContext({
+      budgetId: budget.id,
+      budgetName: budget.name,
+      categoryNames: budget.lines.map((line) => line.category_name).filter(Boolean),
+    });
+    setTxForm((prev) => ({
+      ...prev,
+      direction: "OUTFLOW",
+      categoryId: firstCategoryId || prev.categoryId,
+    }));
+    setTransactionDialogOpen(true);
+  }
+
+  async function createAccount() {
+    setSaving(true);
+    setError(null);
     try {
-      await fetchJson(`${API_BASE}/v1/copilot/chat`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          sessionId: activeSessionId,
-          message: text,
-        }),
+      await apiPost("/v1/accounts", {
+        code: accountForm.code.trim(),
+        name: accountForm.name.trim(),
+        currency: accountForm.currency.toUpperCase(),
+        accountType: accountForm.accountType,
+        balanceCurrent: Number(accountForm.balanceCurrent || "0"),
+      });
+      setAccountForm({ code: "", name: "", currency: "COP", accountType: "CHECKING", balanceCurrent: "0" });
+      setAccountDialogOpen(false);
+      await refreshData();
+      await refreshPlanning();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "No se pudo crear cuenta.";
+      setError(message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function createCategory() {
+    setSaving(true);
+    setError(null);
+    try {
+      const created = await apiPost<Category>("/v1/categories", {
+        code: categoryForm.code.trim().toUpperCase(),
+        name: categoryForm.name.trim(),
+        direction: categoryForm.direction,
+      });
+      setCategoryForm({ code: "", name: "", direction: "BOTH" });
+      await refreshData();
+      return created;
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "No se pudo crear categoria.";
+      setError(message);
+      return null;
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function createBudgetCategory() {
+    const created = await createCategory();
+    if (!created) return;
+
+    setBudgetForm((prev) => ({ ...prev, categoryId: String(created.id) }));
+    setBudgetCategoryComposerOpen(false);
+  }
+
+  async function createCounterparty() {
+    setSaving(true);
+    setError(null);
+    try {
+      await apiPost("/v1/counterparties", {
+        name: counterpartyForm.name.trim(),
+        type: counterpartyForm.type,
+      });
+      setCounterpartyForm({ name: "", type: "OTHER" });
+      await refreshData();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "No se pudo crear contraparte.";
+      setError(message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function createTag() {
+    setSaving(true);
+    setError(null);
+    try {
+      await apiPost("/v1/tags", {
+        name: tagForm.name.trim(),
+        color: tagForm.color.trim() || undefined,
+      });
+      setTagForm({ name: "", color: "" });
+      await refreshData();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "No se pudo crear tag.";
+      setError(message);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function createTransaction() {
+    setSaving(true);
+    setError(null);
+    try {
+      await apiPost("/v1/transactions", {
+        transactionDate: txForm.transactionDate,
+        description: txForm.description || undefined,
+        amount: Number(txForm.amount),
+        currency: txForm.currency.toUpperCase(),
+        direction: txForm.direction,
+        status: txForm.status,
+        accountId: Number(txForm.accountId),
+        categoryId: txForm.categoryId ? Number(txForm.categoryId) : undefined,
+        counterpartyId: txForm.counterpartyId ? Number(txForm.counterpartyId) : undefined,
+        notes: txForm.notes || undefined,
+        tags: txForm.tagIds.map((id) => Number(id)),
+        splits: useSplits
+          ? splitDrafts
+              .filter((split) => Number(split.amount) > 0)
+              .map((split) => ({
+                description: split.description || undefined,
+                amount: Number(split.amount),
+                categoryId: split.categoryId ? Number(split.categoryId) : undefined,
+                counterpartyId: split.counterpartyId ? Number(split.counterpartyId) : undefined,
+              }))
+          : undefined,
+        attachments: useAttachments
+          ? attachmentDrafts
+              .filter((item) => item.fileName.trim() && item.fileUrl.trim())
+              .map((item) => ({
+                fileName: item.fileName.trim(),
+                fileUrl: item.fileUrl.trim(),
+                mimeType: item.mimeType.trim() || undefined,
+                fileSize: item.fileSize ? Number(item.fileSize) : undefined,
+              }))
+          : undefined,
       });
 
-      await Promise.all([loadMessages(activeSessionId), loadCoreData()]);
-    } catch (err: any) {
-      setError(err?.message || "No se pudo enviar el mensaje al Copilot");
-      await loadMessages(activeSessionId);
+      setTxForm({
+        transactionDate: new Date().toISOString().slice(0, 10),
+        description: "",
+        amount: "",
+        currency: "COP",
+        direction: "OUTFLOW",
+        status: "POSTED",
+        accountId: "",
+        categoryId: "",
+        counterpartyId: "",
+        notes: "",
+        tagIds: [],
+      });
+      setUseSplits(false);
+      setSplitDrafts([{ description: "", amount: "", categoryId: "", counterpartyId: "" }]);
+      setUseAttachments(false);
+      setAttachmentDrafts([{ fileName: "", fileUrl: "", mimeType: "", fileSize: "" }]);
+      setBudgetTxContext(null);
+      setTransactionDialogOpen(false);
+      await refreshData();
+      await refreshPlanning();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "No se pudo crear transaccion.";
+      setError(message);
     } finally {
-      setCopilotSending(false);
+      setSaving(false);
+    }
+  }
+
+  async function sendCopilot() {
+    const input = copilotInput.trim();
+    if (!input) return;
+    setCopilotBusy(true);
+    setError(null);
+    try {
+      let sessionId = activeSessionId;
+      if (!sessionId) {
+        const created = await apiPost<CopilotSession>("/v1/copilot/sessions", { mode: "ACCOUNTANT" });
+        sessionId = created.id;
+        setActiveSessionId(sessionId);
+      }
+      const response = await apiPost<{ assistantMessage: CopilotMessage }>("/v1/copilot/chat", {
+        sessionId,
+        message: input,
+        model: copilotModel || undefined,
+      });
+      setMessages((prev) => [
+        ...prev,
+        { id: `tmp-${Date.now()}`, role: "user", content: input, created_at: new Date().toISOString() },
+        response.assistantMessage,
+      ]);
+      setCopilotInput("");
+      await refreshSessions();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "No se pudo enviar mensaje.";
+      setError(message);
+    } finally {
+      setCopilotBusy(false);
     }
   }
 
   return (
-    <div className="journal-shell">
-      <aside className="journal-sidebar">
-        <div className="sidebar-head">
-          <button type="button" className="sidebar-hamburger" aria-label="Menú">
-            ≡
-          </button>
-          <button type="button" className="sidebar-bolt" aria-label="Modo">
-            ⚡
-          </button>
-        </div>
-
-        <nav className="sidebar-nav" aria-label="Navegación principal">
-          {sidebarItems.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              className={`sidebar-item ${tab === item.id ? "active" : ""}`}
-              onClick={() => setTab(item.id)}
-              title={item.label}
-              aria-label={item.label}
-            >
-              <span>{item.icon}</span>
-            </button>
-          ))}
-        </nav>
-
-        <div className="sidebar-foot">
-          <button type="button" className="sidebar-item" title="Tema" aria-label="Tema">
-            ◌
-          </button>
-          <button type="button" className="sidebar-item" title="Salir" aria-label="Salir">
-            ↳
-          </button>
-        </div>
-      </aside>
-
-      <div className="journal-main">
-        <div className="journal-grid-bg" aria-hidden />
-        <main>
-          <section className="header">
-            <div>
-              <h1>{currentMeta.title}</h1>
-              <p>{currentMeta.subtitle}</p>
+    <div className={tab === "copilot" ? "h-full min-h-0 overflow-hidden pt-12 md:pt-0" : "min-h-screen bg-transparent overflow-x-hidden pt-12 pb-6 md:pt-0"}>
+      <main className={tab === "copilot" ? "h-full min-h-0 w-full mx-auto px-4 py-4 md:px-6 md:py-6 lg:px-8" : "w-full xl:max-w-[1600px] mx-auto px-4 py-4 md:px-6 md:py-8 lg:px-8"}>
+        {tab !== "copilot" && (
+          <>
+        <section className="section-enter ui-shell-card mb-6 rounded-[32px] p-5 md:p-6">
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="space-y-1">
+              <h1 className="text-[clamp(2rem,4vw,2.75rem)] font-semibold tracking-tight text-zinc-100">{TAB_META[tab]?.label || "Dashboard"}</h1>
+              <p className="text-sm text-zinc-400">{tab === "dashboard" ? "Bienvenido de nuevo, Juan Camilo." : TAB_META[tab]?.caption}</p>
             </div>
-            <div className="header-actions">
-              <span className="badge">API {API_BASE}</span>
-              <button className="primary-action" type="button">
-                ↗ Nueva Operación
-              </button>
-              <button className="secondary" onClick={loadCoreData} disabled={loading}>
-                {loading ? "Sincronizando..." : "Actualizar"}
-              </button>
+
+            <div className="flex items-center gap-2">
+                <Select value={planningMonth} onValueChange={setPlanningMonth}>
+                  <SelectTrigger className="ui-control h-11 w-[170px] rounded-2xl px-4">
+                    <div className="flex items-center gap-2">
+                      <CalendarDays className="h-4 w-4 text-zinc-400" />
+                      <SelectValue placeholder={formatMonthLabel(planningMonth)} />
+                    </div>
+                  </SelectTrigger>
+                <SelectContent className="border-zinc-800 bg-zinc-950 text-zinc-100">
+                  {dashboardMonthOptions.map((month) => (
+                    <SelectItem key={month} value={month}>
+                      {formatMonthLabel(month)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                onClick={() => void refreshData()}
+                disabled={loading}
+                className="ui-action h-11 rounded-2xl px-3"
+                aria-label="Actualizar informacion"
+                title="Actualizar"
+              >
+                <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="icon"
+                    className="ui-action-primary h-11 w-11 rounded-full"
+                    aria-label="Agregar elemento"
+                    title="Agregar"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-60 border-zinc-800 bg-zinc-950 text-zinc-100">
+                  <DropdownMenuLabel>Crear rapido</DropdownMenuLabel>
+                  <DropdownMenuSeparator className="bg-zinc-800" />
+                  <DropdownMenuItem onSelect={() => { setBudgetTxContext(null); setTransactionDialogOpen(true); }}>
+                    Nueva transaccion
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setAccountDialogOpen(true)}>Nueva cuenta</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => openCreateBudgetDialog()}>Nuevo presupuesto</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setCommitmentDialogOpen(true)}>Nuevo compromiso</DropdownMenuItem>
+                  <DropdownMenuItem onSelect={() => setProjectionDialogOpen(true)}>Nueva proyeccion</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
-          </section>
-
-          <section className="tabs">
-            {tabs.map((t) => (
-              <button key={t.id} type="button" className={`tab-btn ${tab === t.id ? "active" : ""}`} onClick={() => setTab(t.id)}>
-                {t.label}
-              </button>
-            ))}
-          </section>
-
-          {error ? (
-            <section className="card error" style={{ marginBottom: 10 }}>
-              {error}
-            </section>
-          ) : null}
-
-          {tab === "dashboard" && (
-            <section className="layout-grid" style={{ gap: 12 }}>
-          <div className="layout-grid three">
-            <article className="card kpi">
-              <span className="label">Saldo total</span>
-              <strong>{money(summary?.totalBalance || 0, "COP")}</strong>
-            </article>
-            <article className="card kpi">
-              <span className="label">Flujo del mes</span>
-              <strong className={dashboardNet >= 0 ? "text-ok" : "text-danger"}>{money(dashboardNet, "COP")}</strong>
-            </article>
-            <article className="card kpi">
-              <span className="label">Portfolio activo</span>
-              <strong>{money(summary?.investedTotal || 0, "USD")}</strong>
-              <p>{summary?.activePositions || 0} posiciones activas</p>
-            </article>
           </div>
 
-          <div className="layout-grid two">
-            <article className="card">
-              <h3 style={{ marginBottom: 8 }}>Cuentas recientes</h3>
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Cuenta</th>
-                      <th>Tipo</th>
-                      <th>Saldo</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {accounts.slice(0, 8).map((account) => (
-                      <tr key={account.id}>
-                        <td>{account.name}</td>
-                        <td>{account.account_type}</td>
-                        <td>{money(account.balance_current, account.currency)}</td>
-                      </tr>
-                    ))}
-                    {accounts.length === 0 && (
-                      <tr>
-                        <td colSpan={3} className="muted">
-                          Sin cuentas
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </article>
-
-            <article className="card">
-              <h3 style={{ marginBottom: 8 }}>Transacciones recientes</h3>
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Fecha</th>
-                      <th>Descripcion</th>
-                      <th>Monto</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {transactions.slice(0, 8).map((tx) => (
-                      <tr key={tx.id}>
-                        <td>{tx.transaction_date}</td>
-                        <td>{tx.description || "Sin descripcion"}</td>
-                        <td className={`amount ${tx.direction === "INFLOW" ? "in" : "out"}`}>
-                          {tx.direction === "INFLOW" ? "+" : "-"} {money(tx.amount, tx.currency)}
-                        </td>
-                      </tr>
-                    ))}
-                    {transactions.length === 0 && (
-                      <tr>
-                        <td colSpan={3} className="muted">
-                          Sin transacciones
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </article>
-          </div>
-            </section>
-          )}
-
-          {tab === "accounts" && (
-            <section className="layout-grid two">
-          <article className="card alt">
-            <h3 style={{ marginBottom: 8 }}>Nueva cuenta</h3>
-            <form onSubmit={createAccount}>
-              <label>
-                Codigo
-                <input
-                  value={accountForm.code}
-                  onChange={(e) => setAccountForm((prev) => ({ ...prev, code: e.target.value }))}
-                  placeholder="BANCOLOMBIA_AHORROS"
-                  required
-                />
-              </label>
-              <label>
-                Nombre
-                <input
-                  value={accountForm.name}
-                  onChange={(e) => setAccountForm((prev) => ({ ...prev, name: e.target.value }))}
-                  placeholder="Bancolombia Ahorros"
-                  required
-                />
-              </label>
-              <div className="layout-grid two" style={{ gap: 8 }}>
-                <label>
-                  Moneda
-                  <input
-                    value={accountForm.currency}
-                    onChange={(e) => setAccountForm((prev) => ({ ...prev, currency: e.target.value.toUpperCase() }))}
-                  />
-                </label>
-                <label>
-                  Tipo
-                  <select
-                    value={accountForm.accountType}
-                    onChange={(e) => setAccountForm((prev) => ({ ...prev, accountType: e.target.value }))}
-                  >
-                    <option value="CHECKING">CHECKING</option>
-                    <option value="SAVINGS">SAVINGS</option>
-                    <option value="CREDIT_CARD">CREDIT_CARD</option>
-                    <option value="CASH">CASH</option>
-                    <option value="INVESTMENT">INVESTMENT</option>
-                    <option value="LOAN">LOAN</option>
-                    <option value="OTHER">OTHER</option>
-                  </select>
-                </label>
-              </div>
-              <label>
-                Saldo inicial
-                <input
-                  type="number"
-                  step="0.01"
-                  value={accountForm.balanceCurrent}
-                  onChange={(e) => setAccountForm((prev) => ({ ...prev, balanceCurrent: e.target.value }))}
-                />
-              </label>
-              <button type="submit">Crear cuenta</button>
-            </form>
-          </article>
-
-          <article className="card">
-            <h3 style={{ marginBottom: 8 }}>Listado de cuentas</h3>
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>ID</th>
-                    <th>Codigo</th>
-                    <th>Nombre</th>
-                    <th>Tipo</th>
-                    <th>Saldo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {accounts.map((account) => (
-                    <tr key={account.id}>
-                      <td>{account.id}</td>
-                      <td>{account.code}</td>
-                      <td>{account.name}</td>
-                      <td>{account.account_type}</td>
-                      <td>{money(account.balance_current, account.currency)}</td>
-                    </tr>
-                  ))}
-                  {accounts.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="muted">
-                        Sin cuentas
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </article>
-            </section>
-          )}
-
-          {tab === "transactions" && (
-            <section className="layout-grid two">
-          <article className="card alt">
-            <h3 style={{ marginBottom: 8 }}>Nueva transacción</h3>
-            <form onSubmit={createTransaction}>
-              <label>
-                Fecha
-                <input
-                  type="date"
-                  value={txForm.transactionDate}
-                  onChange={(e) => setTxForm((prev) => ({ ...prev, transactionDate: e.target.value }))}
-                  required
-                />
-              </label>
-              <label>
-                Descripción
-                <input
-                  value={txForm.description}
-                  onChange={(e) => setTxForm((prev) => ({ ...prev, description: e.target.value }))}
-                />
-              </label>
-              <div className="layout-grid two" style={{ gap: 8 }}>
-                <label>
-                  Tipo
-                  <select
-                    value={txForm.direction}
-                    onChange={(e) => setTxForm((prev) => ({ ...prev, direction: e.target.value }))}
-                  >
-                    <option value="OUTFLOW">OUTFLOW</option>
-                    <option value="INFLOW">INFLOW</option>
-                  </select>
-                </label>
-                <label>
-                  Estado
-                  <select value={txForm.status} onChange={(e) => setTxForm((prev) => ({ ...prev, status: e.target.value }))}>
-                    <option value="POSTED">POSTED</option>
-                    <option value="PENDING">PENDING</option>
-                    <option value="RECONCILED">RECONCILED</option>
-                    <option value="VOID">VOID</option>
-                  </select>
-                </label>
-              </div>
-              <div className="layout-grid two" style={{ gap: 8 }}>
-                <label>
-                  Moneda
-                  <input value={txForm.currency} onChange={(e) => setTxForm((prev) => ({ ...prev, currency: e.target.value.toUpperCase() }))} />
-                </label>
-                <label>
-                  Monto
-                  <input
-                    type="number"
-                    step="0.01"
-                    min="0"
-                    value={txForm.amount}
-                    onChange={(e) => setTxForm((prev) => ({ ...prev, amount: e.target.value }))}
-                    required
-                  />
-                </label>
-              </div>
-              <label>
-                Cuenta
-                <select value={txForm.accountId} onChange={(e) => setTxForm((prev) => ({ ...prev, accountId: e.target.value }))} required>
-                  <option value="">Selecciona una cuenta</option>
-                  {accounts.map((account) => (
-                    <option key={account.id} value={account.id}>
-                      {account.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <button type="submit">Registrar transacción</button>
-            </form>
-          </article>
-
-          <article className="card">
-            <h3 style={{ marginBottom: 8 }}>Historial</h3>
-            <div className="filters">
-              <input
-                placeholder="Buscar descripción/cuenta"
-                value={txFilter.search}
-                onChange={(e) => setTxFilter((prev) => ({ ...prev, search: e.target.value }))}
-              />
-              <select value={txFilter.direction} onChange={(e) => setTxFilter((prev) => ({ ...prev, direction: e.target.value }))}>
-                <option value="ALL">Dirección: todas</option>
-                <option value="INFLOW">INFLOW</option>
-                <option value="OUTFLOW">OUTFLOW</option>
-              </select>
-              <select value={txFilter.status} onChange={(e) => setTxFilter((prev) => ({ ...prev, status: e.target.value }))}>
-                <option value="ALL">Estado: todos</option>
-                <option value="POSTED">POSTED</option>
-                <option value="PENDING">PENDING</option>
-                <option value="RECONCILED">RECONCILED</option>
-                <option value="VOID">VOID</option>
-              </select>
-            </div>
-
-            <div className="table-wrap">
-              <table>
-                <thead>
-                  <tr>
-                    <th>Fecha</th>
-                    <th>Descripción</th>
-                    <th>Cuenta</th>
-                    <th>Estado</th>
-                    <th>Monto</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredTransactions.map((tx) => (
-                    <tr key={tx.id}>
-                      <td>{tx.transaction_date}</td>
-                      <td>{tx.description || "Sin descripción"}</td>
-                      <td>{tx.account_name}</td>
-                      <td>{tx.status}</td>
-                      <td className={`amount ${tx.direction === "INFLOW" ? "in" : "out"}`}>
-                        {tx.direction === "INFLOW" ? "+" : "-"} {money(tx.amount, tx.currency)}
-                      </td>
-                    </tr>
-                  ))}
-                  {filteredTransactions.length === 0 && (
-                    <tr>
-                      <td colSpan={5} className="muted">
-                        Sin resultados
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </article>
-            </section>
-          )}
-
-          {tab === "portfolio" && (
-            <section className="layout-grid two">
-          <article className="card alt">
-            <h3 style={{ marginBottom: 8 }}>Nueva posición</h3>
-            <form onSubmit={createInvestment}>
-              <div className="layout-grid two" style={{ gap: 8 }}>
-                <label>
-                  Símbolo
-                  <input
-                    value={investmentForm.symbol}
-                    onChange={(e) => setInvestmentForm((prev) => ({ ...prev, symbol: e.target.value.toUpperCase() }))}
-                    required
-                  />
-                </label>
-                <label>
-                  Nombre
-                  <input value={investmentForm.name} onChange={(e) => setInvestmentForm((prev) => ({ ...prev, name: e.target.value }))} required />
-                </label>
-              </div>
-
-              <div className="layout-grid two" style={{ gap: 8 }}>
-                <label>
-                  Tipo de activo
-                  <select value={investmentForm.assetType} onChange={(e) => setInvestmentForm((prev) => ({ ...prev, assetType: e.target.value }))}>
-                    <option value="CRYPTO">CRYPTO</option>
-                    <option value="STOCK">STOCK</option>
-                    <option value="ETF">ETF</option>
-                    <option value="FUND">FUND</option>
-                    <option value="BOND">BOND</option>
-                    <option value="OTHER">OTHER</option>
-                  </select>
-                </label>
-                <label>
-                  Moneda
-                  <input
-                    value={investmentForm.currency}
-                    onChange={(e) => setInvestmentForm((prev) => ({ ...prev, currency: e.target.value.toUpperCase() }))}
-                  />
-                </label>
-              </div>
-
-              <div className="layout-grid two" style={{ gap: 8 }}>
-                <label>
-                  Cantidad
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.00000001"
-                    value={investmentForm.quantity}
-                    onChange={(e) => setInvestmentForm((prev) => ({ ...prev, quantity: e.target.value }))}
-                  />
-                </label>
-                <label>
-                  Costo promedio
-                  <input
-                    type="number"
-                    min="0"
-                    step="0.00000001"
-                    value={investmentForm.avgCost}
-                    onChange={(e) => setInvestmentForm((prev) => ({ ...prev, avgCost: e.target.value }))}
-                  />
-                </label>
-              </div>
-
-              <label>
-                Cuenta asociada (opcional)
-                <select value={investmentForm.accountId} onChange={(e) => setInvestmentForm((prev) => ({ ...prev, accountId: e.target.value }))}>
-                  <option value="">Sin cuenta asociada</option>
-                  {accounts.map((account) => (
-                    <option key={account.id} value={account.id}>
-                      {account.name}
-                    </option>
-                  ))}
-                </select>
-              </label>
-
-              <label>
-                Notas
-                <textarea value={investmentForm.notes} onChange={(e) => setInvestmentForm((prev) => ({ ...prev, notes: e.target.value }))} />
-              </label>
-
-              <button type="submit">Crear posición</button>
-            </form>
-          </article>
-
-          <article className="card">
-            <h3 style={{ marginBottom: 8 }}>Portfolio</h3>
-            <div className="portfolio-grid">
-              {investments.map((item) => (
-                <div className="portfolio-item" key={item.id}>
-                  <strong>
-                    {item.symbol} · {item.name}
-                  </strong>
-                  <p>{item.asset_type}</p>
-                  <p>
-                    Cantidad: {num(item.quantity).toLocaleString("es-CO")} · Avg: {money(item.avg_cost, item.currency)}
-                  </p>
-                  <p>Invertido: {money(item.invested_amount, item.currency)}</p>
-                  <p>Cuenta: {item.account_name || "Sin cuenta"}</p>
+          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
+            <Card className="ui-kpi rounded-[22px]">
+              <CardContent className="flex items-start gap-3 p-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-cyan-500/15 text-cyan-200">
+                  <Wallet className="h-5 w-5" />
                 </div>
-              ))}
-              {investments.length === 0 && <p className="muted">No hay inversiones registradas.</p>}
-            </div>
-          </article>
-            </section>
-          )}
+                <div className="min-w-0">
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-zinc-500">Saldo consolidado</p>
+                  <p className="mt-1 text-2xl font-semibold text-zinc-100">{formatMoney(summary?.totalBalance || 0, "COP")}</p>
+                  <p className="mt-1 text-sm text-zinc-400">Patrimonio neto</p>
+                </div>
+              </CardContent>
+            </Card>
 
-          {tab === "copilot" && (
-            <section className="chat-layout">
-          <article className="card alt">
-            <h3 style={{ marginBottom: 8 }}>Sesiones</h3>
-            <form onSubmit={createSession} style={{ marginBottom: 8 }}>
-              <label>
-                Título (opcional)
-                <input value={sessionForm.title} onChange={(e) => setSessionForm((prev) => ({ ...prev, title: e.target.value }))} />
-              </label>
-              <label>
-                Modo
-                <select value={sessionForm.mode} onChange={(e) => setSessionForm((prev) => ({ ...prev, mode: e.target.value }))}>
-                  <option value="ACCOUNTANT">ACCOUNTANT</option>
-                  <option value="ANALYST">ANALYST</option>
-                </select>
-              </label>
-              <button type="submit">Crear sesión</button>
-            </form>
+            <Card className="ui-kpi rounded-[22px]">
+              <CardContent className="flex items-start gap-3 p-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-200">
+                  <ArrowUpRight className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-zinc-500">Ingresos mes</p>
+                  <p className="mt-1 text-2xl font-semibold text-zinc-100">{formatMoney(summary?.monthInflow || 0, "COP")}</p>
+                  <p className="mt-1 text-sm text-zinc-400">{summary?.monthInflow ? "Entradas del periodo" : "Sin ingresos"}</p>
+                </div>
+              </CardContent>
+            </Card>
 
-            <div className="chat-sessions">
-              {copilotSessions.map((session) => (
-                <button
-                  key={session.id}
-                  className={`session-item ${session.id === activeSessionId ? "active" : ""}`}
-                  onClick={() => setActiveSessionId(session.id)}
+            <Card className="ui-kpi rounded-[22px]">
+              <CardContent className="flex items-start gap-3 p-4">
+                <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-rose-500/15 text-rose-200">
+                  <ArrowDownLeft className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-zinc-500">Egresos mes</p>
+                  <p className="mt-1 text-2xl font-semibold text-zinc-100">{formatMoney(summary?.monthOutflow || 0, "COP")}</p>
+                  <p className="mt-1 text-sm text-zinc-400">{transactions.length} transacciones</p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className="ui-kpi rounded-[22px]">
+              <CardContent className="flex items-start gap-3 p-4">
+                <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${positiveMonth ? "bg-cyan-500/15 text-cyan-200" : "bg-amber-500/15 text-amber-200"}`}>
+                  <BarChart3 className="h-5 w-5" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[11px] uppercase tracking-[0.16em] text-zinc-500">Neto del mes</p>
+                  <p className={`mt-1 text-2xl font-semibold ${positiveMonth ? "text-cyan-200" : "text-amber-200"}`}>{formatMoney(monthNet, "COP")}</p>
+                  <p className="mt-1 text-sm text-zinc-400">{positiveMonth ? "Excedente mensual" : "Deficit mensual"}</p>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+
+        <section className="section-enter mb-6 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-2 md:p-3 backdrop-blur-sm md:hidden">
+          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
+            {MOBILE_TABS.map((item) => {
+              const tabConfig = TAB_META[item];
+              const Icon = tabConfig.icon;
+              const active = tab === item;
+              return (
+                <Button
+                  key={item}
+                  variant="outline"
+                  onClick={() => goTab(item)}
+                  className={`h-auto justify-start rounded-xl border px-3 py-2 text-left transition-all ${
+                    active
+                      ? "border-cyan-500/60 bg-cyan-500/15 text-cyan-100 shadow-md shadow-cyan-500/15"
+                      : "border-zinc-800 bg-zinc-950/70 text-zinc-300 hover:border-zinc-700 hover:bg-zinc-900"
+                  }`}
                 >
-                  <div>{session.title}</div>
-                  <small className="muted">
-                    {session.mode} · {session.message_count} mensajes
-                  </small>
-                </button>
-              ))}
-              {copilotSessions.length === 0 && <p className="muted" style={{ padding: 10 }}>Sin sesiones</p>}
-            </div>
-          </article>
+                  <div className="flex items-center gap-2">
+                    <Icon className={`h-4 w-4 shrink-0 ${active ? "text-cyan-300" : "text-zinc-500"}`} />
+                    <div>
+                      <div className="text-xs font-semibold">{tabConfig.label}</div>
+                      <div className="text-[10px] opacity-80">{tabConfig.caption}</div>
+                    </div>
+                  </div>
+                </Button>
+              );
+            })}
+          </div>
+        </section>
+          </>
+        )}
 
-          <article className="chat-panel">
-            <div className="messages">
-              <div className="muted">
-                {activeSession ? `${activeSession.title} (${activeSession.mode})` : "Selecciona o crea una sesión"}
+        {error && (
+          <Card className="section-enter border-rose-400/40 bg-rose-500/10 mb-6">
+            <CardContent className="py-4 text-rose-100">{error}</CardContent>
+          </Card>
+        )}
+
+        <Dialog open={accountDialogOpen} onOpenChange={setAccountDialogOpen}>
+          <DialogContent className="sm:max-w-[560px]">
+            <DialogHeader>
+              <DialogTitle>Nueva cuenta</DialogTitle>
+              <DialogDescription>Alta rapida para sumar una cuenta operativa al sistema.</DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="space-y-1.5">
+                <Label>Codigo</Label>
+                <Input className="h-11 border-white/10 bg-zinc-950/85" value={accountForm.code} onChange={(e) => setAccountForm((p) => ({ ...p, code: e.target.value }))} />
               </div>
-              {copilotMessages.map((msg) => (
-                <div key={msg.id} className={`message ${msg.role === "user" ? "user" : "assistant"}`}>
-                  {msg.content}
+              <div className="space-y-1.5">
+                <Label>Nombre</Label>
+                <Input className="h-11 border-white/10 bg-zinc-950/85" value={accountForm.name} onChange={(e) => setAccountForm((p) => ({ ...p, name: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Moneda</Label>
+                <Input className="h-11 border-white/10 bg-zinc-950/85" value={accountForm.currency} onChange={(e) => setAccountForm((p) => ({ ...p, currency: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Tipo</Label>
+                <Select value={accountForm.accountType} onValueChange={(v) => setAccountForm((p) => ({ ...p, accountType: v as AccountType }))}>
+                  <SelectTrigger className="border-white/10 bg-zinc-950/85">
+                    <SelectValue placeholder="Selecciona tipo de cuenta" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {(["CHECKING", "SAVINGS", "CREDIT_CARD", "CASH", "INVESTMENT", "LOAN", "OTHER"] as AccountType[]).map((item) => (
+                      <SelectItem key={item} value={item}>
+                        {getAccountTypeLabel(item)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <div className="rounded-2xl border border-dashed border-zinc-800/90 bg-zinc-950/60 p-3">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div>
+                      <p className="text-sm font-medium text-zinc-100">Â¿No ves tu categoria?</p>
+                      <p className="text-xs text-zinc-500">Creala aqui y quedara disponible para presupuestos y transacciones.</p>
+                    </div>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setBudgetCategoryComposerOpen((prev) => !prev)}
+                      className="rounded-full border-zinc-700 bg-zinc-950 text-zinc-100 hover:bg-zinc-900"
+                    >
+                      {budgetCategoryComposerOpen ? "Cerrar" : "Abrir"}
+                    </Button>
+                  </div>
+                  {budgetCategoryComposerOpen && (
+                    <div className="mt-3 space-y-3">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        <div className="space-y-1.5">
+                          <Label>Codigo</Label>
+                          <Input
+                            className="h-11 border-white/10 bg-zinc-950/85"
+                            value={categoryForm.code}
+                            onChange={(e) => setCategoryForm((p) => ({ ...p, code: e.target.value }))}
+                            placeholder="Ej: HOGAR"
+                          />
+                        </div>
+                        <div className="space-y-1.5">
+                          <Label>Nombre</Label>
+                          <Input
+                            className="h-11 border-white/10 bg-zinc-950/85"
+                            value={categoryForm.name}
+                            onChange={(e) => setCategoryForm((p) => ({ ...p, name: e.target.value }))}
+                            placeholder="Ej: Servicios hogar"
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-1.5">
+                        <Label>Direccion</Label>
+                        <Select value={categoryForm.direction} onValueChange={(v) => setCategoryForm((p) => ({ ...p, direction: v as CategoryDirection }))}>
+                          <SelectTrigger className="border-white/10 bg-zinc-950/85">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="BOTH">Mixta</SelectItem>
+                            <SelectItem value="INFLOW">Ingreso</SelectItem>
+                            <SelectItem value="OUTFLOW">Egreso</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <Button
+                        type="button"
+                        onClick={() => void createBudgetCategory()}
+                        disabled={saving}
+                        className="w-full bg-cyan-600 hover:bg-cyan-500 text-white"
+                      >
+                        Crear y usar categoria
+                      </Button>
+                    </div>
+                  )}
                 </div>
-              ))}
-              <div ref={messagesEndRef} />
+              </div>
+              <div className="space-y-1.5 md:col-span-2">
+                <Label>Saldo inicial</Label>
+                <Input className="h-11 border-white/10 bg-zinc-950/85" type="number" value={accountForm.balanceCurrent} onChange={(e) => setAccountForm((p) => ({ ...p, balanceCurrent: e.target.value }))} />
+              </div>
+              <div className="md:col-span-2">
+                <Button onClick={() => void createAccount()} disabled={saving} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white">
+                  Crear cuenta
+                </Button>
+              </div>
             </div>
+          </DialogContent>
+        </Dialog>
 
-            <form className="chat-input" onSubmit={sendCopilotMessage}>
-              <textarea
-                placeholder="Escribe una consulta financiera: saldos, gastos, movimientos, resumen mensual..."
-                value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
-                disabled={!activeSessionId || copilotSending}
-              />
-              <button type="submit" disabled={!activeSessionId || copilotSending}>
-                {copilotSending ? "Enviando..." : "Enviar"}
-              </button>
-            </form>
-          </article>
-            </section>
-          )}
-        </main>
-      </div>
+        <Dialog open={transactionDialogOpen} onOpenChange={(open) => {
+          setTransactionDialogOpen(open);
+          if (!open) setBudgetTxContext(null);
+        }}>
+          <DialogContent className="sm:max-w-[680px]">
+            <DialogHeader>
+              <DialogTitle>Nueva transaccion</DialogTitle>
+              <DialogDescription>Captura rapida desde la portada. Para splits y catalogos avanzados sigue disponible el tab de transacciones.</DialogDescription>
+            </DialogHeader>
+            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              {budgetTxContext && (
+                <div className="md:col-span-2 rounded-2xl border border-cyan-500/30 bg-cyan-500/10 px-4 py-3">
+                  <p className="text-sm font-semibold text-cyan-100">Este gasto quedara vinculado a {budgetTxContext.budgetName}</p>
+                  <p className="mt-1 text-xs text-cyan-100/75">
+                    Para que cuente dentro del presupuesto, guarda la transaccion con una de estas categorias: {budgetTxContext.categoryNames.join(", ")}.
+                  </p>
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <Label>Fecha</Label>
+                <Input className="h-11 border-white/10 bg-zinc-950/85" type="date" value={txForm.transactionDate} onChange={(e) => setTxForm((p) => ({ ...p, transactionDate: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Cuenta</Label>
+                <Select value={txForm.accountId} onValueChange={(v) => setTxForm((p) => ({ ...p, accountId: v }))}>
+                  <SelectTrigger className="border-white/10 bg-zinc-950/85">
+                    <SelectValue placeholder="Selecciona cuenta" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {accounts.map((item) => (
+                      <SelectItem key={item.id} value={String(item.id)}>
+                        {item.name} Â· {getAccountTypeLabel(item.account_type)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2 md:col-span-2">
+                <Label>Direccion</Label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(["INFLOW", "OUTFLOW"] as TxDirection[]).map((direction) => {
+                    const active = txForm.direction === direction;
+                    const Icon = direction === "INFLOW" ? ArrowUpRight : ArrowDownLeft;
+                    return (
+                      <Button
+                        key={direction}
+                        type="button"
+                        variant="outline"
+                        onClick={() => setTxForm((p) => ({ ...p, direction }))}
+                        aria-pressed={active}
+                        className={`h-auto justify-start rounded-2xl border px-4 py-3 text-left transition-all ${
+                          active
+                            ? "border-cyan-400/40 bg-cyan-500/12 text-cyan-50 shadow-[0_0_0_1px_rgba(34,211,238,0.12)]"
+                            : "border-white/10 bg-zinc-950/80 text-zinc-200 hover:border-cyan-500/25 hover:bg-zinc-900/90"
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl ${active ? "bg-cyan-500/15 text-cyan-200" : "bg-zinc-900 text-zinc-500"}`}>
+                            <Icon className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <div className="text-sm font-semibold">{getDirectionLabel(direction)}</div>
+                            <div className="text-[11px] text-zinc-500">{getDirectionHint(direction)}</div>
+                          </div>
+                        </div>
+                      </Button>
+                    );
+                  })}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Monto</Label>
+                <Input className="h-11 border-white/10 bg-zinc-950/85" type="number" value={txForm.amount} onChange={(e) => setTxForm((p) => ({ ...p, amount: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5 md:col-span-2">
+                <Label>Descripcion</Label>
+                <Input className="h-11 border-white/10 bg-zinc-950/85" value={txForm.description} onChange={(e) => setTxForm((p) => ({ ...p, description: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Categoria</Label>
+                <Select value={txForm.categoryId || NONE_VALUE} onValueChange={(v) => setTxForm((p) => ({ ...p, categoryId: v === NONE_VALUE ? "" : v }))}>
+                  <SelectTrigger className="border-white/10 bg-zinc-950/85">
+                    <SelectValue placeholder="Opcional" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE_VALUE}>Sin categoria</SelectItem>
+                    {categories.map((item) => (
+                      <SelectItem key={item.id} value={String(item.id)}>
+                        {item.name} Â· {getCategoryDirectionLabel(item.direction)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Contraparte</Label>
+                <Select value={txForm.counterpartyId || NONE_VALUE} onValueChange={(v) => setTxForm((p) => ({ ...p, counterpartyId: v === NONE_VALUE ? "" : v }))}>
+                  <SelectTrigger className="border-white/10 bg-zinc-950/85">
+                    <SelectValue placeholder="Opcional" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE_VALUE}>Sin contraparte</SelectItem>
+                    {counterparties.map((item) => (
+                      <SelectItem key={item.id} value={String(item.id)}>
+                        {item.name} Â· {getCounterpartyTypeLabel(item.type)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="md:col-span-2">
+                <Button onClick={() => void createTransaction()} disabled={saving} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white">
+                  Guardar transaccion
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+
+        {tab !== "planning" && (
+          <>
+        <Dialog
+          open={budgetDialogOpen}
+          onOpenChange={(open) => {
+            setBudgetDialogOpen(open);
+            if (!open) resetBudgetDialogState();
+          }}
+        >
+          <DialogContent className="sm:max-w-[560px]">
+            <DialogHeader>
+              <DialogTitle>{budgetDialogMode === "edit" ? "Editar presupuesto" : "Crear presupuesto"}</DialogTitle>
+              <DialogDescription>
+                {budgetDialogMode === "edit"
+                  ? "Ajusta el nombre, la categoria o el tope del presupuesto seleccionado."
+                  : "Define un limite mensual sobre una categoria real de tu base."}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label>Nombre</Label>
+                <Input className="h-11 border-white/10 bg-zinc-950/85" value={budgetForm.name} onChange={(e) => setBudgetForm((p) => ({ ...p, name: e.target.value }))} placeholder="Ej: Presupuesto hogar" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Categoria</Label>
+                <Select value={budgetForm.categoryId} onValueChange={(v) => setBudgetForm((p) => ({ ...p, categoryId: v }))}>
+                  <SelectTrigger className="border-white/10 bg-zinc-950/85">
+                    <SelectValue placeholder="Selecciona una categoria" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={String(category.id)}>
+                        {category.name} Â· {getCategoryDirectionLabel(category.direction)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Tope mensual (COP)</Label>
+                <Input className="h-11 border-white/10 bg-zinc-950/85" type="number" value={budgetForm.limitAmount} onChange={(e) => setBudgetForm((p) => ({ ...p, limitAmount: e.target.value }))} placeholder="0" />
+              </div>
+              <Button onClick={() => void saveBudget()} disabled={saving} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white">
+                {budgetDialogMode === "edit" ? "Actualizar presupuesto" : "Guardar presupuesto"}
+              </Button>
+            </div>
+              </DialogContent>
+            </Dialog>
+
+        <Dialog open={commitmentDialogOpen} onOpenChange={setCommitmentDialogOpen}>
+          <DialogContent className="sm:max-w-[560px]">
+            <DialogHeader>
+              <DialogTitle>Crear compromiso recurrente</DialogTitle>
+              <DialogDescription>Registra pagos fijos sin mezclar la portada con formularios largos.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label>Nombre</Label>
+                <Input className="h-11 border-white/10 bg-zinc-950/85" value={commitmentForm.name} onChange={(e) => setCommitmentForm((p) => ({ ...p, name: e.target.value }))} placeholder="Ej: Gimnasio" />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Monto (COP)</Label>
+                <Input className="h-11 border-white/10 bg-zinc-950/85" type="number" value={commitmentForm.amount} onChange={(e) => setCommitmentForm((p) => ({ ...p, amount: e.target.value }))} placeholder="0" />
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label>Cadencia</Label>
+                  <Select value={commitmentForm.cadence} onValueChange={(v) => setCommitmentForm((p) => ({ ...p, cadence: v as Commitment["cadence"] }))}>
+                    <SelectTrigger className="border-white/10 bg-zinc-950/85">
+                      <SelectValue placeholder="Selecciona" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="WEEKLY">{getCadenceLabel("WEEKLY")}</SelectItem>
+                      <SelectItem value="MONTHLY">{getCadenceLabel("MONTHLY")}</SelectItem>
+                      <SelectItem value="YEARLY">{getCadenceLabel("YEARLY")}</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label>Dia del mes</Label>
+                  <Input className="h-11 border-white/10 bg-zinc-950/85" type="number" min={1} max={31} value={commitmentForm.dayOfMonth} onChange={(e) => setCommitmentForm((p) => ({ ...p, dayOfMonth: e.target.value }))} />
+                </div>
+              </div>
+              <Button onClick={() => void createCommitment()} disabled={saving} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white">
+                Guardar compromiso
+              </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
+
+        <Dialog open={projectionDialogOpen} onOpenChange={setProjectionDialogOpen}>
+          <DialogContent className="sm:max-w-[560px]">
+            <DialogHeader>
+              <DialogTitle>Crear proyeccion de flujo</DialogTitle>
+              <DialogDescription>Simula ahorro e inversion futura sin salir del dashboard.</DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <div className="space-y-1.5">
+                <Label>Horizonte (meses)</Label>
+                <Input className="h-11 border-white/10 bg-zinc-950/85" type="number" min={1} max={36} value={projectionForm.horizonMonths} onChange={(e) => setProjectionForm((p) => ({ ...p, horizonMonths: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Ahorro mensual meta (COP)</Label>
+                <Input className="h-11 border-white/10 bg-zinc-950/85" type="number" value={projectionForm.monthlySavingsGoal} onChange={(e) => setProjectionForm((p) => ({ ...p, monthlySavingsGoal: e.target.value }))} />
+              </div>
+              <div className="space-y-1.5">
+                <Label>Inversion mensual meta (COP)</Label>
+                <Input className="h-11 border-white/10 bg-zinc-950/85" type="number" value={projectionForm.monthlyInvestmentGoal} onChange={(e) => setProjectionForm((p) => ({ ...p, monthlyInvestmentGoal: e.target.value }))} />
+              </div>
+              <Button onClick={() => void runProjection()} disabled={saving} className="w-full bg-cyan-600 hover:bg-cyan-500 text-white">
+                Ejecutar proyeccion
+              </Button>
+            </div>
+              </DialogContent>
+            </Dialog>
+          </>
+        )}
+
+        {tab === "dashboard" && (
+          <DashboardView
+            monthCoach={monthCoach}
+            positiveMonth={positiveMonth}
+            dashboardActions={dashboardActions}
+            dashboardBudgets={dashboardBudgets}
+            dashboardBudgetWindow={dashboardBudgetWindow}
+            dashboardBudgetStart={dashboardBudgetStart}
+            setDashboardBudgetStart={setDashboardBudgetStart}
+            dashboardBudgetMaxStart={dashboardBudgetMaxStart}
+            dashboardBudgetCanPrev={dashboardBudgetCanPrev}
+            dashboardBudgetCanNext={dashboardBudgetCanNext}
+            startBudgetExpense={startBudgetExpense}
+            openEditBudgetDialog={openEditBudgetDialog}
+            upcomingCommitments={upcomingCommitments}
+            nextCommitment={nextCommitment}
+            onReviewExpenses={() => goTab("transactions")}
+            recentTransactions={recentTransactions}
+            latestTransaction={latestTransaction}
+            topAccounts={topAccounts}
+          />
+        )}
+
+        {tab === "accounts" && (
+          <AccountsView
+            accounts={accounts}
+            accountTotals={accountTotals}
+            accountForm={accountForm}
+            setAccountForm={setAccountForm}
+            onCreateAccount={() => void createAccount()}
+            saving={saving}
+          />
+        )}
+
+        {tab === "transactions" && (
+          <TransactionsView
+            transactions={transactions}
+            accounts={accounts}
+            categories={categories}
+            counterparties={counterparties}
+            tags={tags}
+            filteredTx={filteredTx}
+            txMetrics={txMetrics}
+            txSearch={txSearch}
+            setTxSearch={setTxSearch}
+            txDirection={txDirection}
+            setTxDirection={setTxDirection}
+            txStatus={txStatus}
+            setTxStatus={setTxStatus}
+            txCategoryFilter={txCategoryFilter}
+            setTxCategoryFilter={setTxCategoryFilter}
+            txCounterpartyFilter={txCounterpartyFilter}
+            setTxCounterpartyFilter={setTxCounterpartyFilter}
+            txTagFilter={txTagFilter}
+            setTxTagFilter={setTxTagFilter}
+            txForm={txForm}
+            setTxForm={setTxForm}
+            toggleTag={toggleTag}
+            useSplits={useSplits}
+            setUseSplits={setUseSplits}
+            splitDrafts={splitDrafts}
+            setSplitDrafts={setSplitDrafts}
+            useAttachments={useAttachments}
+            setUseAttachments={setUseAttachments}
+            attachmentDrafts={attachmentDrafts}
+            setAttachmentDrafts={setAttachmentDrafts}
+            onCreateTransaction={() => void createTransaction()}
+            categoryForm={categoryForm}
+            setCategoryForm={setCategoryForm}
+            onCreateCategory={() => void createCategory()}
+            counterpartyForm={counterpartyForm}
+            setCounterpartyForm={setCounterpartyForm}
+            onCreateCounterparty={() => void createCounterparty()}
+            tagForm={tagForm}
+            setTagForm={setTagForm}
+            onCreateTag={() => void createTag()}
+            saving={saving}
+          />
+        )}
+
+        {tab === "reports" && (
+          <ReportsView
+            reportRange={reportRange}
+            setReportRange={setReportRange}
+            onRefresh={() => void refreshReports()}
+            reportsLoading={reportsLoading}
+            reportTotals={reportTotals}
+            cashflowReport={cashflowReport}
+            categoryBreakdown={categoryBreakdown}
+          />
+        )}
+
+        {tab === "planning" && (
+          <PlanningView
+            planningSection={planningSection}
+            goPlanningSection={goPlanningSection}
+            planningSections={PLANNING_SECTIONS}
+            planningMonth={planningMonth}
+            setPlanningMonth={setPlanningMonth}
+            planningLoading={planningLoading}
+            refreshPlanning={() => void refreshPlanning()}
+            planningSummaryCards={planningSummaryCards}
+            budgets={budgets}
+            budgetDeficitEvents={budgetDeficitEvents}
+            commitments={commitments}
+            projectionScenarios={projectionScenarios}
+            monthlyFinanceSummary={monthlyFinanceSummary}
+            categories={categories}
+            budgetDialogOpen={budgetDialogOpen}
+            setBudgetDialogOpen={setBudgetDialogOpen}
+            resetBudgetDialogState={resetBudgetDialogState}
+            openCreateBudgetDialog={openCreateBudgetDialog}
+            budgetDialogMode={budgetDialogMode}
+            budgetForm={budgetForm}
+            setBudgetForm={setBudgetForm}
+            saveBudget={() => void saveBudget()}
+            budgetCategoryComposerOpen={budgetCategoryComposerOpen}
+            setBudgetCategoryComposerOpen={setBudgetCategoryComposerOpen}
+            createBudgetCategory={() => void createBudgetCategory()}
+            categoryForm={categoryForm}
+            setCategoryForm={setCategoryForm}
+            commitmentDialogOpen={commitmentDialogOpen}
+            setCommitmentDialogOpen={setCommitmentDialogOpen}
+            commitmentForm={commitmentForm}
+            setCommitmentForm={setCommitmentForm}
+            createCommitment={() => void createCommitment()}
+            projectionDialogOpen={projectionDialogOpen}
+            setProjectionDialogOpen={setProjectionDialogOpen}
+            projectionForm={projectionForm}
+            setProjectionForm={setProjectionForm}
+            runProjection={() => void runProjection()}
+            saving={saving}
+          />
+        )}
+
+        {tab === "investments" && (
+          <InvestmentsView
+            investments={investments}
+            summary={summary}
+          />
+        )}
+
+        {tab === "copilot" && (
+          <div className="section-enter ui-shell-card h-full min-h-0 overflow-hidden rounded-[28px]">
+            <ChatInterfaceFinance />
+          </div>
+        )}
+
+        {tab === "settings" && <SettingsView />}
+      </main>
     </div>
+  );
+}
+
+export default function HomePage() {
+  const searchParams = useSearchParams();
+  const authMode = searchParams.get("auth");
+
+  if (authMode === "login") {
+    return <AuthLoginScreen />;
+  }
+
+  if (authMode === "callback") {
+    return <AuthCallbackScreen />;
+  }
+
+  return (
+    <Suspense fallback={<div className="p-6 text-sm text-zinc-500">Cargando...</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }

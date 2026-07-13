@@ -6,8 +6,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const repoRoot = path.resolve(__dirname, '..');
 
-function loadEnvLocal() {
-  const envPath = path.join(repoRoot, '.env.local');
+function loadEnvFile(filename) {
+  const envPath = path.join(repoRoot, filename);
   if (!fs.existsSync(envPath)) return;
   const raw = fs.readFileSync(envPath, 'utf8');
   for (const line of raw.split('\n')) {
@@ -24,9 +24,28 @@ function loadEnvLocal() {
   }
 }
 
-loadEnvLocal();
+loadEnvFile('.env.local');
+loadEnvFile('.env.vm');
 
-const endpoint = (process.env.HASURA_GRAPHQL_ENDPOINT || 'http://localhost:8086').replace(/\/+$/, '');
+function resolveHasuraEndpoint(rawEndpoint) {
+  if (!rawEndpoint) return rawEndpoint;
+  const preferred = process.env.HASURA_GRAPHQL_ENDPOINT_HOST || process.env.HASURA_ENDPOINT_HOST;
+  if (preferred) return preferred.replace(/\/+$/, '');
+  try {
+    const parsed = new URL(rawEndpoint);
+    if (parsed.hostname === 'hasura') {
+      parsed.hostname = '127.0.0.1';
+      if (!parsed.port || parsed.port === '8080') {
+        parsed.port = '8085';
+      }
+    }
+    return parsed.toString().replace(/\/+$/, '');
+  } catch {
+    return rawEndpoint.replace(/\/+$/, '');
+  }
+}
+
+const endpoint = resolveHasuraEndpoint(process.env.HASURA_GRAPHQL_ENDPOINT || 'http://localhost:8086');
 const adminSecret = process.env.HASURA_GRAPHQL_ADMIN_SECRET || '';
 const metadataPath = path.join(repoRoot, 'hasura', 'metadata', 'metadata.json');
 
@@ -50,19 +69,39 @@ const payload = {
   },
 };
 
-const res = await fetch(`${endpoint}/v1/metadata`, {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'x-hasura-admin-secret': adminSecret,
-  },
-  body: JSON.stringify(payload),
-});
-
-const data = await res.json().catch(() => ({}));
-if (!res.ok || data?.error) {
-  console.error('Hasura metadata apply failed:', JSON.stringify(data, null, 2));
-  process.exit(1);
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-console.log('Hasura metadata applied successfully.');
+const maxAttempts = Number(process.env.HASURA_APPLY_RETRIES || 8);
+let lastError = null;
+
+for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+  try {
+    const res = await fetch(`${endpoint}/v1/metadata`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-hasura-admin-secret': adminSecret,
+      },
+      body: JSON.stringify(payload),
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data?.error) {
+      lastError = new Error(`Hasura metadata apply failed: ${JSON.stringify(data)}`);
+    } else {
+      console.log('Hasura metadata applied successfully.');
+      process.exit(0);
+    }
+  } catch (error) {
+    lastError = error;
+  }
+
+  const waitMs = Math.min(5000, 600 * attempt);
+  console.warn(`Hasura apply attempt ${attempt}/${maxAttempts} failed. Retrying in ${waitMs}ms...`);
+  await sleep(waitMs);
+}
+
+console.error('Hasura metadata apply failed after retries:', lastError?.message || lastError);
+process.exit(1);

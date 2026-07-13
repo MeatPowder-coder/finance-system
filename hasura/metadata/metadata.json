@@ -32,7 +32,7 @@
               "role": "user",
               "permission": {
                 "columns": ["id", "code", "name", "currency", "account_type", "balance_current", "is_active", "created_at", "updated_at"],
-                "filter": {},
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
                 "allow_aggregations": true
               }
             }
@@ -42,7 +42,8 @@
               "role": "user",
               "permission": {
                 "columns": ["code", "name", "currency", "account_type", "balance_current", "is_active"],
-                "check": {}
+                "check": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "set": { "owner_user_id": "X-Hasura-User-Id" }
               }
             }
           ],
@@ -51,8 +52,8 @@
               "role": "user",
               "permission": {
                 "columns": ["name", "currency", "account_type", "balance_current", "is_active"],
-                "filter": {},
-                "check": {}
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "check": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } }
               }
             }
           ],
@@ -60,7 +61,7 @@
             {
               "role": "user",
               "permission": {
-                "filter": {}
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } }
               }
             }
           ]
@@ -72,7 +73,7 @@
               "role": "user",
               "permission": {
                 "columns": ["id", "code", "name", "direction", "created_at"],
-                "filter": {},
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
                 "allow_aggregations": true
               }
             }
@@ -82,7 +83,8 @@
               "role": "user",
               "permission": {
                 "columns": ["code", "name", "direction"],
-                "check": {}
+                "check": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "set": { "owner_user_id": "X-Hasura-User-Id" }
               }
             }
           ],
@@ -91,8 +93,8 @@
               "role": "user",
               "permission": {
                 "columns": ["code", "name", "direction"],
-                "filter": {},
-                "check": {}
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "check": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } }
               }
             }
           ],
@@ -100,7 +102,7 @@
             {
               "role": "user",
               "permission": {
-                "filter": {}
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } }
               }
             }
           ]
@@ -120,7 +122,7 @@
               "role": "user",
               "permission": {
                 "columns": ["id", "transaction_date", "description", "amount", "currency", "direction", "status", "account_id", "category_id", "external_ref", "created_at", "updated_at"],
-                "filter": {},
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
                 "allow_aggregations": true
               }
             }
@@ -130,7 +132,8 @@
               "role": "user",
               "permission": {
                 "columns": ["transaction_date", "description", "amount", "currency", "direction", "status", "account_id", "category_id", "external_ref"],
-                "check": {}
+                "check": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "set": { "owner_user_id": "X-Hasura-User-Id" }
               }
             }
           ],
@@ -139,8 +142,8 @@
               "role": "user",
               "permission": {
                 "columns": ["transaction_date", "description", "amount", "currency", "direction", "status", "account_id", "category_id", "external_ref"],
-                "filter": {},
-                "check": {}
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "check": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } }
               }
             }
           ],
@@ -148,7 +151,7 @@
             {
               "role": "user",
               "permission": {
-                "filter": {}
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } }
               }
             }
           ]
@@ -160,7 +163,7 @@
               "role": "user",
               "permission": {
                 "columns": ["id", "name", "period", "currency", "start_date", "end_date", "created_at"],
-                "filter": {},
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
                 "allow_aggregations": true
               }
             }
@@ -170,7 +173,8 @@
               "role": "user",
               "permission": {
                 "columns": ["name", "period", "currency", "start_date", "end_date"],
-                "check": {}
+                "check": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "set": { "owner_user_id": "X-Hasura-User-Id" }
               }
             }
           ],
@@ -179,8 +183,8 @@
               "role": "user",
               "permission": {
                 "columns": ["name", "period", "currency", "start_date", "end_date"],
-                "filter": {},
-                "check": {}
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "check": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } }
               }
             }
           ],
@@ -188,7 +192,7 @@
             {
               "role": "user",
               "permission": {
-                "filter": {}
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } }
               }
             }
           ]
@@ -200,7 +204,7 @@
               "role": "user",
               "permission": {
                 "columns": ["id", "budget_id", "category_id", "limit_amount"],
-                "filter": {},
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
                 "allow_aggregations": true
               }
             }
@@ -210,7 +214,8 @@
               "role": "user",
               "permission": {
                 "columns": ["budget_id", "category_id", "limit_amount"],
-                "check": {}
+                "check": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "set": { "owner_user_id": "X-Hasura-User-Id" }
               }
             }
           ],
@@ -219,8 +224,8 @@
               "role": "user",
               "permission": {
                 "columns": ["budget_id", "category_id", "limit_amount"],
-                "filter": {},
-                "check": {}
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "check": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } }
               }
             }
           ],
@@ -228,7 +233,7 @@
             {
               "role": "user",
               "permission": {
-                "filter": {}
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } }
               }
             }
           ]
@@ -240,7 +245,7 @@
               "role": "user",
               "permission": {
                 "columns": ["id", "name", "cadence", "next_run_at", "is_active", "payload", "created_at"],
-                "filter": {},
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
                 "allow_aggregations": true
               }
             }
@@ -250,7 +255,8 @@
               "role": "user",
               "permission": {
                 "columns": ["name", "cadence", "next_run_at", "is_active", "payload"],
-                "check": {}
+                "check": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "set": { "owner_user_id": "X-Hasura-User-Id" }
               }
             }
           ],
@@ -259,8 +265,8 @@
               "role": "user",
               "permission": {
                 "columns": ["name", "cadence", "next_run_at", "is_active", "payload"],
-                "filter": {},
-                "check": {}
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "check": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } }
               }
             }
           ],
@@ -268,7 +274,7 @@
             {
               "role": "user",
               "permission": {
-                "filter": {}
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } }
               }
             }
           ]
@@ -288,7 +294,7 @@
               "role": "user",
               "permission": {
                 "columns": ["id", "symbol", "name", "asset_type", "quantity", "avg_cost", "currency", "account_id", "legacy_ref", "notes", "is_active", "created_at", "updated_at"],
-                "filter": {},
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
                 "allow_aggregations": true
               }
             }
@@ -298,7 +304,8 @@
               "role": "user",
               "permission": {
                 "columns": ["symbol", "name", "asset_type", "quantity", "avg_cost", "currency", "account_id", "legacy_ref", "notes", "is_active"],
-                "check": {}
+                "check": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "set": { "owner_user_id": "X-Hasura-User-Id" }
               }
             }
           ],
@@ -307,8 +314,8 @@
               "role": "user",
               "permission": {
                 "columns": ["symbol", "name", "asset_type", "quantity", "avg_cost", "currency", "account_id", "legacy_ref", "notes", "is_active"],
-                "filter": {},
-                "check": {}
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "check": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } }
               }
             }
           ],
@@ -316,7 +323,7 @@
             {
               "role": "user",
               "permission": {
-                "filter": {}
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } }
               }
             }
           ]
@@ -339,7 +346,7 @@
               "role": "user",
               "permission": {
                 "columns": ["id", "title", "mode", "created_at", "updated_at"],
-                "filter": {},
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
                 "allow_aggregations": true
               }
             }
@@ -349,7 +356,8 @@
               "role": "user",
               "permission": {
                 "columns": ["title", "mode"],
-                "check": {}
+                "check": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "set": { "owner_user_id": "X-Hasura-User-Id" }
               }
             }
           ],
@@ -358,8 +366,8 @@
               "role": "user",
               "permission": {
                 "columns": ["title", "mode"],
-                "filter": {},
-                "check": {}
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "check": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } }
               }
             }
           ],
@@ -367,7 +375,7 @@
             {
               "role": "user",
               "permission": {
-                "filter": {}
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } }
               }
             }
           ]
@@ -387,7 +395,7 @@
               "role": "user",
               "permission": {
                 "columns": ["id", "session_id", "role", "content", "created_at"],
-                "filter": {},
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
                 "allow_aggregations": true
               }
             }
@@ -397,7 +405,8 @@
               "role": "user",
               "permission": {
                 "columns": ["session_id", "role", "content"],
-                "check": {}
+                "check": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "set": { "owner_user_id": "X-Hasura-User-Id" }
               }
             }
           ],
@@ -406,8 +415,8 @@
               "role": "user",
               "permission": {
                 "columns": ["session_id", "role", "content"],
-                "filter": {},
-                "check": {}
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "check": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } }
               }
             }
           ],
@@ -415,7 +424,261 @@
             {
               "role": "user",
               "permission": {
-                "filter": {}
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } }
+              }
+            }
+          ]
+        },
+        {
+          "table": { "schema": "public", "name": "agent_runs" },
+          "array_relationships": [
+            {
+              "name": "steps",
+              "using": {
+                "foreign_key_constraint_on": {
+                  "table": { "schema": "public", "name": "agent_steps" },
+                  "column": "run_id"
+                }
+              }
+            },
+            {
+              "name": "tool_calls",
+              "using": {
+                "foreign_key_constraint_on": {
+                  "table": { "schema": "public", "name": "agent_tool_calls" },
+                  "column": "run_id"
+                }
+              }
+            },
+            {
+              "name": "proposals",
+              "using": {
+                "foreign_key_constraint_on": {
+                  "table": { "schema": "public", "name": "agent_proposals" },
+                  "column": "run_id"
+                }
+              }
+            }
+          ],
+          "select_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["id", "channel", "agent_name", "status", "user_message", "assistant_message", "model_requested", "model_resolved", "error_code", "error_message", "metadata", "started_at", "finished_at"],
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "allow_aggregations": true
+              }
+            }
+          ]
+        },
+        {
+          "table": { "schema": "public", "name": "agent_steps" },
+          "object_relationships": [
+            {
+              "name": "run",
+              "using": {
+                "foreign_key_constraint_on": "run_id"
+              }
+            }
+          ],
+          "select_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["id", "run_id", "step_name", "status", "notes", "payload", "started_at", "finished_at"],
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "allow_aggregations": true
+              }
+            }
+          ]
+        },
+        {
+          "table": { "schema": "public", "name": "agent_tool_calls" },
+          "object_relationships": [
+            {
+              "name": "run",
+              "using": {
+                "foreign_key_constraint_on": "run_id"
+              }
+            },
+            {
+              "name": "step",
+              "using": {
+                "foreign_key_constraint_on": "step_id"
+              }
+            }
+          ],
+          "select_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["id", "run_id", "step_id", "tool_name", "status", "input_payload", "output_payload", "error_message", "called_at"],
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "allow_aggregations": true
+              }
+            }
+          ]
+        },
+        {
+          "table": { "schema": "public", "name": "agent_proposals" },
+          "array_relationships": [
+            {
+              "name": "approvals",
+              "using": {
+                "foreign_key_constraint_on": {
+                  "table": { "schema": "public", "name": "agent_approvals" },
+                  "column": "proposal_id"
+                }
+              }
+            }
+          ],
+          "object_relationships": [
+            {
+              "name": "run",
+              "using": {
+                "foreign_key_constraint_on": "run_id"
+              }
+            }
+          ],
+          "select_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["id", "run_id", "proposal_type", "title", "summary", "payload", "status", "created_at", "resolved_at"],
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "allow_aggregations": true
+              }
+            }
+          ]
+        },
+        {
+          "table": { "schema": "public", "name": "agent_approvals" },
+          "object_relationships": [
+            {
+              "name": "proposal",
+              "using": {
+                "foreign_key_constraint_on": "proposal_id"
+              }
+            }
+          ],
+          "select_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["id", "proposal_id", "decision", "reason", "actor", "created_at"],
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "allow_aggregations": true
+              }
+            }
+          ]
+        },
+        {
+          "table": { "schema": "public", "name": "generated_views" },
+          "array_relationships": [
+            {
+              "name": "widgets",
+              "using": {
+                "foreign_key_constraint_on": {
+                  "table": { "schema": "public", "name": "generated_view_widgets" },
+                  "column": "view_id"
+                }
+              }
+            }
+          ],
+          "object_relationships": [
+            {
+              "name": "source_proposal",
+              "using": {
+                "foreign_key_constraint_on": "source_proposal_id"
+              }
+            }
+          ],
+          "select_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["id", "source_proposal_id", "slug", "title", "description", "layout", "status", "config", "created_at", "updated_at"],
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "allow_aggregations": true
+              }
+            }
+          ]
+        },
+        {
+          "table": { "schema": "public", "name": "generated_view_widgets" },
+          "object_relationships": [
+            {
+              "name": "view",
+              "using": {
+                "foreign_key_constraint_on": "view_id"
+              }
+            }
+          ],
+          "select_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["id", "view_id", "widget_key", "widget_type", "title", "position", "data_source", "config", "created_at"],
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "allow_aggregations": true
+              }
+            }
+          ]
+        },
+        {
+          "table": { "schema": "public", "name": "agent_reminders" },
+          "object_relationships": [
+            {
+              "name": "schedule",
+              "using": {
+                "foreign_key_constraint_on": "schedule_id"
+              }
+            }
+          ],
+          "select_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["id", "schedule_id", "title", "channel", "target", "message_template", "next_run_at", "status", "metadata", "created_at", "updated_at"],
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "allow_aggregations": true
+              }
+            }
+          ]
+        },
+        {
+          "table": { "schema": "public", "name": "agent_schedules" },
+          "array_relationships": [
+            {
+              "name": "reminders",
+              "using": {
+                "foreign_key_constraint_on": {
+                  "table": { "schema": "public", "name": "agent_reminders" },
+                  "column": "schedule_id"
+                }
+              }
+            }
+          ],
+          "select_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["id", "name", "cadence", "timezone", "is_active", "payload", "created_at", "updated_at"],
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "allow_aggregations": true
+              }
+            }
+          ]
+        },
+        {
+          "table": { "schema": "public", "name": "projection_scenarios" },
+          "select_permissions": [
+            {
+              "role": "user",
+              "permission": {
+                "columns": ["id", "proposal_id", "scenario_type", "title", "assumptions", "result", "created_at", "updated_at"],
+                "filter": { "owner_user_id": { "_eq": "X-Hasura-User-Id" } },
+                "allow_aggregations": true
               }
             }
           ]
