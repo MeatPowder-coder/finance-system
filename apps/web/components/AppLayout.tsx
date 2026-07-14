@@ -11,7 +11,7 @@ import { AnimatedBackground } from "./AnimatedBackground";
 import CopilotSidebarChat from "./CopilotSidebarChat";
 import { cn } from "@/lib/utils";
 import { clearAuthSession, persistAuthTokens, refreshAuthSession } from "@/lib/auth";
-import { buildFinanceHeaders, readFinanceAuthToken, resolveFinanceApiBaseUrl } from "@/lib/runtime-config";
+import { readFinanceAuthToken } from "@/lib/runtime-config";
 
 export default function AppLayout({
     children,
@@ -27,52 +27,6 @@ export default function AppLayout({
     const isDesktopEmbed = false;
     const [collapsed, setCollapsed] = useState(false);
     const [copilotRailOpen, setCopilotRailOpen] = useState(false);
-
-    useEffect(() => {
-        if (isAuthScreen) return;
-        const authToken = readFinanceAuthToken();
-        if (authToken) return;
-
-        const currentQuery = searchParams.toString();
-        const currentLocation = `${pathname}${currentQuery ? `?${currentQuery}` : ""}`;
-        const returnTo = encodeURIComponent(currentLocation || "/?tab=dashboard");
-        router.replace(`/?auth=login&returnTo=${returnTo}`);
-    }, [isAuthScreen, pathname, router, searchParams]);
-
-    useEffect(() => {
-        if (isAuthScreen) return;
-        const authToken = readFinanceAuthToken();
-        if (!authToken) return;
-
-        let cancelled = false;
-
-        async function validateSession() {
-          try {
-            const apiBase = resolveFinanceApiBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4100");
-            const res = await fetch(`${apiBase}/v1/auth/me`, {
-              cache: "no-store",
-              headers: buildFinanceHeaders(),
-            });
-
-            if (!cancelled && res.status === 401) {
-              clearAuthSession();
-              const currentQuery = searchParams.toString();
-              const currentLocation = `${pathname}${currentQuery ? `?${currentQuery}` : ""}`;
-              const returnTo = encodeURIComponent(currentLocation || "/?tab=dashboard");
-              router.replace(`/?auth=login&returnTo=${returnTo}`);
-            }
-          } catch {
-            // Si la verificacion falla por red, mantenemos la sesion local y dejamos
-            // que la API marque el estado en la siguiente llamada.
-          }
-        }
-
-        void validateSession();
-
-        return () => {
-          cancelled = true;
-        };
-    }, [isAuthScreen, pathname, router, searchParams]);
 
     useEffect(() => {
         if (isAuthScreen) return;
@@ -107,7 +61,7 @@ export default function AppLayout({
         };
     }, [isAuthScreen, pathname, router, searchParams]);
 
-    if (isAuthScreen) {
+    if (isAuthScreen || (!readFinanceAuthToken() && pathname === "/")) {
         return <div className="min-h-screen bg-background">{children}</div>;
     }
 

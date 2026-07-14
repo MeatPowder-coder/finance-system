@@ -47,7 +47,7 @@ import {
   isResourceOwner,
   normalizeSharePermissions,
   SHARE_PERMISSIONS,
-  SHARE_RESOURCE_TYPES,
+  SHARE_INVITATION_RESOURCE_TYPES,
 } from "./access.js";
 
 export const app = Fastify({
@@ -424,7 +424,7 @@ const shareInvitationSchema = z.object({
   message: z.string().trim().max(1000).optional(),
   expiresInDays: z.coerce.number().int().min(1).max(30).default(14),
   items: z.array(z.object({
-    resourceType: z.enum(SHARE_RESOURCE_TYPES),
+    resourceType: z.enum(SHARE_INVITATION_RESOURCE_TYPES),
     resourceId: z.string().trim().min(1).max(120),
     permissions: z.array(z.enum(SHARE_PERMISSIONS)).min(1).max(SHARE_PERMISSIONS.length).default(["READ"]),
   })).min(1).max(100),
@@ -432,6 +432,10 @@ const shareInvitationSchema = z.object({
 
 const shareGrantUpdateSchema = z.object({
   permissions: z.array(z.enum(SHARE_PERMISSIONS)).min(1).max(SHARE_PERMISSIONS.length),
+});
+
+const friendRequestSchema = z.object({
+  username: z.string().trim().min(3).max(48).regex(/^[a-zA-Z0-9](?:[a-zA-Z0-9-]*[a-zA-Z0-9])?$/),
 });
 
 const authGoogleExchangeSchema = z.object({
@@ -2133,34 +2137,267 @@ app.get("/v1/settings/integrations", async (_req) => {
   };
 });
 
+app.get("/v1/friends", async (req) => {
+  const userId = await getRequestOwnerUserId(req);
+  const result = await query(`
+    SELECT f.id, f.created_at, f.updated_at,
+           other.id AS user_id, other.username, other.name, other.picture
+      FROM finance_friendships f
+      JOIN auth_users other
+        ON other.id = CASE WHEN f.user_a_id = $1::uuid THEN f.user_b_id ELSE f.user_a_id END
+     WHERE (f.user_a_id = $1::uuid OR f.user_b_id = $1::uuid)
+       AND f.status = 'ACTIVE'
+       AND other.is_active = TRUE
+     ORDER BY LOWER(other.username) ASC`,
+    [userId]
+  );
+  return { data: result.rows };
+});
+
+app.get("/v1/friends/requests", async (req) => {
+  const userId = await getRequestOwnerUserId(req);
+  const [received, sent] = await Promise.all([
+    query(`
+      SELECT r.id, r.status, r.created_at, r.updated_at,
+             u.id AS user_id, u.username, u.name, u.picture
+        FROM finance_friend_requests r
+        JOIN auth_users u ON u.id = r.requester_user_id
+       WHERE r.addressee_user_id = $1
+       ORDER BY r.created_at DESC`, [userId]),
+    query(`
+      SELECT r.id, r.status, r.created_at, r.updated_at,
+             u.id AS user_id, u.username, u.name, u.picture
+        FROM finance_friend_requests r
+        JOIN auth_users u ON u.id = r.addressee_user_id
+       WHERE r.requester_user_id = $1
+       ORDER BY r.created_at DESC`, [userId]),
+  ]);
+  return { data: { received: received.rows, sent: sent.rows } };
+});
+
+app.get("/v1/friends/lookup", async (req) => {
+  const userId = await getRequestOwnerUserId(req);
+  const username = String((req as any).query?.username || "").trim();
+  if (!username) return { data: [] };
+
+  const result = await query(`
+    SELECT u.id, u.username, u.name, u.picture
+      FROM auth_users u
+     WHERE u.id <> $1
+       AND LOWER(u.username) = LOWER($2)
+       AND u.is_active = TRUE
+       AND NOT EXISTS (
+         SELECT 1
+           FROM finance_friendships f
+          WHERE f.status = 'ACTIVE'
+            AND f.user_a_id = LEAST($1::uuid, u.id)
+            AND f.user_b_id = GREATEST($1::uuid, u.id)
+       )
+     LIMIT 1`,
+    [userId, username]
+  );
+  return { data: result.rows };
+});
+
+app.post("/v1/friends/requests", async (req, reply) => {
+  const parsed = friendRequestSchema.safeParse((req as any).body || {});
+  if (!parsed.success) return reply.code(400).send({ error: "Username invalido.", details: parsed.error.flatten() });
+
+  const requesterId = await getRequestOwnerUserId(req);
+  const target = await query<{ id: string; username: string; name: string | null; picture: string | null }>(
+    `SELECT id, username, name, picture
+       FROM auth_users
+      WHERE LOWER(username) = LOWER($1)
+        AND is_active = TRUE
+      LIMIT 1`,
+    [parsed.data.username]
+  );
+  const addressee = target.rows[0];
+  if (!addressee) return reply.code(404).send({ error: "No encontramos ese nombre de usuario." });
+  if (addressee.id === requesterId) return reply.code(400).send({ error: "No puedes enviarte una solicitud a ti mismo." });
+
+  const existingFriendship = await query<{ id: string; status: string }>(
+    `SELECT id, status
+       FROM finance_friendships
+      WHERE user_a_id = LEAST($1::uuid, $2::uuid)
+        AND user_b_id = GREATEST($1::uuid, $2::uuid)
+      LIMIT 1`,
+    [requesterId, addressee.id]
+  );
+  if (existingFriendship.rows[0]?.status === "ACTIVE") {
+    return reply.code(409).send({ error: "Ya son amigos." });
+  }
+
+  const pending = await query(
+    `SELECT id
+       FROM finance_friend_requests
+      WHERE status = 'PENDING'
+        AND LEAST(requester_user_id, addressee_user_id) = LEAST($1::uuid, $2::uuid)
+        AND GREATEST(requester_user_id, addressee_user_id) = GREATEST($1::uuid, $2::uuid)
+      LIMIT 1`,
+    [requesterId, addressee.id]
+  );
+  if (pending.rows[0]) return reply.code(409).send({ error: "Ya existe una solicitud pendiente entre ustedes." });
+
+  const created = await withTransaction(async (client) => {
+    const request = await client.query<{ id: string }>(
+      `INSERT INTO finance_friend_requests (requester_user_id, addressee_user_id, status)
+       VALUES ($1, $2, 'PENDING')
+       RETURNING id`,
+      [requesterId, addressee.id]
+    );
+    await client.query(
+      `INSERT INTO finance_share_audit_log (actor_user_id, owner_user_id, grantee_user_id, action, metadata)
+       VALUES ($1, $1, $2, 'FRIEND_REQUEST_CREATED', $3::jsonb)`,
+      [requesterId, addressee.id, JSON.stringify({ requestId: request.rows[0].id })]
+    );
+    return request.rows[0].id;
+  });
+
+  return reply.code(201).send({ data: { id: created, status: "PENDING", user: addressee } });
+});
+
+app.post("/v1/friends/requests/:id/accept", async (req, reply) => {
+  const requestId = String((req.params as any)?.id || "");
+  const userId = await getRequestOwnerUserId(req);
+  const request = await query<{ requester_user_id: string; addressee_user_id: string; status: string }>(
+    `SELECT requester_user_id, addressee_user_id, status
+       FROM finance_friend_requests
+      WHERE id = $1 AND addressee_user_id = $2
+      LIMIT 1`,
+    [requestId, userId]
+  );
+  if (!request.rows[0]) return reply.code(404).send({ error: "Solicitud no encontrada." });
+  if (request.rows[0].status !== "PENDING") return reply.code(409).send({ error: "La solicitud ya no esta pendiente." });
+
+  const friendshipId = await withTransaction(async (client) => {
+    const friendship = await client.query<{ id: string }>(
+      `INSERT INTO finance_friendships (user_a_id, user_b_id, status)
+       VALUES (LEAST($1::uuid, $2::uuid), GREATEST($1::uuid, $2::uuid), 'ACTIVE')
+       ON CONFLICT (user_a_id, user_b_id)
+       DO UPDATE SET status = 'ACTIVE', removed_at = NULL, updated_at = NOW()
+       RETURNING id`,
+      [request.rows[0].requester_user_id, userId]
+    );
+    await client.query(
+      `UPDATE finance_friend_requests
+          SET status = 'ACCEPTED', responded_at = NOW(), updated_at = NOW()
+        WHERE id = $1`,
+      [requestId]
+    );
+    await client.query(
+      `INSERT INTO finance_share_audit_log (actor_user_id, owner_user_id, grantee_user_id, action, metadata)
+       VALUES ($1, $2, $1, 'FRIEND_REQUEST_ACCEPTED', $3::jsonb)`,
+      [userId, request.rows[0].requester_user_id, JSON.stringify({ requestId, friendshipId: friendship.rows[0].id })]
+    );
+    return friendship.rows[0].id;
+  });
+
+  return { data: { id: requestId, status: "ACCEPTED", friendshipId } };
+});
+
+app.post("/v1/friends/requests/:id/reject", async (req, reply) => {
+  const requestId = String((req.params as any)?.id || "");
+  const userId = await getRequestOwnerUserId(req);
+  const result = await query(
+    `UPDATE finance_friend_requests
+        SET status = 'REJECTED', responded_at = NOW(), updated_at = NOW()
+      WHERE id = $1 AND addressee_user_id = $2 AND status = 'PENDING'
+      RETURNING id`,
+    [requestId, userId]
+  );
+  if (!result.rowCount) return reply.code(404).send({ error: "Solicitud pendiente no encontrada." });
+  return { data: { id: requestId, status: "REJECTED" } };
+});
+
+app.post("/v1/friends/requests/:id/cancel", async (req, reply) => {
+  const requestId = String((req.params as any)?.id || "");
+  const userId = await getRequestOwnerUserId(req);
+  const result = await query(
+    `UPDATE finance_friend_requests
+        SET status = 'CANCELLED', responded_at = NOW(), updated_at = NOW()
+      WHERE id = $1 AND requester_user_id = $2 AND status = 'PENDING'
+      RETURNING id`,
+    [requestId, userId]
+  );
+  if (!result.rowCount) return reply.code(404).send({ error: "Solicitud pendiente no encontrada." });
+  return { data: { id: requestId, status: "CANCELLED" } };
+});
+
+app.delete("/v1/friends/:id", async (req, reply) => {
+  const friendshipId = String((req.params as any)?.id || "");
+  const userId = await getRequestOwnerUserId(req);
+
+  await withTransaction(async (client) => {
+    const friendship = await client.query<{ id: string; user_a_id: string; user_b_id: string }>(
+      `SELECT id, user_a_id, user_b_id
+         FROM finance_friendships
+        WHERE id = $1
+          AND (user_a_id = $2 OR user_b_id = $2)
+          AND status = 'ACTIVE'
+        FOR UPDATE`,
+      [friendshipId, userId]
+    );
+    if (!friendship.rows[0]) throw new ApiError(404, "FRIENDSHIP_NOT_FOUND", "Amistad no encontrada.");
+    const { user_a_id: userA, user_b_id: userB } = friendship.rows[0];
+
+    await client.query(
+      `UPDATE finance_share_invitations
+          SET status = 'REVOKED', updated_at = NOW()
+        WHERE status = 'PENDING'
+          AND (
+            friendship_id = $1
+            OR (friendship_id IS NULL AND (
+              (owner_user_id = $2 AND invitee_user_id = $3)
+              OR (owner_user_id = $3 AND invitee_user_id = $2)
+            ))
+          )`,
+      [friendshipId, userA, userB]
+    );
+    const grants = await client.query<{ id: string; owner_user_id: string; grantee_user_id: string; resource_type: string; resource_id: string }>(
+      `UPDATE finance_share_grants
+          SET status = 'REVOKED', updated_at = NOW()
+        WHERE status = 'ACTIVE'
+          AND ((owner_user_id = $1 AND grantee_user_id = $2) OR (owner_user_id = $2 AND grantee_user_id = $1))
+        RETURNING id, owner_user_id, grantee_user_id, resource_type, resource_id`,
+      [userA, userB]
+    );
+    for (const grant of grants.rows) {
+      await client.query(
+        `INSERT INTO finance_share_audit_log (actor_user_id, owner_user_id, grantee_user_id, grant_id, action, resource_type, resource_id)
+         VALUES ($1, $2, $3, $4, 'FRIENDSHIP_REMOVED', $5, $6)`,
+        [userId, grant.owner_user_id, grant.grantee_user_id, grant.id, grant.resource_type, grant.resource_id]
+      );
+    }
+    await client.query(
+      `UPDATE finance_friendships SET status = 'REMOVED', removed_at = NOW(), updated_at = NOW() WHERE id = $1`,
+      [friendshipId]
+    );
+  });
+
+  return { data: { id: friendshipId, status: "REMOVED" } };
+});
+
 app.get("/v1/shares/users", async (req) => {
   const userId = await getRequestOwnerUserId(req);
-  const rawQuery = String((req as any).query?.q || "").trim().toLowerCase();
-  if (rawQuery.length < 2) return { data: [] };
+  const username = String((req as any).query?.q || "").trim();
+  if (!username) return { data: [] };
   const result = await query(
-    `SELECT id, username, name, email, picture
+    `SELECT id, username, name, picture
        FROM auth_users
       WHERE id <> $1
         AND is_active = TRUE
-        AND (LOWER(username) LIKE $2 OR LOWER(COALESCE(name, '')) LIKE $2 OR LOWER(email) LIKE $2)
-      ORDER BY username ASC
-      LIMIT 10`,
-    [userId, `%${rawQuery}%`]
+        AND LOWER(username) = LOWER($2)
+      LIMIT 1`,
+    [userId, username]
   );
   return { data: result.rows };
 });
 
 app.get("/v1/shares/catalog", async (req) => {
   const userId = await getRequestOwnerUserId(req);
-  const [accounts, transactions, budgets, commitments, projections, deficits, reports] = await Promise.all([
+  const [accounts, budgets, commitments, projections, deficits, reports] = await Promise.all([
     query(`SELECT id, name, currency, balance_current FROM accounts WHERE owner_user_id = $1 ORDER BY name ASC`, [userId]),
-    query(`
-      SELECT t.id, t.description, t.transaction_date, t.amount, t.currency, t.direction, a.name AS account_name
-        FROM transactions t
-        LEFT JOIN accounts a ON a.id = t.account_id
-       WHERE t.owner_user_id = $1
-       ORDER BY t.transaction_date DESC, t.id DESC
-       LIMIT 100`, [userId]),
     query(`SELECT id, name, period, currency, start_date, end_date FROM budgets WHERE owner_user_id = $1 ORDER BY start_date DESC, name ASC`, [userId]),
     query(`SELECT id, name, cadence, next_run_at, is_active FROM recurring_rules WHERE owner_user_id = $1 ORDER BY next_run_at ASC, name ASC`, [userId]),
     query(`SELECT id, title, scenario_type, created_at FROM projection_scenarios WHERE owner_user_id = $1 ORDER BY created_at DESC LIMIT 50`, [userId]),
@@ -2176,7 +2413,6 @@ app.get("/v1/shares/catalog", async (req) => {
   return {
     data: {
       accounts: accounts.rows,
-      transactions: transactions.rows,
       budgets: budgets.rows,
       commitments: commitments.rows,
       projections: projections.rows,
@@ -2216,7 +2452,8 @@ app.get("/v1/shares", async (req) => {
         FROM finance_share_grants g
         JOIN auth_users owner ON owner.id = g.owner_user_id
         JOIN auth_users grantee ON grantee.id = g.grantee_user_id
-       WHERE g.owner_user_id = $1 OR g.grantee_user_id = $1
+       WHERE (g.owner_user_id = $1 OR g.grantee_user_id = $1)
+         AND g.resource_type <> 'TRANSACTION'
        ORDER BY g.updated_at DESC`, [userId]),
   ]);
   return { data: { sent: sent.rows, received: received.rows, grants: grants.rows } };
@@ -2234,6 +2471,22 @@ app.post("/v1/shares/invitations", async (req, reply) => {
   if (!invitee.rows[0]) return reply.code(404).send({ error: "No encontramos un usuario activo con ese nombre." });
   if (invitee.rows[0].id === ownerUserId) return reply.code(400).send({ error: "No puedes compartir contigo mismo." });
 
+  const friendship = await query<{ id: string }>(
+    `SELECT id
+       FROM finance_friendships
+      WHERE status = 'ACTIVE'
+        AND user_a_id = LEAST($1::uuid, $2::uuid)
+        AND user_b_id = GREATEST($1::uuid, $2::uuid)
+      LIMIT 1`,
+    [ownerUserId, invitee.rows[0].id]
+  );
+  if (!friendship.rows[0]) {
+    return reply.code(403).send({
+      error: "Solo puedes compartir finanzas con una amistad aceptada.",
+      code: "FRIENDSHIP_REQUIRED",
+    });
+  }
+
   for (const item of payload.items) {
     if (!(await isResourceOwner(ownerUserId, item.resourceType, item.resourceId))) {
       return reply.code(404).send({ error: `No puedes compartir ${item.resourceType}:${item.resourceId}.` });
@@ -2242,10 +2495,10 @@ app.post("/v1/shares/invitations", async (req, reply) => {
 
   const created = await withTransaction(async (client) => {
     const invitation = await client.query<{ id: string }>(
-      `INSERT INTO finance_share_invitations (owner_user_id, invitee_user_id, message, expires_at)
-       VALUES ($1, $2, $3, NOW() + ($4::text || ' days')::interval)
+      `INSERT INTO finance_share_invitations (owner_user_id, invitee_user_id, friendship_id, message, expires_at)
+       VALUES ($1, $2, $3, $4, NOW() + ($5::text || ' days')::interval)
        RETURNING id`,
-      [ownerUserId, invitee.rows[0].id, payload.message || null, payload.expiresInDays]
+      [ownerUserId, invitee.rows[0].id, friendship.rows[0].id, payload.message || null, payload.expiresInDays]
     );
     const invitationId = invitation.rows[0].id;
     for (const item of payload.items) {
@@ -2268,8 +2521,8 @@ app.post("/v1/shares/invitations", async (req, reply) => {
 app.post("/v1/shares/invitations/:id/accept", async (req, reply) => {
   const invitationId = String((req.params as any)?.id || "");
   const userId = await getRequestOwnerUserId(req);
-  const invitation = await query<{ id: string; owner_user_id: string; status: string; expires_at: string }>(
-    `SELECT id, owner_user_id, status, expires_at FROM finance_share_invitations WHERE id = $1 AND invitee_user_id = $2 LIMIT 1`,
+  const invitation = await query<{ id: string; owner_user_id: string; friendship_id: string | null; status: string; expires_at: string }>(
+    `SELECT id, owner_user_id, friendship_id, status, expires_at FROM finance_share_invitations WHERE id = $1 AND invitee_user_id = $2 LIMIT 1`,
     [invitationId, userId]
   );
   if (!invitation.rows[0]) return reply.code(404).send({ error: "Invitacion no encontrada." });
@@ -2280,6 +2533,31 @@ app.post("/v1/shares/invitations/:id/accept", async (req, reply) => {
   }
 
   await withTransaction(async (client) => {
+    let friendshipId = invitation.rows[0].friendship_id;
+    if (friendshipId) {
+      const friendship = await client.query<{ status: string }>(
+        `SELECT status FROM finance_friendships WHERE id = $1 LIMIT 1`,
+        [friendshipId]
+      );
+      if (friendship.rows[0]?.status !== "ACTIVE") {
+        throw new ApiError(409, "FRIENDSHIP_REQUIRED", "La amistad ya no esta activa.");
+      }
+    } else {
+      const friendship = await client.query<{ id: string }>(
+        `INSERT INTO finance_friendships (user_a_id, user_b_id, status)
+         VALUES (LEAST($1::uuid, $2::uuid), GREATEST($1::uuid, $2::uuid), 'ACTIVE')
+         ON CONFLICT (user_a_id, user_b_id)
+         DO UPDATE SET status = 'ACTIVE', removed_at = NULL, updated_at = NOW()
+         RETURNING id`,
+        [invitation.rows[0].owner_user_id, userId]
+      );
+      friendshipId = friendship.rows[0].id;
+      await client.query(
+        `UPDATE finance_share_invitations SET friendship_id = $1, updated_at = NOW() WHERE id = $2`,
+        [friendshipId, invitationId]
+      );
+    }
+
     const items = await client.query(`SELECT resource_type, resource_id, permissions FROM finance_share_invitation_items WHERE invitation_id = $1`, [invitationId]);
     for (const item of items.rows as any[]) {
       await client.query(
@@ -3168,6 +3446,21 @@ app.patch("/v1/budget-deficits/:id", async (req, reply) => {
   return { data: result.rows[0] };
 });
 
+export function buildCommitmentsQuery(from: string, to: string, accessibleIds: Array<string | number>, activeOnly: boolean) {
+  if (!accessibleIds.length) return null;
+  const where: string[] = ["r.id = ANY($3::bigint[])"];
+  if (activeOnly) where.push("r.is_active = TRUE");
+  return {
+    text: `SELECT r.id, r.name, r.cadence, r.next_run_at, r.is_active, r.payload, r.created_at
+       FROM recurring_rules r
+      WHERE r.next_run_at <= $2::date
+        AND r.next_run_at >= $1::date
+        AND ${where.join(" AND ")}
+      ORDER BY r.next_run_at ASC, r.id ASC`,
+    values: [from, to, accessibleIds.map(Number)],
+  };
+}
+
 app.get("/v1/commitments", async (req, reply) => {
   if ((await isLegacyJournalSchema()) && !(await hasPlanningTables())) {
     return reply.code(501).send({
@@ -3183,22 +3476,13 @@ app.get("/v1/commitments", async (req, reply) => {
   const ownerUserId = await getRequestOwnerUserId(req);
 
   const accessibleCommitmentIds = await getAccessibleIds(ownerUserId, "COMMITMENT", "READ");
-  const where: string[] = [accessibleCommitmentIds.length ? `r.id = ANY($3::bigint[])` : "FALSE"];
-  const values: any[] = [from, to, accessibleCommitmentIds.map(Number)];
-  if (parsed.activeOnly) {
-    where.push("r.is_active = TRUE");
+  const commitmentQuery = buildCommitmentsQuery(from, to, accessibleCommitmentIds, parsed.activeOnly);
+  // No commitment IDs means no SQL query and no unused third bind parameter.
+  if (!commitmentQuery) {
+    return { data: [] };
   }
-  const whereClause = `AND ${where.join(" AND ")}`;
 
-  const result = await query(
-    `SELECT r.id, r.name, r.cadence, r.next_run_at, r.is_active, r.payload, r.created_at
-       FROM recurring_rules r
-      WHERE r.next_run_at <= $2::date
-        AND r.next_run_at >= $1::date
-        ${whereClause}
-      ORDER BY r.next_run_at ASC, r.id ASC`,
-    values
-  );
+  const result = await query(commitmentQuery.text, commitmentQuery.values);
 
   return { data: result.rows };
 });
@@ -3471,7 +3755,7 @@ app.get("/v1/transactions", async (req) => {
 
   const accessibleTransactionIds = await getAccessibleTransactionIds(ownerUserId, "READ");
   const where: string[] = [accessibleTransactionIds.length ? `t.id = ANY($1::bigint[])` : "FALSE"];
-  const values: any[] = [accessibleTransactionIds.map(Number)];
+  const values: any[] = accessibleTransactionIds.length ? [accessibleTransactionIds.map(Number)] : [];
 
   if (parsed.accountId) {
     values.push(parsed.accountId);
@@ -4509,7 +4793,7 @@ app.get("/v1/summary", async (req) => {
          FROM accounts
         WHERE is_active = TRUE
           AND ${accountIdFilter}`,
-      [accessibleAccountIds.map(Number)]
+      accessibleAccountIds.length ? [accessibleAccountIds.map(Number)] : []
     ),
     query<{ inflow: string; outflow: string }>(
       `SELECT
@@ -4518,7 +4802,7 @@ app.get("/v1/summary", async (req) => {
        FROM transactions
        WHERE transaction_date >= date_trunc('month', CURRENT_DATE)::date
          AND ${transactionIdFilter}`,
-      [accessibleTransactionIds.map(Number)]
+      accessibleTransactionIds.length ? [accessibleTransactionIds.map(Number)] : []
     ),
     query<{ invested_total: string; positions: string }>(
       `SELECT

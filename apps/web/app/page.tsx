@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -1619,9 +1619,5 @@ export default function HomePage() {
     return <AuthCallbackScreen />;
   }
 
-  return (
-    <Suspense fallback={<div className="p-6 text-sm text-zinc-500">Cargando...</div>}>
-      <HomeContent />
-    </Suspense>
-  );
+  return <HomeContent />;
 }

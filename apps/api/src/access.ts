@@ -10,6 +10,17 @@ export const SHARE_RESOURCE_TYPES = [
   "REPORT",
 ] as const;
 
+// New invitations share transactions through their parent account. The
+// broader list remains for reading legacy transaction grants during migration.
+export const SHARE_INVITATION_RESOURCE_TYPES = [
+  "ACCOUNT",
+  "BUDGET",
+  "COMMITMENT",
+  "PROJECTION",
+  "DEFICIT",
+  "REPORT",
+] as const;
+
 export const SHARE_PERMISSIONS = ["READ", "WRITE", "UPLOAD", "ANALYZE"] as const;
 
 export type ShareResourceType = (typeof SHARE_RESOURCE_TYPES)[number];
@@ -41,9 +52,8 @@ export async function getAccessibleAccountIds(userId: string, permission: ShareP
 }
 
 export async function getAccessibleTransactionIds(userId: string, permission: SharePermission = "READ") {
-  const [owned, shared, accountIds] = await Promise.all([
+  const [owned, accountIds] = await Promise.all([
     query<{ id: number }>(`SELECT id FROM transactions WHERE owner_user_id = $1`, [userId]),
-    grantIds(userId, "TRANSACTION", permission),
     getAccessibleAccountIds(userId, permission),
   ]);
   const inherited = accountIds.length
@@ -51,7 +61,9 @@ export async function getAccessibleTransactionIds(userId: string, permission: Sh
         await query<{ id: number }>(`SELECT id FROM transactions WHERE account_id = ANY($1::bigint[])`, [accountIds.map(Number)])
       ).rows
     : [];
-  return cleanIds([...owned.rows, ...inherited, ...shared.map((id) => ({ id }))]);
+  // Transaction access is intentionally inherited from an account grant.
+  // Legacy transaction-level grants are no longer sufficient on their own.
+  return cleanIds([...owned.rows, ...inherited]);
 }
 
 export async function getAccessibleIds(userId: string, resourceType: Exclude<ShareResourceType, "ACCOUNT" | "TRANSACTION">, permission: SharePermission = "READ") {

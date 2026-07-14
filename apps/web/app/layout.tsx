@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import "./globals.css";
 import AppLayout from "@/components/AppLayout";
+import EntryGate from "@/components/EntryGate";
 
 export const metadata: Metadata = {
   title: "Finance System",
@@ -17,7 +18,9 @@ export default function RootLayout({
     <html lang="en" className="dark">
       <body className="font-sans">
         <Suspense fallback={<div className="p-4 text-sm text-zinc-500">Cargando interfaz...</div>}>
-          <AppLayout>{children}</AppLayout>
+          <EntryGate>
+            <AppLayout>{children}</AppLayout>
+          </EntryGate>
         </Suspense>
       </body>
     </html>

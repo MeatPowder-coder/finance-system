@@ -59,7 +59,8 @@ function normalizeReturnTo(rawValue: string | null | undefined) {
 
 export function AuthLoginScreen() {
   const searchParams = useSearchParams();
-  const [authMode, setAuthMode] = useState<AuthMode>("login");
+  const requestedAuthMode: AuthMode = searchParams.get("mode") === "register" ? "register" : "login";
+  const [authMode, setAuthMode] = useState<AuthMode>(requestedAuthMode);
   const [configLoading, setConfigLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
@@ -75,6 +76,10 @@ export function AuthLoginScreen() {
   });
 
   const returnTo = useMemo(() => normalizeReturnTo(searchParams.get("returnTo")), [searchParams]);
+
+  useEffect(() => {
+    setAuthMode(requestedAuthMode);
+  }, [requestedAuthMode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -181,9 +186,10 @@ export function AuthLoginScreen() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(34,211,238,0.12),transparent_28%),radial-gradient(circle_at_bottom_right,rgba(168,85,247,0.08),transparent_24%)] opacity-90" />
-      <Card className="relative w-full max-w-xl border-zinc-800/80 bg-zinc-950/95 shadow-2xl shadow-cyan-900/20 backdrop-blur">
+    <div className="auth-screen auth-screen-quiet">
+      <div className="auth-screen-orb auth-screen-orb-one" aria-hidden="true" />
+      <div className="auth-screen-orb auth-screen-orb-two" aria-hidden="true" />
+      <Card className="auth-card relative w-full max-w-xl">
         <CardHeader className="space-y-4">
           <div className="inline-flex items-center gap-2 self-start rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-200">
             <Sparkles className="h-3.5 w-3.5" />
@@ -197,7 +203,7 @@ export function AuthLoginScreen() {
           </div>
         </CardHeader>
         <CardContent className="space-y-5">
-          <div className="rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4 text-sm text-cyan-50">
+          <div className={`auth-access-note auth-access-note-${authMode} rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4 text-sm text-cyan-50`}>
             <div className="flex items-center gap-2 font-medium">
               <ShieldCheck className="h-4 w-4" />
               Un solo acceso para toda la app
@@ -207,7 +213,7 @@ export function AuthLoginScreen() {
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-3">
             <Button
               type="button"
               onClick={() => void handleGoogleLogin()}
@@ -217,15 +223,6 @@ export function AuthLoginScreen() {
               {googleBusy ? <Loader2 className="h-4 w-4 animate-spin" /> : <Chrome className="h-4 w-4" />}
               {googleCaption}
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setAuthMode((current) => (current === "login" ? "register" : "login"))}
-              className="h-12 gap-2 border-zinc-700 bg-zinc-950 text-zinc-100 hover:bg-zinc-900"
-            >
-              <UserRound className="h-4 w-4" />
-              {authMode === "login" ? "Crear cuenta" : "Volver a iniciar"}
-            </Button>
           </div>
 
           <div className="flex items-center gap-4 text-xs uppercase tracking-[0.2em] text-zinc-500">
@@ -234,7 +231,7 @@ export function AuthLoginScreen() {
             <span className="h-px flex-1 bg-zinc-800" />
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="auth-mode-tabs flex items-center gap-2">
             <button
               type="button"
               onClick={() => setAuthMode("login")}
@@ -261,7 +258,7 @@ export function AuthLoginScreen() {
             </button>
           </div>
 
-          <form className="space-y-4" onSubmit={(event) => void handleEmailSubmit(event)}>
+          <form key={authMode} className={`auth-form auth-form-${authMode} space-y-4`} onSubmit={(event) => void handleEmailSubmit(event)}>
             {authMode === "register" && (
               <div className="space-y-2">
                 <Label htmlFor="auth-name" className="text-zinc-200">
@@ -406,8 +403,8 @@ export function AuthCallbackScreen() {
   }, [router, searchParams]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4 py-10">
-      <Card className="w-full max-w-lg border-zinc-800/80 bg-zinc-950/95 shadow-2xl shadow-cyan-900/20 backdrop-blur">
+    <div className="auth-screen auth-screen-quiet">
+      <Card className="auth-card w-full max-w-lg">
         <CardHeader className="space-y-4">
           <div className="inline-flex items-center gap-2 self-start rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-200">
             <ShieldCheck className="h-3.5 w-3.5" />

@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Check, ChevronDown, Link2, Lock, Mail, RefreshCw, Search, Shield, UserPlus, X } from "lucide-react";
+import { Check, ChevronDown, Link2, Loader2, Lock, Mail, RefreshCw, Search, Shield, UserCheck, UserPlus, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -12,7 +12,7 @@ import { buildFinanceHeaders, resolveFinanceApiBaseUrl } from "@/lib/runtime-con
 import { cn } from "@/lib/utils";
 
 type Permission = "READ" | "WRITE" | "UPLOAD" | "ANALYZE";
-type ResourceType = "ACCOUNT" | "TRANSACTION" | "BUDGET" | "COMMITMENT" | "PROJECTION" | "DEFICIT" | "REPORT";
+type ResourceType = "ACCOUNT" | "BUDGET" | "COMMITMENT" | "PROJECTION" | "DEFICIT" | "REPORT";
 type ResourceItem = { resourceType: ResourceType; resourceId: string; label: string; detail?: string };
 
 type Profile = {
@@ -31,7 +31,6 @@ type Integrations = {
 
 type Catalog = {
   accounts: Array<{ id: number; name: string; currency: string; balance_current: string | number }>;
-  transactions: Array<{ id: number; description: string | null; transaction_date: string; amount: string | number; currency: string; direction: string; account_name: string | null }>;
   budgets: Array<{ id: number; name: string; period: string; currency: string; start_date: string; end_date: string }>;
   commitments: Array<{ id: string | number; name: string; cadence: string; next_run_at: string | null; is_active: boolean }>;
   projections: Array<{ id: string; title: string; scenario_type: string; created_at: string }>;
@@ -65,6 +64,9 @@ type Grant = {
   permissions: Permission[];
   status: string;
 };
+type UserSummary = { id: string; username: string; name: string | null; picture?: string | null };
+type Friend = UserSummary & { id: string; created_at: string; updated_at?: string };
+type FriendRequest = UserSummary & { id: string; status: string; created_at: string; updated_at: string };
 
 const API_BASE = resolveFinanceApiBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4100");
 const PERMISSIONS: Array<{ value: Permission; label: string; hint: string }> = [
@@ -102,8 +104,12 @@ export function SettingsView() {
   const [sent, setSent] = useState<Invitation[]>([]);
   const [received, setReceived] = useState<Invitation[]>([]);
   const [grants, setGrants] = useState<Grant[]>([]);
+  const [friends, setFriends] = useState<Friend[]>([]);
+  const [friendRequests, setFriendRequests] = useState<{ received: FriendRequest[]; sent: FriendRequest[] }>({ received: [], sent: [] });
+  const [friendUsername, setFriendUsername] = useState("");
+  const [friendMatches, setFriendMatches] = useState<UserSummary[]>([]);
+  const [selectedFriend, setSelectedFriend] = useState<UserSummary | null>(null);
   const [inviteUsername, setInviteUsername] = useState("");
-  const [userMatches, setUserMatches] = useState<Array<{ id: string; username: string; name: string | null; email: string }>>([]);
   const [selected, setSelected] = useState<Record<string, Permission[]>>({});
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -114,11 +120,13 @@ export function SettingsView() {
     setLoading(true);
     setError(null);
     try {
-      const [profileData, integrationData, catalogData, sharingData] = await Promise.all([
+      const [profileData, integrationData, catalogData, sharingData, friendsData, friendRequestsData] = await Promise.all([
         apiRequest<Profile>("/v1/settings/profile"),
         apiRequest<Integrations>("/v1/settings/integrations"),
         apiRequest<Catalog>("/v1/shares/catalog"),
         apiRequest<{ sent: Invitation[]; received: Invitation[]; grants: Grant[] }>("/v1/shares"),
+        apiRequest<Friend[]>("/v1/friends"),
+        apiRequest<{ received: FriendRequest[]; sent: FriendRequest[] }>("/v1/friends/requests"),
       ]);
       setProfile(profileData);
       setName(profileData.name || "");
@@ -128,6 +136,8 @@ export function SettingsView() {
       setSent(sharingData.sent || []);
       setReceived(sharingData.received || []);
       setGrants(sharingData.grants || []);
+      setFriends(friendsData || []);
+      setFriendRequests(friendRequestsData || { received: [], sent: [] });
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo cargar la configuracion.");
     } finally {
@@ -143,7 +153,6 @@ export function SettingsView() {
     if (!catalog) return [];
     return [
       ...catalog.accounts.map((item) => ({ resourceType: "ACCOUNT" as const, resourceId: String(item.id), label: item.name, detail: `Cuenta ${item.currency}` })),
-      ...catalog.transactions.map((item) => ({ resourceType: "TRANSACTION" as const, resourceId: String(item.id), label: item.description || "Movimiento sin descripcion", detail: `${item.transaction_date} - ${item.account_name || "Sin cuenta"}` })),
       ...catalog.budgets.map((item) => ({ resourceType: "BUDGET" as const, resourceId: String(item.id), label: item.name, detail: `Presupuesto ${item.start_date} a ${item.end_date}` })),
       ...catalog.commitments.map((item) => ({ resourceType: "COMMITMENT" as const, resourceId: String(item.id), label: item.name, detail: `Compromiso ${item.cadence}` })),
       ...catalog.projections.map((item) => ({ resourceType: "PROJECTION" as const, resourceId: String(item.id), label: item.title, detail: `Proyeccion ${item.scenario_type}` })),
@@ -181,12 +190,67 @@ export function SettingsView() {
     }
   }
 
-  async function searchUsers() {
-    if (inviteUsername.trim().length < 2) return setUserMatches([]);
+  async function searchFriend() {
+    if (friendUsername.trim().length < 3) return setFriendMatches([]);
+    setSaving(true);
+    setError(null);
     try {
-      setUserMatches(await apiRequest<typeof userMatches>(`/v1/shares/users?q=${encodeURIComponent(inviteUsername.trim())}`));
+      setFriendMatches(await apiRequest<UserSummary[]>(`/v1/friends/lookup?username=${encodeURIComponent(friendUsername.trim())}`));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo buscar usuarios.");
+      setError(err instanceof Error ? err.message : "No se pudo buscar ese usuario.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function sendFriendRequest() {
+    if (!selectedFriend) return;
+    setSaving(true);
+    setError(null);
+    setNotice(null);
+    try {
+      await apiRequest("/v1/friends/requests", {
+        method: "POST",
+        body: JSON.stringify({ username: selectedFriend.username }),
+      });
+      setFriendUsername("");
+      setFriendMatches([]);
+      setSelectedFriend(null);
+      setNotice(`Solicitud enviada a @${selectedFriend.username}.`);
+      await loadAll();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo enviar la solicitud.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function decideFriendRequest(id: string, action: "accept" | "reject" | "cancel") {
+    setSaving(true);
+    setError(null);
+    try {
+      await apiRequest(`/v1/friends/requests/${id}/${action}`, { method: "POST" });
+      await loadAll();
+      setNotice(action === "accept" ? "Amistad aceptada." : action === "reject" ? "Solicitud rechazada." : "Solicitud cancelada.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo actualizar la solicitud.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function removeFriend(friendshipId: string) {
+    setSaving(true);
+    setError(null);
+    try {
+      await apiRequest(`/v1/friends/${friendshipId}`, { method: "DELETE" });
+      if (selectedFriend?.id) setSelectedFriend(null);
+      await loadAll();
+      setNotice("Amistad eliminada y accesos financieros revocados.");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "No se pudo eliminar la amistad.");
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -217,18 +281,18 @@ export function SettingsView() {
   }
 
   async function sendInvitation() {
-    if (!inviteUsername.trim() || !selectedItems.length) return;
+    if (!selectedFriend || !selectedItems.length) return;
     setSaving(true);
     setError(null);
     setNotice(null);
     try {
       await apiRequest("/v1/shares/invitations", {
         method: "POST",
-        body: JSON.stringify({ username: inviteUsername.trim(), items: selectedItems }),
+        body: JSON.stringify({ username: selectedFriend.username, items: selectedItems }),
       });
       setSelected({});
       setInviteUsername("");
-      setUserMatches([]);
+      setSelectedFriend(null);
       setNotice("Invitacion enviada. La otra persona debe aceptarla para activar el acceso.");
       await loadAll();
     } catch (err) {
@@ -266,7 +330,6 @@ export function SettingsView() {
 
   const groups = [
     { type: "ACCOUNT" as const, label: "Cuentas", items: resources.filter((item) => item.resourceType === "ACCOUNT") },
-    { type: "TRANSACTION" as const, label: "Movimientos", items: resources.filter((item) => item.resourceType === "TRANSACTION") },
     { type: "BUDGET" as const, label: "Presupuestos", items: resources.filter((item) => item.resourceType === "BUDGET") },
     { type: "COMMITMENT" as const, label: "Compromisos", items: resources.filter((item) => item.resourceType === "COMMITMENT") },
     { type: "PROJECTION" as const, label: "Proyecciones", items: resources.filter((item) => item.resourceType === "PROJECTION") },
@@ -330,14 +393,36 @@ export function SettingsView() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle>Compartir finanzas</CardTitle><CardDescription>Invita a otra persona por su nombre de usuario y selecciona exactamente que puede ver o hacer.</CardDescription></CardHeader>
+        <CardHeader><CardTitle>Amigos</CardTitle><CardDescription>Busca por username exacto y crea una amistad antes de compartir cualquier dato financiero.</CardDescription></CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-3 md:grid-cols-[1fr_auto]">
+            <div className="relative">
+              <Label htmlFor="friend-username">Username exacto</Label>
+              <div className="mt-1.5 flex gap-2">
+                <Input id="friend-username" value={friendUsername} onChange={(event) => { setFriendUsername(event.target.value); setFriendMatches([]); setSelectedFriend(null); }} onKeyDown={(event) => { if (event.key === "Enter") void searchFriend(); }} placeholder="ej. sergio-navarro" />
+                <Button type="button" variant="outline" onClick={() => void searchFriend()} disabled={saving || friendUsername.trim().length < 3}>{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Search className="h-4 w-4" />} Buscar</Button>
+              </div>
+              {friendMatches.length > 0 && <div className="absolute left-0 right-0 top-[4.4rem] z-10 rounded-xl border border-border bg-popover p-1 shadow-xl">{friendMatches.map((match) => <button key={match.id} type="button" onClick={() => { setSelectedFriend(match); setFriendUsername(match.username); setFriendMatches([]); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-accent"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary"><UserCheck className="h-4 w-4" /></span><span><span className="block text-sm font-medium text-foreground">@{match.username}</span><span className="block text-xs text-muted-foreground">{match.name || "Usuario FinanceSystem"}</span></span></button>)}</div>}
+              {selectedFriend && <div className="mt-2 flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary"><UserCheck className="h-4 w-4" /> @{selectedFriend.username} seleccionado <button type="button" className="ml-auto" onClick={() => { setSelectedFriend(null); setFriendUsername(""); }} aria-label="Quitar seleccion"><X className="h-4 w-4" /></button></div>}
+            </div>
+            <div className="flex items-end"><Button type="button" onClick={() => void sendFriendRequest()} disabled={saving || !selectedFriend} className="w-full rounded-xl md:w-auto"><UserPlus className="h-4 w-4" /> Enviar solicitud</Button></div>
+          </div>
+          <div className="grid gap-3 lg:grid-cols-2">
+            <div className="rounded-2xl border border-border bg-muted/20 p-4"><div className="flex items-center justify-between"><p className="text-sm font-semibold text-foreground">Amistades activas</p><Badge variant="outline">{friends.length}</Badge></div><div className="mt-3 space-y-2">{friends.map((friend) => <div key={friend.id} className="flex items-center gap-3 rounded-xl border border-border bg-card/50 px-3 py-2"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary"><UserCheck className="h-4 w-4" /></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-foreground">@{friend.username}</p><p className="truncate text-xs text-muted-foreground">{friend.name || "Usuario FinanceSystem"}</p></div><Button size="sm" variant="ghost" onClick={() => void removeFriend(friend.id)} disabled={saving}>Eliminar</Button></div>)}{!friends.length && <EmptyState icon={UserPlus} text="Aun no tienes amistades activas." />}</div></div>
+            <div className="rounded-2xl border border-border bg-muted/20 p-4"><p className="text-sm font-semibold text-foreground">Solicitudes pendientes</p><div className="mt-3 space-y-2">{friendRequests.received.filter((request) => request.status === "PENDING").map((request) => <div key={request.id} className="rounded-xl border border-border bg-card/50 p-3"><p className="text-sm font-medium text-foreground">@{request.username}</p><p className="text-xs text-muted-foreground">Quiere agregarte como amigo</p><div className="mt-2 flex gap-2"><Button size="sm" onClick={() => void decideFriendRequest(request.id, "accept")} disabled={saving}>Aceptar</Button><Button size="sm" variant="outline" onClick={() => void decideFriendRequest(request.id, "reject")} disabled={saving}>Rechazar</Button></div></div>)}{friendRequests.sent.filter((request) => request.status === "PENDING").map((request) => <div key={request.id} className="rounded-xl border border-dashed border-border p-3"><p className="text-sm font-medium text-foreground">@{request.username}</p><p className="text-xs text-muted-foreground">Solicitud enviada</p><Button size="sm" variant="ghost" className="mt-1 px-0" onClick={() => void decideFriendRequest(request.id, "cancel")} disabled={saving}>Cancelar</Button></div>)}{!friendRequests.received.filter((request) => request.status === "PENDING").length && !friendRequests.sent.filter((request) => request.status === "PENDING").length && <p className="text-xs text-muted-foreground">No hay solicitudes pendientes.</p>}</div></div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader><CardTitle>Compartir finanzas</CardTitle><CardDescription>Comparte cuentas o recursos concretos con un amigo activo y permisos explicitos.</CardDescription></CardHeader>
         <CardContent className="space-y-5">
           <div className="grid gap-3 md:grid-cols-[1fr_auto]">
-            <div className="relative"><Label htmlFor="share-username">Usuario invitado</Label><div className="mt-1.5 flex gap-2"><Input id="share-username" value={inviteUsername} onChange={(event) => setInviteUsername(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void searchUsers(); }} placeholder="ej. sergio-navarro" /><Button type="button" variant="outline" onClick={() => void searchUsers()}><Search className="h-4 w-4" /> Buscar</Button></div>{userMatches.length > 0 && <div className="absolute left-0 right-0 top-[4.4rem] z-10 rounded-xl border border-border bg-popover p-1 shadow-xl">{userMatches.map((match) => <button key={match.id} type="button" onClick={() => { setInviteUsername(match.username); setUserMatches([]); }} className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-accent"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary"><UserPlus className="h-4 w-4" /></span><span><span className="block text-sm font-medium text-foreground">@{match.username}</span><span className="block text-xs text-muted-foreground">{match.name || match.email}</span></span></button>)}</div>}</div>
-            <div className="flex items-end"><Button type="button" onClick={() => void sendInvitation()} disabled={saving || !inviteUsername.trim() || !selectedItems.length} className="w-full rounded-xl md:w-auto"><UserPlus className="h-4 w-4" /> Enviar invitacion</Button></div>
+            <div className="relative"><Label htmlFor="share-username">Amigo destinatario</Label><div className="mt-1.5 flex gap-2"><Input id="share-username" value={inviteUsername} readOnly placeholder="Selecciona un amigo activo abajo" /><select aria-label="Seleccionar amigo" value={selectedFriend?.id || ""} onChange={(event) => { const friend = friends.find((item) => item.id === event.target.value) || null; setSelectedFriend(friend); setInviteUsername(friend?.username || ""); }} className="h-10 max-w-[16rem] rounded-xl border border-border bg-background px-3 text-sm text-foreground"><option value="">Amigos</option>{friends.map((friend) => <option key={friend.id} value={friend.id}>@{friend.username}</option>)}</select></div>{selectedFriend && <div className="mt-2 flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary"><UserCheck className="h-4 w-4" /> @{selectedFriend.username} seleccionado</div>}</div>
+            <div className="flex items-end"><Button type="button" onClick={() => void sendInvitation()} disabled={saving || !selectedFriend || !selectedItems.length} className="w-full rounded-xl md:w-auto">{saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />} Enviar invitacion</Button></div>
           </div>
 
-          <div className="rounded-2xl border border-border bg-muted/20 p-4"><div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-semibold text-foreground">Recursos a compartir</p><p className="text-xs text-muted-foreground">Seleccionados: {selectedItems.length}. Cada fila puede tener permisos diferentes.</p></div><Badge variant="outline">{resources.length} disponibles</Badge></div><div className="mt-4 space-y-4">{groups.map((group) => <div key={group.type}><p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{group.label}</p><div className="grid gap-2 lg:grid-cols-2">{group.items.map((item) => { const key = resourceKey(item.resourceType, item.resourceId); const permissions = selected[key] || []; const active = permissions.length > 0; return <div key={key} className={cn("rounded-xl border p-3 transition-colors", active ? "border-primary/60 bg-primary/5" : "border-border bg-card/40")}><button type="button" onClick={() => toggleResource(item)} className="flex w-full items-start gap-3 text-left"><span className={cn("mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border", active ? "border-primary bg-primary text-primary-foreground" : "border-border text-transparent")}><Check className="h-3 w-3" /></span><span className="min-w-0"><span className="block truncate text-sm font-medium text-foreground">{formatResourceLabel(item)}</span><span className="text-xs text-muted-foreground">{active ? "Seleccionado" : "Toca para seleccionar"}</span></span></button>{active && <div className="mt-3 flex flex-wrap gap-1.5 pl-8">{PERMISSIONS.map((permission) => <button key={permission.value} type="button" onClick={() => togglePermission(item, permission.value)} title={permission.hint} className={cn("rounded-full border px-2.5 py-1 text-[11px] transition-colors", permissions.includes(permission.value) ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-accent")}>{permission.label}</button>)}</div>}</div>; })}</div></div>)}</div>{!resources.length && <p className="mt-4 rounded-xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">Todavia no tienes recursos listos para compartir.</p>}</div>
+          <div className="rounded-2xl border border-border bg-muted/20 p-4"><div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between"><div><p className="text-sm font-semibold text-foreground">Recursos a compartir</p><p className="text-xs text-muted-foreground">Seleccionados: {selectedItems.length}. Los movimientos se incluyen automáticamente al compartir una cuenta.</p></div><Badge variant="outline">{resources.length} disponibles</Badge></div><div className="mt-4 space-y-4">{groups.map((group) => <div key={group.type}><p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-muted-foreground">{group.label}</p><div className="grid gap-2 lg:grid-cols-2">{group.items.map((item) => { const key = resourceKey(item.resourceType, item.resourceId); const permissions = selected[key] || []; const active = permissions.length > 0; return <div key={key} className={cn("rounded-xl border p-3 transition-colors", active ? "border-primary/60 bg-primary/5" : "border-border bg-card/40")}><button type="button" onClick={() => toggleResource(item)} className="flex w-full items-start gap-3 text-left"><span className={cn("mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-md border", active ? "border-primary bg-primary text-primary-foreground" : "border-border text-transparent")}><Check className="h-3 w-3" /></span><span className="min-w-0"><span className="block truncate text-sm font-medium text-foreground">{formatResourceLabel(item)}</span><span className="text-xs text-muted-foreground">{active ? "Seleccionado" : "Toca para seleccionar"}</span></span></button>{active && <div className="mt-3 flex flex-wrap gap-1.5 pl-8">{PERMISSIONS.map((permission) => <button key={permission.value} type="button" onClick={() => togglePermission(item, permission.value)} title={permission.hint} className={cn("rounded-full border px-2.5 py-1 text-[11px] transition-colors", permissions.includes(permission.value) ? "border-primary bg-primary/10 text-primary" : "border-border text-muted-foreground hover:bg-accent")}>{permission.label}</button>)}</div>}</div>; })}</div></div>)}</div>{!resources.length && <p className="mt-4 rounded-xl border border-dashed border-border p-5 text-center text-sm text-muted-foreground">Todavia no tienes recursos listos para compartir.</p>}</div>
         </CardContent>
       </Card>
 
