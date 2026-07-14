@@ -112,6 +112,8 @@ export function SettingsView() {
   const [inviteUsername, setInviteUsername] = useState("");
   const [selected, setSelected] = useState<Record<string, Permission[]>>({});
   const [saving, setSaving] = useState(false);
+  const [friendRequestAction, setFriendRequestAction] = useState<string | null>(null);
+  const [friendRequestError, setFriendRequestError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -227,14 +229,19 @@ export function SettingsView() {
 
   async function decideFriendRequest(id: string, action: "accept" | "reject" | "cancel") {
     setSaving(true);
+    setFriendRequestAction(`${id}:${action}`);
+    setFriendRequestError(null);
     setError(null);
     try {
       await apiRequest(`/v1/friends/requests/${id}/${action}`, { method: "POST" });
       await loadAll();
       setNotice(action === "accept" ? "Amistad aceptada." : action === "reject" ? "Solicitud rechazada." : "Solicitud cancelada.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo actualizar la solicitud.");
+      const message = err instanceof Error ? err.message : "No se pudo actualizar la solicitud.";
+      setFriendRequestError(message);
+      setError(message);
     } finally {
+      setFriendRequestAction(null);
       setSaving(false);
     }
   }
@@ -409,7 +416,7 @@ export function SettingsView() {
           </div>
           <div className="grid gap-3 lg:grid-cols-2">
             <div className="rounded-2xl border border-border bg-muted/20 p-4"><div className="flex items-center justify-between"><p className="text-sm font-semibold text-foreground">Amistades activas</p><Badge variant="outline">{friends.length}</Badge></div><div className="mt-3 space-y-2">{friends.map((friend) => <div key={friend.id} className="flex items-center gap-3 rounded-xl border border-border bg-card/50 px-3 py-2"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary"><UserCheck className="h-4 w-4" /></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-foreground">@{friend.username}</p><p className="truncate text-xs text-muted-foreground">{friend.name || "Usuario FinanceSystem"}</p></div><Button size="sm" variant="ghost" onClick={() => void removeFriend(friend.id)} disabled={saving}>Eliminar</Button></div>)}{!friends.length && <EmptyState icon={UserPlus} text="Aun no tienes amistades activas." />}</div></div>
-            <div className="rounded-2xl border border-border bg-muted/20 p-4"><p className="text-sm font-semibold text-foreground">Solicitudes pendientes</p><div className="mt-3 space-y-2">{friendRequests.received.filter((request) => request.status === "PENDING").map((request) => <div key={request.id} className="rounded-xl border border-border bg-card/50 p-3"><p className="text-sm font-medium text-foreground">@{request.username}</p><p className="text-xs text-muted-foreground">Quiere agregarte como amigo</p><div className="mt-2 flex gap-2"><Button size="sm" onClick={() => void decideFriendRequest(request.id, "accept")} disabled={saving}>Aceptar</Button><Button size="sm" variant="outline" onClick={() => void decideFriendRequest(request.id, "reject")} disabled={saving}>Rechazar</Button></div></div>)}{friendRequests.sent.filter((request) => request.status === "PENDING").map((request) => <div key={request.id} className="rounded-xl border border-dashed border-border p-3"><p className="text-sm font-medium text-foreground">@{request.username}</p><p className="text-xs text-muted-foreground">Solicitud enviada</p><Button size="sm" variant="ghost" className="mt-1 px-0" onClick={() => void decideFriendRequest(request.id, "cancel")} disabled={saving}>Cancelar</Button></div>)}{!friendRequests.received.filter((request) => request.status === "PENDING").length && !friendRequests.sent.filter((request) => request.status === "PENDING").length && <p className="text-xs text-muted-foreground">No hay solicitudes pendientes.</p>}</div></div>
+            <div className="rounded-2xl border border-border bg-muted/20 p-4"><p className="text-sm font-semibold text-foreground">Solicitudes pendientes</p><div className="mt-3 space-y-2">{friendRequests.received.filter((request) => request.status === "PENDING").map((request) => { const accepting = friendRequestAction === `${request.id}:accept`; const rejecting = friendRequestAction === `${request.id}:reject`; return <div key={request.id} className="rounded-xl border border-border bg-card/50 p-3"><p className="text-sm font-medium text-foreground">@{request.username}</p><p className="text-xs text-muted-foreground">Quiere agregarte como amigo</p><div className="mt-2 flex gap-2"><Button size="sm" onClick={() => void decideFriendRequest(request.id, "accept")} disabled={saving}>{accepting && <Loader2 className="h-3.5 w-3.5 animate-spin" />} {accepting ? "Aceptando..." : "Aceptar"}</Button><Button size="sm" variant="outline" onClick={() => void decideFriendRequest(request.id, "reject")} disabled={saving}>{rejecting && <Loader2 className="h-3.5 w-3.5 animate-spin" />} {rejecting ? "Rechazando..." : "Rechazar"}</Button></div>{friendRequestError && (accepting || rejecting) && <p className="mt-2 rounded-lg border border-destructive/30 bg-destructive/10 px-2.5 py-2 text-xs text-destructive">{friendRequestError}</p>}</div>; })}{friendRequests.sent.filter((request) => request.status === "PENDING").map((request) => <div key={request.id} className="rounded-xl border border-dashed border-border p-3"><p className="text-sm font-medium text-foreground">@{request.username}</p><p className="text-xs text-muted-foreground">Solicitud enviada</p><Button size="sm" variant="ghost" className="mt-1 px-0" onClick={() => void decideFriendRequest(request.id, "cancel")} disabled={saving}>{friendRequestAction === `${request.id}:cancel` && <Loader2 className="h-3.5 w-3.5 animate-spin" />} {friendRequestAction === `${request.id}:cancel` ? "Cancelando..." : "Cancelar"}</Button></div>)}{!friendRequests.received.filter((request) => request.status === "PENDING").length && !friendRequests.sent.filter((request) => request.status === "PENDING").length && <p className="text-xs text-muted-foreground">No hay solicitudes pendientes.</p>}</div></div>
           </div>
         </CardContent>
       </Card>

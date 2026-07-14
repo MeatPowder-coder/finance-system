@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { AppSidebar, MobileSidebar } from "./AppSidebar";
 import { AnimatedBackground } from "./AnimatedBackground";
 import CopilotSidebarChat from "./CopilotSidebarChat";
+import { NotificationBell } from "./NotificationBell";
 import { cn } from "@/lib/utils";
 import { clearAuthSession, persistAuthTokens, refreshAuthSession } from "@/lib/auth";
 import { readFinanceAuthToken } from "@/lib/runtime-config";
@@ -76,6 +77,7 @@ export default function AppLayout({
     return (
         <div className="flex h-screen md:h-screen sm:h-[100dvh] bg-background overflow-hidden relative z-0">
             <AnimatedBackground />
+            <NotificationBell />
 
             {/* Desktop Sidebar - Fixed width, hidden on mobile */}
             {!isDesktopEmbed && (

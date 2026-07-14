@@ -21,10 +21,12 @@ test("api integration smoke", async (t) => {
   assert.equal(manifestBody.data.capabilities.dashboards, true);
   assert.equal(manifestBody.data.capabilities.schedules, true);
   assert.equal(manifestBody.data.capabilities.telegramRemote, true);
+  assert.equal(manifestBody.data.capabilities.notifications, true);
   assert.equal(manifestBody.data.rest.generatedViews, "/v1/generated-views");
   assert.equal(manifestBody.data.rest.generatedViewCreate, "POST /v1/generated-views");
   assert.equal(manifestBody.data.rest.generatedViewUpdate, "PATCH /v1/generated-views/:id");
   assert.equal(manifestBody.data.rest.toolingSchema, "/v1/tooling/schema");
+  assert.equal(manifestBody.data.rest.notifications, "/v1/notifications");
 
   const examplesRes = await app.inject({
     method: "GET",

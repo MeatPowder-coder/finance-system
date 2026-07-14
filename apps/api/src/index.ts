@@ -472,6 +472,11 @@ const createReminderSchema = z.object({
   nextRunAt: z.string().datetime().optional(),
 });
 
+const listNotificationsQuerySchema = z.object({
+  unreadOnly: z.coerce.boolean().default(false),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
+
 
 const listBudgetsQuerySchema = z.object({
   month: z.string().regex(/^\d{4}-\d{2}$/).optional(),
@@ -1386,6 +1391,53 @@ async function getRequestOwnerUserId(req: any) {
   throw new ApiError(401, "AUTH_REQUIRED", "Autenticacion requerida.");
 }
 
+let notificationsTableCache: boolean | null = null;
+
+async function hasNotificationsTable() {
+  if (notificationsTableCache !== null) return notificationsTableCache;
+  const result = await query<{ ok: boolean }>(
+    `SELECT to_regclass('public.finance_notifications') IS NOT NULL AS ok`
+  );
+  notificationsTableCache = Boolean(result.rows[0]?.ok);
+  return notificationsTableCache;
+}
+
+type NotificationInput = {
+  ownerUserId: string;
+  actorUserId?: string | null;
+  notificationType: "FRIEND_REQUEST" | "FRIEND_ACCEPTED" | "SHARE_INVITATION" | "SHARE_ACCEPTED" | "AGENT_PROPOSAL" | "AGENT_TASK" | "SYSTEM";
+  title: string;
+  body: string;
+  actionUrl?: string | null;
+  metadata?: Record<string, unknown>;
+  dedupeKey?: string | null;
+};
+
+async function createNotification(input: NotificationInput) {
+  if (!(await hasNotificationsTable())) return;
+  try {
+    await query(
+      `INSERT INTO finance_notifications
+        (owner_user_id, actor_user_id, notification_type, title, body, action_url, metadata, dedupe_key)
+       VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8)
+       ON CONFLICT DO NOTHING`,
+      [
+        input.ownerUserId,
+        input.actorUserId || null,
+        input.notificationType,
+        input.title,
+        input.body,
+        input.actionUrl || null,
+        JSON.stringify(input.metadata || {}),
+        input.dedupeKey || null,
+      ]
+    );
+  } catch (error) {
+    // Notifications must never block the financial action that produced them.
+    app.log.error({ err: error, notificationType: input.notificationType }, "Could not create notification");
+  }
+}
+
 async function buildCopilotContext(ownerUserId?: string) {
   if (await isLegacyJournalSchema()) {
     const [summaryRes, accountsRes, txRes] = await Promise.all([
@@ -2114,6 +2166,67 @@ app.patch("/v1/settings/preferences", async (req, reply) => {
   return { data: result.rows[0]?.preferences || {} };
 });
 
+app.get("/v1/notifications", async (req, reply) => {
+  if (!(await hasNotificationsTable())) {
+    return reply.code(503).send({ error: "Notificaciones no disponibles. Ejecuta las migraciones.", code: "NOTIFICATIONS_TABLE_MISSING" });
+  }
+  const parsed = listNotificationsQuerySchema.safeParse((req as any).query || {});
+  if (!parsed.success) return reply.code(400).send({ error: "Invalid query", details: parsed.error.flatten() });
+  const ownerUserId = await getRequestOwnerUserId(req);
+  const result = await query(
+    `SELECT id, actor_user_id, notification_type, title, body, action_url, metadata, read_at, created_at, expires_at
+       FROM finance_notifications
+      WHERE owner_user_id = $1
+        AND (expires_at IS NULL OR expires_at > NOW())
+        ${parsed.data.unreadOnly ? "AND read_at IS NULL" : ""}
+      ORDER BY created_at DESC
+      LIMIT $2`,
+    [ownerUserId, parsed.data.limit]
+  );
+  return { data: result.rows };
+});
+
+app.get("/v1/notifications/unread-count", async (req, reply) => {
+  if (!(await hasNotificationsTable())) return { data: { count: 0 } };
+  const ownerUserId = await getRequestOwnerUserId(req);
+  const result = await query<{ count: string }>(
+    `SELECT COUNT(*)::text AS count
+       FROM finance_notifications
+      WHERE owner_user_id = $1
+        AND read_at IS NULL
+        AND (expires_at IS NULL OR expires_at > NOW())`,
+    [ownerUserId]
+  );
+  return { data: { count: Number(result.rows[0]?.count || 0) } };
+});
+
+app.post("/v1/notifications/:id/read", async (req, reply) => {
+  if (!(await hasNotificationsTable())) return reply.code(503).send({ error: "Notificaciones no disponibles.", code: "NOTIFICATIONS_TABLE_MISSING" });
+  const ownerUserId = await getRequestOwnerUserId(req);
+  const notificationId = String((req.params as any)?.id || "");
+  const result = await query(
+    `UPDATE finance_notifications
+        SET read_at = COALESCE(read_at, NOW())
+      WHERE id = $1 AND owner_user_id = $2
+      RETURNING id, read_at`,
+    [notificationId, ownerUserId]
+  );
+  if (!result.rowCount) return reply.code(404).send({ error: "Notificacion no encontrada." });
+  return { data: result.rows[0] };
+});
+
+app.post("/v1/notifications/read-all", async (req) => {
+  if (!(await hasNotificationsTable())) return { data: { updated: 0 } };
+  const ownerUserId = await getRequestOwnerUserId(req);
+  const result = await query(
+    `UPDATE finance_notifications
+        SET read_at = NOW()
+      WHERE owner_user_id = $1 AND read_at IS NULL`,
+    [ownerUserId]
+  );
+  return { data: { updated: result.rowCount || 0 } };
+});
+
 app.get("/v1/settings/integrations", async (_req) => {
   return {
     data: {
@@ -2254,6 +2367,17 @@ app.post("/v1/friends/requests", async (req, reply) => {
     return request.rows[0].id;
   });
 
+  await createNotification({
+    ownerUserId: addressee.id,
+    actorUserId: requesterId,
+    notificationType: "FRIEND_REQUEST",
+    title: "Nueva solicitud de amistad",
+    body: `@${(await query<{ username: string }>("SELECT username FROM auth_users WHERE id = $1", [requesterId])).rows[0]?.username || "Alguien"} quiere agregarte como amigo.`,
+    actionUrl: "/?tab=settings",
+    metadata: { requestId: created },
+    dedupeKey: `friend-request:${created}`,
+  });
+
   return reply.code(201).send({ data: { id: created, status: "PENDING", user: addressee } });
 });
 
@@ -2291,6 +2415,18 @@ app.post("/v1/friends/requests/:id/accept", async (req, reply) => {
       [userId, request.rows[0].requester_user_id, JSON.stringify({ requestId, friendshipId: friendship.rows[0].id })]
     );
     return friendship.rows[0].id;
+  });
+
+  const requester = await query<{ username: string }>("SELECT username FROM auth_users WHERE id = $1", [request.rows[0].requester_user_id]);
+  await createNotification({
+    ownerUserId: request.rows[0].requester_user_id,
+    actorUserId: userId,
+    notificationType: "FRIEND_ACCEPTED",
+    title: "Solicitud aceptada",
+    body: `@${requester.rows[0]?.username || "Tu contacto"} ahora es tu amigo en FinanceSystem.`,
+    actionUrl: "/?tab=settings",
+    metadata: { requestId, friendshipId },
+    dedupeKey: `friend-accepted:${requestId}`,
   });
 
   return { data: { id: requestId, status: "ACCEPTED", friendshipId } };
@@ -2515,6 +2651,16 @@ app.post("/v1/shares/invitations", async (req, reply) => {
     );
     return invitationId;
   });
+  await createNotification({
+    ownerUserId: invitee.rows[0].id,
+    actorUserId: ownerUserId,
+    notificationType: "SHARE_INVITATION",
+    title: "Nueva invitacion financiera",
+    body: `@${invitee.rows[0].username} recibio una invitacion para consultar recursos financieros.`,
+    actionUrl: "/?tab=settings",
+    metadata: { invitationId: created, itemCount: payload.items.length },
+    dedupeKey: `share-invitation:${created}`,
+  });
   return reply.code(201).send({ data: { id: created, status: "PENDING", invitee: invitee.rows[0] } });
 });
 
@@ -2574,6 +2720,16 @@ app.post("/v1/shares/invitations/:id/accept", async (req, reply) => {
        VALUES ($1, $2, $1, $3, 'INVITATION_ACCEPTED')`,
       [userId, invitation.rows[0].owner_user_id, invitationId]
     );
+  });
+  await createNotification({
+    ownerUserId: invitation.rows[0].owner_user_id,
+    actorUserId: userId,
+    notificationType: "SHARE_ACCEPTED",
+    title: "Invitacion financiera aceptada",
+    body: "La otra persona acepto el acceso financiero que compartiste.",
+    actionUrl: "/?tab=settings",
+    metadata: { invitationId },
+    dedupeKey: `share-accepted:${invitationId}`,
   });
   return { data: { id: invitationId, status: "ACCEPTED" } };
 });
@@ -5183,6 +5339,15 @@ app.post("/v1/agents/chat", async (req, reply) => {
       );
       const proposalId = proposalInsert.rows[0].id;
       createdProposalIds.push(proposalId);
+      await createNotification({
+        ownerUserId,
+        notificationType: "AGENT_PROPOSAL",
+        title: "Copilot preparo una propuesta",
+        body: proposal.title,
+        actionUrl: "/?tab=copilot",
+        metadata: { proposalId, proposalType: proposal.proposalType, runId },
+        dedupeKey: `agent-proposal:${proposalId}`,
+      });
 
       if (proposal.proposalType === "CREATE_DASHBOARD") {
         const baseSlug = slugify(proposal.title);
@@ -5475,6 +5640,16 @@ app.post("/v1/agent-proposals/:id/approve", async (req, reply) => {
     );
   });
 
+  await createNotification({
+    ownerUserId,
+    notificationType: proposal.rows[0].proposal_type === "CREATE_REMINDER" ? "AGENT_TASK" : "SYSTEM",
+    title: proposal.rows[0].proposal_type === "CREATE_REMINDER" ? "Recordatorio programado" : "Propuesta aprobada",
+    body: proposal.rows[0].title,
+    actionUrl: proposal.rows[0].proposal_type === "CREATE_REMINDER" ? "/?tab=planning" : "/?tab=copilot",
+    metadata: { proposalId, proposalType: proposal.rows[0].proposal_type },
+    dedupeKey: `agent-approved:${proposalId}`,
+  });
+
   return {
     data: {
       id: proposalId,
@@ -5671,6 +5846,7 @@ app.get("/v1/tooling/manifest", async (_req, reply) => {
         accounts: true,
         monthlyReports: true,
         agentChat: true,
+        notifications: true,
         telegramRemote: true,
       },
       rest: {
@@ -5687,6 +5863,7 @@ app.get("/v1/tooling/manifest", async (_req, reply) => {
         telegramStatus: "/v1/integrations/telegram/status",
         telegramWebhook: "/v1/integrations/telegram/webhook",
         telegramTestMessage: "/v1/integrations/telegram/test-message",
+        notifications: "/v1/notifications",
         toolingSchema: "/v1/tooling/schema",
         openapi: "/v1/tooling/openapi",
       },
@@ -6031,6 +6208,16 @@ app.post("/v1/reminders", async (req, reply) => {
     );
 
     return reminderRes.rows[0];
+  });
+
+  await createNotification({
+    ownerUserId,
+    notificationType: "AGENT_TASK",
+    title: "Recordatorio programado",
+    body: `La IA programo «${payload.title}» para ejecutarse ${payload.cadence.toLowerCase()}.`,
+    actionUrl: "/?tab=planning",
+    metadata: { reminderId: created.id, scheduleId: created.schedule_id, channel: created.channel },
+    dedupeKey: `agent-reminder:${created.id}`,
   });
 
   return reply.code(201).send({ data: created });
