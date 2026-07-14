@@ -233,7 +233,16 @@ export function SettingsView() {
     setFriendRequestError(null);
     setError(null);
     try {
-      await apiRequest(`/v1/friends/requests/${id}/${action}`, { method: "POST" });
+      const result = await apiRequest<{ id: string; status: string; friendshipId?: string }>(`/v1/friends/requests/${id}/${action}`, { method: "POST" });
+      const request = [...friendRequests.received, ...friendRequests.sent].find((item) => item.id === id);
+      const friendshipId = result.friendshipId;
+      if (action === "accept" && request && friendshipId) {
+        setFriends((current) => current.some((friend) => friend.id === friendshipId) ? current : [...current, { id: friendshipId, username: request.username, name: request.name, picture: request.picture, created_at: new Date().toISOString() }]);
+      }
+      setFriendRequests((current) => ({
+        received: action === "cancel" ? current.received : current.received.filter((item) => item.id !== id),
+        sent: current.sent.filter((item) => item.id !== id),
+      }));
       await loadAll();
       setNotice(action === "accept" ? "Amistad aceptada." : action === "reject" ? "Solicitud rechazada." : "Solicitud cancelada.");
     } catch (err) {
