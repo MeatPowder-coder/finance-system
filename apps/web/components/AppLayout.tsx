@@ -77,7 +77,7 @@ export default function AppLayout({
     return (
         <div className="flex h-screen md:h-screen sm:h-[100dvh] bg-background overflow-hidden relative z-0">
             <AnimatedBackground />
-            <NotificationBell />
+            <NotificationBell copilotOpen={copilotRailOpen} />
 
             {/* Desktop Sidebar - Fixed width, hidden on mobile */}
             {!isDesktopEmbed && (

@@ -41,7 +41,7 @@ function typeLabel(type: string) {
   return "FinanceSystem";
 }
 
-export function NotificationBell() {
+export function NotificationBell({ copilotOpen = false }: { copilotOpen?: boolean }) {
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<NotificationItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -89,7 +89,7 @@ export function NotificationBell() {
   }
 
   return (
-    <div className="pointer-events-none fixed right-16 top-4 z-[45]">
+    <div className={cn("pointer-events-none fixed top-4 z-[45] transition-[right] duration-300", copilotOpen ? "right-[21rem]" : "right-16")}>
       <div className="relative pointer-events-auto">
         <Button
           type="button"
@@ -126,4 +126,3 @@ export function NotificationBell() {
     </div>
   );
 }
-
