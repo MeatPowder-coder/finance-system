@@ -133,9 +133,9 @@ export default function AppLayout({
 
                 {/* Mobile Header - Visible only on mobile */}
                 {!isDesktopEmbed && (
-                    <div className="md:hidden flex items-center h-14 px-4 border-b bg-zinc-900 border-zinc-800 shrink-0 z-40 relative">
+                    <div className="md:hidden flex items-center h-14 px-4 border-b border-[var(--ui-border)] bg-surface-1 text-fg shrink-0 z-40 relative">
                         <MobileSidebar />
-                        <span className="ml-3 font-bold text-white text-lg">FinanceSystem</span>
+                        <span className="ml-3 font-semibold text-fg text-lg tracking-tight">FinanceSystem</span>
                     </div>
                 )}
 

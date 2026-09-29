@@ -354,21 +354,22 @@ export function SettingsView() {
   ].filter((group) => group.items.length);
 
   return (
-    <div className="section-enter space-y-5 pb-12">
-      <div className="flex flex-col gap-3 rounded-3xl border border-border bg-card/70 p-5 md:flex-row md:items-center md:justify-between md:p-6">
+    <div className="section-enter space-y-6 pb-12">
+      <div className="ui-shell-card relative flex flex-col gap-4 overflow-hidden bg-brand p-5 text-surface md:flex-row md:items-center md:justify-between md:p-7">
         <div>
-          <div className="flex items-center gap-2 text-primary"><Shield className="h-4 w-4" /><span className="text-xs font-semibold uppercase tracking-[0.18em]">Control personal</span></div>
-          <h2 className="mt-2 text-2xl font-semibold tracking-tight text-foreground">Configuracion</h2>
-          <p className="mt-1 text-sm text-muted-foreground">Perfil, apariencia, conexiones y acceso compartido a tus finanzas.</p>
+          <div className="flex items-center gap-2 text-surface/80"><Shield className="h-4 w-4" /><span className="text-xs font-semibold uppercase tracking-[0.18em]">Control personal</span></div>
+          <h2 className="mt-2 text-3xl font-semibold tracking-tight text-surface md:text-4xl">Configuración</h2>
+          <p className="mt-1 max-w-2xl text-sm text-surface/75">Perfil, apariencia, conexiones y acceso compartido a tus finanzas.</p>
         </div>
-        <Button variant="outline" className="rounded-xl" onClick={() => void loadAll()} disabled={loading}><RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} /> Actualizar</Button>
+        <div className="relative flex items-center gap-3"><span className="hidden text-right text-xs text-surface/70 sm:block">Tu espacio<br/>financiero privado</span><Button variant="outline" className="border-surface/30 bg-surface/10 text-surface hover:bg-surface/20" onClick={() => void loadAll()} disabled={loading}><RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} /> Actualizar</Button></div>
+        <span className="pointer-events-none absolute -bottom-14 right-28 h-44 w-44 rounded-full border-[28px] border-surface/10" />
       </div>
 
       {error && <div className="rounded-2xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div>}
       {notice && <div className="rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">{notice}</div>}
 
-      <div className="grid gap-5 xl:grid-cols-[0.8fr_1.2fr]">
-        <Card>
+      <div className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
+        <Card className="ds-soft-card overflow-hidden">
           <CardHeader><CardTitle>Tu identidad</CardTitle><CardDescription>Este nombre de usuario sirve para recibir invitaciones sin compartir tu correo.</CardDescription></CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -380,7 +381,7 @@ export function SettingsView() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="ds-soft-card overflow-hidden">
           <CardHeader><CardTitle>Apariencia</CardTitle><CardDescription>Los cambios se aplican en web y desktop en este dispositivo.</CardDescription></CardHeader>
           <CardContent>
             <ThemeSelector
@@ -392,7 +393,7 @@ export function SettingsView() {
         </Card>
       </div>
 
-      <Card>
+      <Card className="ds-soft-card overflow-hidden">
         <CardHeader><CardTitle>Conexiones del sistema</CardTitle><CardDescription>Estado de las capacidades que pueden trabajar con tus datos. Las claves nunca se muestran aqui.</CardDescription></CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-3">
           {[
@@ -408,7 +409,7 @@ export function SettingsView() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="ds-soft-card overflow-hidden">
         <CardHeader><CardTitle>Amigos</CardTitle><CardDescription>Busca por username exacto y crea una amistad antes de compartir cualquier dato financiero.</CardDescription></CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 md:grid-cols-[1fr_auto]">
@@ -430,7 +431,7 @@ export function SettingsView() {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="ds-soft-card overflow-hidden">
         <CardHeader><CardTitle>Compartir finanzas</CardTitle><CardDescription>Comparte cuentas o recursos concretos con un amigo activo y permisos explicitos.</CardDescription></CardHeader>
         <CardContent className="space-y-5">
           <div className="grid gap-3 md:grid-cols-[1fr_auto]">
@@ -442,12 +443,12 @@ export function SettingsView() {
         </CardContent>
       </Card>
 
-      <div className="grid gap-5 xl:grid-cols-2">
-        <Card><CardHeader><CardTitle>Invitaciones recibidas</CardTitle><CardDescription>Acepta solo los accesos que reconozcas.</CardDescription></CardHeader><CardContent className="space-y-3">{received.filter((item) => item.status === "PENDING").map((item) => <div key={item.id} className="rounded-xl border border-border p-3"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold text-foreground">@{item.owner_username} quiere compartir contigo</p><p className="mt-1 text-xs text-muted-foreground">{item.items.length} recursos seleccionados</p></div><Badge variant="outline">Pendiente</Badge></div><div className="mt-3 flex gap-2"><Button size="sm" onClick={() => void decideInvitation(item.id, "accept")} disabled={saving}>Aceptar</Button><Button size="sm" variant="outline" onClick={() => void decideInvitation(item.id, "reject")} disabled={saving}>Rechazar</Button></div></div>)}{!received.some((item) => item.status === "PENDING") && <EmptyState icon={Lock} text="No tienes invitaciones pendientes." />}</CardContent></Card>
-        <Card><CardHeader><CardTitle>Accesos y solicitudes enviadas</CardTitle><CardDescription>Revoca un acceso activo o una invitacion pendiente.</CardDescription></CardHeader><CardContent className="space-y-3">{sent.filter((item) => item.status === "PENDING").map((item) => <div key={item.id} className="flex items-center gap-3 rounded-xl border border-dashed border-border p-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-foreground">@{item.invitee_username} - invitacion pendiente</p><p className="text-xs text-muted-foreground">{item.items.length} recursos seleccionados</p></div><Button size="sm" variant="outline" onClick={() => void decideInvitation(item.id, "revoke")} disabled={saving}><X className="h-3.5 w-3.5" /> Revocar</Button></div>)}{grants.filter((item) => item.status === "ACTIVE" && item.owner_user_id === profile?.id).map((grant) => <div key={grant.id} className="flex items-center gap-3 rounded-xl border border-border p-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-foreground">@{grant.grantee_username} - {grant.resource_type} {grant.resource_id}</p><p className="text-xs text-muted-foreground">{grant.permissions.join(" / ")}</p></div><Button size="sm" variant="outline" onClick={() => void revokeGrant(grant.id)} disabled={saving}><X className="h-3.5 w-3.5" /> Revocar</Button></div>)}{!sent.some((item) => item.status === "PENDING") && !grants.some((item) => item.status === "ACTIVE" && item.owner_user_id === profile?.id) && <EmptyState icon={Shield} text="Todavia no has compartido recursos." />}</CardContent></Card>
+      <div className="grid gap-4 xl:grid-cols-2">
+        <Card className="ds-soft-card overflow-hidden"><CardHeader><CardTitle>Invitaciones recibidas</CardTitle><CardDescription>Acepta solo los accesos que reconozcas.</CardDescription></CardHeader><CardContent className="space-y-3">{received.filter((item) => item.status === "PENDING").map((item) => <div key={item.id} className="rounded-xl border border-surface-2 bg-surface-1/70 p-3"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold text-fg">@{item.owner_username} quiere compartir contigo</p><p className="mt-1 text-xs text-fg-subtle">{item.items.length} recursos seleccionados</p></div><Badge variant="outline">Pendiente</Badge></div><div className="mt-3 flex gap-2"><Button size="sm" onClick={() => void decideInvitation(item.id, "accept")} disabled={saving}>Aceptar</Button><Button size="sm" variant="outline" onClick={() => void decideInvitation(item.id, "reject")} disabled={saving}>Rechazar</Button></div></div>)}{!received.some((item) => item.status === "PENDING") && <EmptyState icon={Lock} text="No tienes invitaciones pendientes." />}</CardContent></Card>
+        <Card className="ds-soft-card overflow-hidden"><CardHeader><CardTitle>Accesos y solicitudes enviadas</CardTitle><CardDescription>Revoca un acceso activo o una invitacion pendiente.</CardDescription></CardHeader><CardContent className="space-y-3">{sent.filter((item) => item.status === "PENDING").map((item) => <div key={item.id} className="flex items-center gap-3 rounded-xl border border-dashed border-surface-2 p-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-fg">@{item.invitee_username} - invitacion pendiente</p><p className="text-xs text-fg-subtle">{item.items.length} recursos seleccionados</p></div><Button size="sm" variant="outline" onClick={() => void decideInvitation(item.id, "revoke")} disabled={saving}><X className="h-3.5 w-3.5" /> Revocar</Button></div>)}{grants.filter((item) => item.status === "ACTIVE" && item.owner_user_id === profile?.id).map((grant) => <div key={grant.id} className="flex items-center gap-3 rounded-xl border border-surface-2 p-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-fg">@{grant.grantee_username} - {grant.resource_type} {grant.resource_id}</p><p className="text-xs text-fg-subtle">{grant.permissions.join(" / ")}</p></div><Button size="sm" variant="outline" onClick={() => void revokeGrant(grant.id)} disabled={saving}><X className="h-3.5 w-3.5" /> Revocar</Button></div>)}{!sent.some((item) => item.status === "PENDING") && !grants.some((item) => item.status === "ACTIVE" && item.owner_user_id === profile?.id) && <EmptyState icon={Shield} text="Todavia no has compartido recursos." />}</CardContent></Card>
       </div>
 
-      <Card><CardHeader><CardTitle>Accesos que recibes</CardTitle><CardDescription>Recursos de otras personas disponibles para ti.</CardDescription></CardHeader><CardContent className="space-y-3">{grants.filter((item) => item.status === "ACTIVE" && item.grantee_user_id === profile?.id).map((grant) => <div key={grant.id} className="flex items-center gap-3 rounded-xl border border-border p-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-foreground">@{grant.owner_username} - {grant.resource_type} {grant.resource_id}</p><p className="text-xs text-muted-foreground">Permisos: {grant.permissions.join(" / ")}</p></div><Badge variant="outline">Activo</Badge></div>)}{!grants.some((item) => item.status === "ACTIVE" && item.grantee_user_id === profile?.id) && <EmptyState icon={Link2} text="Cuando aceptes una invitacion, sus recursos apareceran aqui." />}</CardContent></Card>
+      <Card className="ds-soft-card overflow-hidden"><CardHeader><CardTitle>Accesos que recibes</CardTitle><CardDescription>Recursos de otras personas disponibles para ti.</CardDescription></CardHeader><CardContent className="space-y-3">{grants.filter((item) => item.status === "ACTIVE" && item.grantee_user_id === profile?.id).map((grant) => <div key={grant.id} className="flex items-center gap-3 rounded-xl border border-surface-2 p-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-fg">@{grant.owner_username} - {grant.resource_type} {grant.resource_id}</p><p className="text-xs text-fg-subtle">Permisos: {grant.permissions.join(" / ")}</p></div><Badge variant="outline">Activo</Badge></div>)}{!grants.some((item) => item.status === "ACTIVE" && item.grantee_user_id === profile?.id) && <EmptyState icon={Link2} text="Cuando aceptes una invitacion, sus recursos apareceran aqui." />}</CardContent></Card>
     </div>
   );
 }

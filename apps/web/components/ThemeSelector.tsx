@@ -32,10 +32,10 @@ type ThemeOption = {
 const THEME_OPTIONS: ThemeOption[] = [
   {
     value: "light",
-    label: "Claro",
-    description: "Limpio, luminoso y más editorial",
+    label: "Editorial",
+    description: "Papel cálido, verde botánico y acentos coral",
     icon: Sun,
-    swatch: "from-white via-slate-200 to-amber-200",
+    swatch: "from-[#f2f0e4] via-[#9dbf67] to-[#e98765]",
   },
   {
     value: "dark",
@@ -112,7 +112,7 @@ const THEME_OPTIONS: ThemeOption[] = [
 const THEME_CLASS_NAMES = THEME_OPTIONS.map((option) => "theme-" + option.value);
 
 export function ThemeSelector({ collapsed, panel = false, onThemeChange, onBackgroundChange }: ThemeSelectorProps) {
-  const [theme, setTheme] = useState<ThemeId>("dark");
+  const [theme, setTheme] = useState<ThemeId>("light");
   const [backgroundMode, setBackgroundMode] = useState<BackgroundMode>("auto");
 
   const currentTheme = useMemo(
@@ -145,10 +145,10 @@ export function ThemeSelector({ collapsed, panel = false, onThemeChange, onBackg
   };
 
   useEffect(() => {
-    const savedThemeRaw = localStorage.getItem("theme") || "dark";
+    const savedThemeRaw = localStorage.getItem("theme") || "light";
     const savedTheme = THEME_OPTIONS.some((option) => option.value === savedThemeRaw)
       ? (savedThemeRaw as ThemeId)
-      : "dark";
+      : "light";
 
     if (savedThemeRaw !== savedTheme) {
       localStorage.setItem("theme", savedTheme);
@@ -165,7 +165,7 @@ export function ThemeSelector({ collapsed, panel = false, onThemeChange, onBackg
   const handleThemeChange = (newTheme: string) => {
     const nextTheme = THEME_OPTIONS.some((option) => option.value === newTheme)
       ? (newTheme as ThemeId)
-      : "dark";
+      : "light";
     setTheme(nextTheme);
     localStorage.setItem("theme", nextTheme);
     applyTheme(nextTheme);

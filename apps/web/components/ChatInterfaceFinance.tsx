@@ -349,35 +349,35 @@ export default function ChatInterfaceFinance() {
   }, []);
 
   return (
-    <div className="chat-screen flex h-full min-h-0 overflow-hidden bg-zinc-950 text-zinc-100">
-      <aside className="w-72 min-h-0 border-r border-zinc-800 bg-zinc-950/95 flex flex-col">
-        <div className="p-3 border-b border-zinc-800 space-y-2">
-          <Button variant="outline" className="w-full justify-start gap-2 border-zinc-700 bg-zinc-950 hover:bg-zinc-900" onClick={() => void createSession("ACCOUNTANT")}>
+    <div className="chat-screen flex h-full min-h-0 overflow-hidden bg-surface-1 text-fg">
+      <aside className="w-72 min-h-0 border-r border-surface-2 bg-surface-1/95 flex flex-col">
+        <div className="p-4 border-b border-surface-2 space-y-2">
+          <Button variant="outline" className="w-full justify-start gap-2 border-surface-2 bg-surface-1 hover:bg-surface-2" onClick={() => void createSession("ACCOUNTANT")}>
             <Plus className="h-4 w-4" />
             Nueva sesiÃ³n contable
           </Button>
-          <Button variant="outline" className="w-full justify-start gap-2 border-zinc-700 bg-zinc-950 hover:bg-zinc-900" onClick={() => void createSession("ANALYST")}>
+          <Button variant="outline" className="w-full justify-start gap-2 border-surface-2 bg-surface-1 hover:bg-surface-2" onClick={() => void createSession("ANALYST")}>
             <Plus className="h-4 w-4" />
             Nueva sesiÃ³n analÃ­tica
           </Button>
         </div>
         <div className="flex-1 overflow-y-auto">
-          {loadingSessions && <div className="p-3 text-xs text-zinc-500">Cargando sesiones...</div>}
+          {loadingSessions && <div className="p-3 text-xs text-fg-subtle">Cargando sesiones...</div>}
           {!loadingSessions &&
             sessions.map((session) => (
               <button
                 key={session.id}
                 type="button"
                 onClick={() => setActiveSessionId(session.id)}
-                className={`w-full text-left px-3 py-3 border-b border-zinc-900 transition-colors ${
-                  session.id === activeSessionId ? "bg-cyan-500/10" : "hover:bg-zinc-900"
+                className={`w-full text-left px-4 py-3 border-b border-surface-2 transition-colors ${
+                  session.id === activeSessionId ? "bg-brand-soft" : "hover:bg-surface-2/70"
                 }`}
               >
                 <div className="flex items-center gap-2">
-                  <MessageSquare className="h-3.5 w-3.5 text-cyan-400 shrink-0" />
+                  <MessageSquare className="h-3.5 w-3.5 text-brand shrink-0" />
                   <div className="truncate text-sm font-medium">{session.title || "Sin tÃ­tulo"}</div>
                 </div>
-                <div className="text-[11px] text-zinc-500 mt-1">
+                <div className="text-[11px] text-fg-subtle mt-1">
                   {session.mode} Â· {session.message_count} mensajes
                 </div>
               </button>
@@ -409,19 +409,19 @@ export default function ChatInterfaceFinance() {
           void attachFiles(Array.from(event.dataTransfer.files || []));
         }}
       >
-        <div className="shrink-0 p-3 border-b border-zinc-800 bg-zinc-950/95 flex items-center justify-between gap-3">
+        <div className="shrink-0 p-4 border-b border-surface-2 bg-surface-1/95 flex items-center justify-between gap-3">
           <div className="flex items-center gap-2 min-w-0">
-            <Sparkles className="h-4 w-4 text-cyan-400 shrink-0" />
+            <Sparkles className="h-4 w-4 text-brand shrink-0" />
             <div className="truncate">
-              <div className="text-sm font-semibold text-zinc-100">Agentame Chat (Finance)</div>
-              <div className="text-[11px] text-zinc-500 truncate">
+              <div className="text-sm font-semibold text-fg">Agentame Chat (Finance)</div>
+              <div className="text-[11px] text-fg-subtle truncate">
                 {activeSession ? activeSession.title : "Selecciona o crea una sesiÃ³n"}
               </div>
             </div>
           </div>
           <div className="w-[340px] max-w-[50%]">
             <Select value={selectedModel} onValueChange={setSelectedModel}>
-              <SelectTrigger className="h-8 text-xs border-zinc-700 bg-zinc-950">
+              <SelectTrigger className="h-9 text-xs border-surface-2 bg-surface-1">
                 <SelectValue placeholder="Selecciona modelo" />
               </SelectTrigger>
               <SelectContent>
@@ -433,7 +433,7 @@ export default function ChatInterfaceFinance() {
                 ))}
               </SelectContent>
             </Select>
-            <div className="text-[10px] text-zinc-500 mt-1">
+            <div className="text-[10px] text-fg-subtle mt-1">
               Adjuntos multimodales: activo Â· MÃ¡x {maxFiles} archivo(s) por mensaje.
             </div>
           </div>
@@ -441,8 +441,8 @@ export default function ChatInterfaceFinance() {
 
         <div ref={scrollRef} className="chat-message-scroll flex-1 min-h-0 overflow-y-auto p-4 space-y-3 finance-scrollbar">
           {messages.length === 0 && (
-            <div className="h-full flex flex-col items-center justify-center text-zinc-500 text-sm gap-2">
-              <Bot className="h-8 w-8 text-cyan-400/70" />
+            <div className="h-full flex flex-col items-center justify-center text-fg-subtle text-sm gap-2">
+              <Bot className="h-10 w-10 text-brand/70" />
               <p>Escribe un mensaje para comenzar.</p>
             </div>
           )}
@@ -453,8 +453,8 @@ export default function ChatInterfaceFinance() {
                 <div
                   className={`max-w-[78%] rounded-2xl px-3 py-2 text-sm whitespace-pre-wrap ${
                     isUser
-                      ? "bg-cyan-600 text-white rounded-tr-none shadow-lg shadow-cyan-500/20"
-                      : "bg-zinc-900 border border-zinc-800 text-zinc-100 rounded-tl-none"
+                      ? "bg-brand text-surface rounded-tr-none shadow-lg shadow-brand/20"
+                      : "bg-surface-1 border border-surface-2 text-fg rounded-tl-none"
                   }`}
                 >
                   {message.content}
@@ -464,8 +464,8 @@ export default function ChatInterfaceFinance() {
           })}
           {(busy || typingAssistant) && (
             <div className="flex justify-start">
-              <div className="bg-zinc-900 border border-zinc-800 rounded-2xl rounded-tl-none px-3 py-2 text-xs text-zinc-400 inline-flex items-center gap-2">
-                <Loader2 className="h-4 w-4 animate-spin text-cyan-400" />
+              <div className="bg-surface-1 border border-surface-2 rounded-2xl rounded-tl-none px-3 py-2 text-xs text-fg-subtle inline-flex items-center gap-2">
+                <Loader2 className="h-4 w-4 animate-spin text-brand" />
                 Escribiendo...
               </div>
             </div>
@@ -473,34 +473,34 @@ export default function ChatInterfaceFinance() {
         </div>
 
         {isDragging && (
-          <div className="absolute inset-3 rounded-xl border-2 border-dashed border-cyan-500/70 bg-cyan-500/10 z-20 pointer-events-none flex items-center justify-center">
-            <div className="bg-zinc-900 border border-zinc-700 rounded-xl px-4 py-3 text-sm text-zinc-200 shadow">
+          <div className="absolute inset-3 rounded-xl border-2 border-dashed border-brand/70 bg-brand-soft/80 z-20 pointer-events-none flex items-center justify-center">
+            <div className="bg-surface-1 border border-surface-2 rounded-xl px-4 py-3 text-sm text-fg shadow">
               Suelta archivos aquÃ­ para adjuntarlos
             </div>
           </div>
         )}
 
-        <div className="chat-composer shrink-0 p-3 border-t border-zinc-800 bg-zinc-950">
-          {error && <div className="mb-2 text-xs text-amber-300 whitespace-pre-wrap rounded-lg border border-amber-500/40 bg-amber-500/10 px-2 py-1.5">{error}</div>}
+        <div className="chat-composer shrink-0 p-4 border-t border-surface-2 bg-surface-1">
+          {error && <div className="mb-2 text-xs text-warning whitespace-pre-wrap rounded-lg border border-warning/40 bg-warning/10 px-2 py-1.5">{error}</div>}
 
           {pendingAttachments.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-2">
               {pendingAttachments.map((file) => (
                 <div
                   key={file.id}
-                  className="relative rounded-lg border border-zinc-800 bg-zinc-900 px-2 py-1.5 pr-7 max-w-[220px]"
+                  className="relative rounded-lg border border-surface-2 bg-surface-1 px-2 py-1.5 pr-7 max-w-[220px]"
                 >
                   <div className="flex items-center gap-2">
                     {file.kind === "image" ? (
-                      <img src={file.dataUrl} alt={file.name} className="h-10 w-10 rounded object-cover border border-zinc-700" />
+                      <img src={file.dataUrl} alt={file.name} className="h-10 w-10 rounded object-cover border border-surface-2" />
                     ) : (
-                      <div className="h-10 w-10 rounded bg-zinc-800 flex items-center justify-center">
-                        <FileText className="h-4 w-4 text-zinc-300" />
+                      <div className="h-10 w-10 rounded bg-surface-2 flex items-center justify-center">
+                        <FileText className="h-4 w-4 text-fg-secondary" />
                       </div>
                     )}
                     <div className="min-w-0">
                       <div className="text-xs font-medium truncate">{truncateText(file.name, 34)}</div>
-                      <div className="text-[10px] text-zinc-500 truncate">
+                      <div className="text-[10px] text-fg-subtle truncate">
                         {file.kind === "image" ? <ImageIcon className="inline-block h-3 w-3 mr-1" /> : null}
                         {truncateText(file.mediaType, 28)} Â· {(file.size / 1024).toFixed(1)} KB
                       </div>
@@ -508,7 +508,7 @@ export default function ChatInterfaceFinance() {
                   </div>
                   <button
                     type="button"
-                    className="absolute top-1 right-1 rounded-full bg-rose-500 text-white p-0.5"
+                    className="absolute top-1 right-1 rounded-full bg-danger text-surface p-0.5"
                     onClick={() => removeAttachment(file.id)}
                     aria-label="Quitar adjunto"
                   >
@@ -544,7 +544,7 @@ export default function ChatInterfaceFinance() {
               disabled={!canUseAttachments || busy || typingAssistant}
               onClick={() => fileInputRef.current?.click()}
               title="Adjuntar archivos"
-              className="border-zinc-700 bg-zinc-950 text-zinc-200 hover:bg-zinc-900"
+              className="border-surface-2 bg-surface-1 text-fg-secondary hover:bg-surface-2"
             >
               <Paperclip className="h-4 w-4" />
             </Button>
@@ -566,17 +566,17 @@ export default function ChatInterfaceFinance() {
               }}
               placeholder="Escribe tu mensaje o pega/arrastra/sube archivos..."
               disabled={!activeSessionId || busy || typingAssistant}
-              className="bg-zinc-950 border-zinc-800"
+              className="bg-surface-1 border-surface-2"
             />
             <Button
               type="submit"
-              className="bg-cyan-600 hover:bg-cyan-500 text-white"
+              className="bg-brand text-surface hover:bg-brand/90"
               disabled={!activeSessionId || busy || typingAssistant || (!input.trim() && pendingAttachments.length === 0)}
             >
               {busy || typingAssistant ? <Loader2 className="h-4 w-4 animate-spin" /> : "Enviar"}
             </Button>
           </form>
-          <div className="mt-1 text-[10px] text-zinc-500">Atajo: pega imÃ¡genes con Ctrl+V o arrastra archivos al chat.</div>
+          <div className="mt-1 text-[10px] text-fg-subtle">Atajo: pega imágenes con Ctrl+V o arrastra archivos al chat.</div>
         </div>
       </section>
     </div>

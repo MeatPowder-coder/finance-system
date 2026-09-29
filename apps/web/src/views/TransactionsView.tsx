@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowDownLeft, ArrowUpRight, Filter, Plus, Tags, Search } from "lucide-react";
+import { ArrowDownLeft, ArrowUpRight, Filter, Plus, Tags, Search, Rows3, Table2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -145,6 +145,17 @@ export function TransactionsView(props: TransactionsViewProps) {
     onCreateTag,
     saving,
   } = props;
+  const [viewMode, setViewMode] = React.useState<"ledger" | "table">("ledger");
+  const ledgerGroups = React.useMemo(() => {
+    const groups = new Map<string, Transaction[]>();
+    filteredTx.forEach((transaction) => {
+      const day = String(transaction.transaction_date).slice(0, 10);
+      const items = groups.get(day) ?? [];
+      items.push(transaction);
+      groups.set(day, items);
+    });
+    return Array.from(groups.entries());
+  }, [filteredTx]);
 
   const columns: DataViewColumn<Transaction>[] = [
     {
@@ -243,8 +254,15 @@ export function TransactionsView(props: TransactionsViewProps) {
       />
 
       {/* Filtros + mini métricas */}
-      <Card className="ds-soft-card">
+      <Card className="ui-shell-card overflow-hidden">
         <CardContent className="p-4 md:p-5">
+          <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+            <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">Libro de movimientos</p><h2 className="mt-1 text-2xl font-semibold tracking-[-0.04em] text-fg">Todo tiene su lugar</h2><p className="mt-1 text-sm ui-muted">Busca y filtra para encontrar el hilo de tu dinero.</p></div>
+            <div className="flex rounded-xl border border-surface-2 bg-surface-1 p-1" role="group" aria-label="Presentación de movimientos">
+              <Button type="button" size="sm" variant={viewMode === "ledger" ? "default" : "ghost"} aria-pressed={viewMode === "ledger"} onClick={() => setViewMode("ledger")} className={viewMode === "ledger" ? "bg-brand text-surface hover:bg-brand/90" : "text-fg-secondary"}><Rows3 className="mr-1.5 h-4 w-4" />Libro</Button>
+              <Button type="button" size="sm" variant={viewMode === "table" ? "default" : "ghost"} aria-pressed={viewMode === "table"} onClick={() => setViewMode("table")} className={viewMode === "table" ? "bg-brand text-surface hover:bg-brand/90" : "text-fg-secondary"}><Table2 className="mr-1.5 h-4 w-4" />Tabla</Button>
+            </div>
+          </div>
           <div className="grid grid-cols-1 gap-3 md:grid-cols-3 xl:grid-cols-6">
             <div className="relative md:col-span-3 xl:col-span-2">
               <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-fg-subtle pointer-events-none" />
@@ -313,16 +331,42 @@ export function TransactionsView(props: TransactionsViewProps) {
         </CardContent>
       </Card>
 
-      {/* Tabla responsive */}
-      <Card className="ds-soft-card">
+      {/* Libro editorial y tabla completa como alternativa */}
+      <Card className="ds-soft-card overflow-hidden">
         <CardContent className="p-4 md:p-5">
-          <SectionHeader title="Movimientos del mes" caption="Detalle filtrado, ordenado por fecha." className="pb-3" />
+          <SectionHeader title={viewMode === "ledger" ? "El recorrido de tu dinero" : "Movimientos del mes"} caption={viewMode === "ledger" ? "Cada movimiento conserva el contexto de su día." : "Detalle filtrado, ordenado por fecha."} className="pb-3" />
           {filteredTx.length === 0 ? (
             <EmptyState icon={<Filter className="h-7 w-7" />} title="Sin resultados">
               Ajusta los filtros para ver movimientos.
             </EmptyState>
-          ) : (
+          ) : viewMode === "table" ? (
             <DataView columns={columns} rows={filteredTx} rowKey={(t) => t.id} />
+          ) : (
+            <div className="space-y-6">
+              {ledgerGroups.map(([day, transactions]) => (
+                <section key={day} aria-label={`Movimientos del ${formatDate(day)}`}>
+                  <div className="mb-2 flex items-center gap-3">
+                    <h3 className="shrink-0 text-xs font-semibold uppercase tracking-[0.16em] text-brand">{formatDate(day)}</h3>
+                    <span aria-hidden="true" className="h-px flex-1 bg-surface-2" />
+                    <span className="text-[11px] ui-muted">{transactions.length} {transactions.length === 1 ? "movimiento" : "movimientos"}</span>
+                  </div>
+                  <div className="overflow-hidden rounded-2xl border border-surface-2 bg-surface-1">
+                    {transactions.map((transaction, index) => {
+                      const inflow = transaction.direction === "INFLOW";
+                      return <article key={transaction.id} className={`grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3 py-3.5 transition-colors hover:bg-brand-soft/50 sm:gap-4 sm:px-4 ${index ? "border-t border-surface-2/80" : ""}`}>
+                        <span className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl ${inflow ? "bg-positive-soft text-positive" : "bg-brand-soft text-brand"}`} aria-hidden="true">{inflow ? <ArrowUpRight className="h-5 w-5" /> : <ArrowDownLeft className="h-5 w-5" />}</span>
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><p className="truncate font-semibold text-fg">{transaction.description || "Sin descripción"}</p><span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${getStatusTone(transaction.status)}`}>{transaction.status}</span></div>
+                          <p className="mt-0.5 truncate text-xs ui-muted">{transaction.account_name}{transaction.category_name ? ` · ${transaction.category_name}` : ""}{transaction.counterparty_name ? ` · ${transaction.counterparty_name}` : ""}</p>
+                          {transaction.tags.length > 0 && <p className="mt-1 truncate text-[11px] ui-muted">{transaction.tags.map((tag) => tag.name).join(" · ")}</p>}
+                        </div>
+                        <p className={`whitespace-nowrap text-right text-sm font-bold tracking-tight sm:text-base ${inflow ? "text-positive" : "text-fg"}`}>{inflow ? "+" : "−"}{formatMoney(toNumber(transaction.amount), transaction.currency)}</p>
+                      </article>;
+                    })}
+                  </div>
+                </section>
+              ))}
+            </div>
           )}
         </CardContent>
       </Card>

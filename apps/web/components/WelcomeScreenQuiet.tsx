@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, WalletCards } from "lucide-react";
+import { ArrowDownRight, ArrowRight, ChartNoAxesCombined, LockKeyhole, WalletCards } from "lucide-react";
 
 type WelcomeScreenProps = {
   returnTo: string;
@@ -46,28 +46,55 @@ export default function WelcomeScreenQuiet({ returnTo, apiBaseUrl }: WelcomeScre
             <span className="welcome-brand-mark"><WalletCards className="h-5 w-5" /></span>
             <span>FinanceSystem</span>
           </a>
-          <div className="welcome-connection">
+          <div className="welcome-connection" aria-label="Estado del servicio: backend conectado">
             <span className="welcome-connection-dot" />
             <span>Backend conectado</span>
           </div>
         </header>
 
-        <section className="welcome-quiet-layout">
-          <div className="quiet-side-label">PRIVATE FINANCE<br /><span>EST. 2026</span></div>
-          <div className="quiet-panel">
-            <div className="quiet-panel-mark"><WalletCards className="h-5 w-5" /></div>
-            <div className="quiet-panel-kicker">{COPY.eyebrow}</div>
-            <h1>{COPY.title}</h1>
-            <p className="welcome-description">{COPY.description}</p>
+        <section className="welcome-quiet-layout welcome-editorial-layout" aria-labelledby="welcome-title">
+          <div className="welcome-editorial-main quiet-panel">
+            <div className="welcome-editorial-kicker quiet-panel-kicker">
+              <span className="quiet-panel-mark"><WalletCards className="h-5 w-5" /></span>
+              <span>{COPY.eyebrow}<span className="welcome-editorial-est"> · PRIVATE FINANCE / EST. 2026</span></span>
+            </div>
+            <h1 id="welcome-title">Tu dinero.<br /><span>Tu ritmo.</span></h1>
+            <p className="welcome-description">Un espacio claro para entender tus movimientos, organizar tus planes y decidir con calma.</p>
             <WelcomeActions returnTo={returnTo} />
             <div className="quiet-panel-note"><span /> {COPY.note}</div>
           </div>
-          <div className="quiet-side-note">Tu información permanece<br />contigo y sólo contigo.</div>
+
+          <aside className="welcome-editorial-art" aria-label="Vista previa de tus finanzas">
+            <div className="welcome-editorial-art-top">
+              <span>VISTA GENERAL</span>
+              <span className="welcome-editorial-lock"><LockKeyhole className="h-3.5 w-3.5" /> PRIVADO</span>
+            </div>
+            <div className="welcome-editorial-balance">
+              <span>Tu panorama, en un solo lugar</span>
+              <strong>Más claridad.<br />Menos ruido.</strong>
+            </div>
+            <div className="welcome-editorial-chart" aria-hidden="true">
+              <div className="welcome-editorial-chart-label"><span>FLUJO DEL MES</span><ArrowDownRight className="h-4 w-4" /></div>
+              <div className="welcome-editorial-bars">
+                {[42, 59, 48, 76, 63, 91, 70, 100, 79, 88, 68, 96].map((height, index) => (
+                  <span key={index} style={{ height: `${height}%` }} />
+                ))}
+              </div>
+              <div className="welcome-editorial-chart-foot"><span>INGRESOS</span><span>GASTOS</span><span>PLANES</span></div>
+            </div>
+            <div className="welcome-editorial-art-stamp" aria-hidden="true"><ChartNoAxesCombined className="h-5 w-5" /><span>FINANZAS<br />A TU MANERA</span></div>
+          </aside>
+
+          <div className="welcome-editorial-stats" aria-label="Lo que puedes hacer">
+            <div className="welcome-editorial-stat"><span>01</span><strong>Ver con claridad</strong><small>Ingresos, gastos y cuentas, reunidos.</small></div>
+            <div className="welcome-editorial-stat"><span>02</span><strong>Planear a tu ritmo</strong><small>Metas que se sienten alcanzables.</small></div>
+            <div className="welcome-editorial-stat"><span>03</span><strong>Privacidad primero</strong><small>Un acceso seguro para web y desktop.</small></div>
+          </div>
         </section>
 
         <footer className="welcome-footer">
-          <span>Acceso seguro para web y desktop</span>
-          <span className="welcome-footer-url">{apiBaseUrl || "Conexión local"}</span>
+          <span className="welcome-footer-security"><LockKeyhole className="h-3.5 w-3.5" /> Acceso seguro para web y desktop</span>
+          <span className="welcome-footer-url" title={apiBaseUrl || "Conexión local"}>{apiBaseUrl || "Conexión local"}</span>
         </footer>
       </main>
     </div>

@@ -156,14 +156,14 @@ export function PlanningView(p: PlanningViewProps) {
   } = p;
 
   return (
-    <div className="section-enter space-y-5">
+    <div className="section-enter space-y-6 pb-10">
       <PageHeader
         title="Planificación"
         subtitle="Presupuestos, déficits, compromisos y proyecciones del mes."
         icon={<CalendarDays className="h-5 w-5" />}
       />
 
-      <section className="ui-shell-card rounded-[28px] p-4">
+      <section className="ui-shell-card grid gap-5 p-5 md:p-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
             <div className="min-w-[180px]">
@@ -185,9 +185,9 @@ export function PlanningView(p: PlanningViewProps) {
           </div>
           <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
             {planningSummaryCards.map((item) => (
-              <div key={item.label} className="ui-panel-soft rounded-2xl px-3 py-2.5">
-                <p className="text-[11px] uppercase tracking-[0.14em] ui-subtle">{item.label}</p>
-                <p className={`mt-1 text-sm font-semibold ${item.tone}`}>{item.value}</p>
+              <div key={item.label} className="ui-panel-soft min-w-0 rounded-xl px-3 py-3 md:px-4">
+                <p className="truncate text-[10px] font-semibold uppercase tracking-[0.14em] ui-subtle">{item.label}</p>
+                <p className={`mt-1 truncate text-base font-semibold tracking-tight md:text-lg ${item.tone}`}>{item.value}</p>
               </div>
             ))}
           </div>
@@ -458,12 +458,12 @@ export function PlanningView(p: PlanningViewProps) {
         </DialogContent>
       </Dialog>
 
-      <section className="space-y-4">
+      <section className="space-y-5">
         {planningSection === "budgets" && (
           <Card className="ds-soft-card overflow-hidden">
             <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div>
-                <CardTitle className="text-fg">Presupuestos</CardTitle>
+                <CardTitle className="text-xl tracking-tight text-fg md:text-2xl">Presupuestos</CardTitle>
                 <CardDescription className="text-fg-subtle">
                   Lectura primero: consumo, saldo restante y alertas por categoría.
                 </CardDescription>
@@ -486,12 +486,12 @@ export function PlanningView(p: PlanningViewProps) {
                 return (
                   <article
                     key={budget.id}
-                    className="planning-budget-row rounded-2xl p-4"
+                    className="planning-budget-row rounded-2xl p-5 md:p-6"
                   >
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div className="space-y-2">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-base font-semibold text-fg">{budget.name}</p>
+                          <p className="text-lg font-semibold tracking-tight text-fg">{budget.name}</p>
                           <Badge variant="secondary" className={getBudgetStatusTone(budget.deficit_summary.status)}>
                             {getBudgetStatusLabel(budget.deficit_summary.status)}
                           </Badge>
@@ -509,20 +509,20 @@ export function PlanningView(p: PlanningViewProps) {
                         </p>
                       </div>
 
-                      <div className="planning-budget-metrics grid min-w-[260px] grid-cols-2 gap-3">
-                        <div className="rounded-xl border border-surface-2 bg-surface-1/60 p-3">
+                      <div className="planning-budget-metrics grid min-w-[260px] grid-cols-2 gap-2.5">
+                        <div className="rounded-xl border border-surface-2 bg-surface-1/60 p-3.5">
                           <p className="text-[11px] uppercase tracking-[0.14em] text-fg-subtle">Asignado</p>
-                          <p className="mt-1 font-semibold text-fg">{formatMoney(budget.allocated_amount, budget.currency)}</p>
+                          <p className="mt-1 text-base font-semibold tracking-tight text-fg">{formatMoney(budget.allocated_amount, budget.currency)}</p>
                         </div>
-                        <div className="rounded-xl border border-surface-2 bg-surface-1/60 p-3">
+                        <div className="rounded-xl border border-surface-2 bg-surface-1/60 p-3.5">
                           <p className="text-[11px] uppercase tracking-[0.14em] text-fg-subtle">Consumido</p>
-                          <p className="mt-1 font-semibold text-fg">{formatMoney(budget.actual_amount, budget.currency)}</p>
+                          <p className="mt-1 text-base font-semibold tracking-tight text-fg">{formatMoney(budget.actual_amount, budget.currency)}</p>
                         </div>
-                        <div className="rounded-xl border border-surface-2 bg-surface-1/60 p-3">
+                        <div className="rounded-xl border border-surface-2 bg-surface-1/60 p-3.5">
                           <p className="text-[11px] uppercase tracking-[0.14em] text-fg-subtle">Restante</p>
-                          <p className="mt-1 font-semibold text-fg">{formatMoney(budget.remaining_budget_amount, budget.currency)}</p>
+                          <p className="mt-1 text-base font-semibold tracking-tight text-fg">{formatMoney(budget.remaining_budget_amount, budget.currency)}</p>
                         </div>
-                        <div className="rounded-xl border border-surface-2 bg-surface-1/60 p-3">
+                        <div className="rounded-xl border border-surface-2 bg-surface-1/60 p-3.5">
                           <p className="text-[11px] uppercase tracking-[0.14em] text-fg-subtle">Última causa</p>
                           <p className="mt-1 text-sm text-fg-secondary">{budget.deficit_summary.lastCauseSummary || "Sin incidentes"}</p>
                         </div>
@@ -584,10 +584,10 @@ export function PlanningView(p: PlanningViewProps) {
         )}
 
         {planningSection === "deficits" && (
-          <Card className="ds-soft-card">
+          <Card className="ds-soft-card overflow-hidden">
             <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div>
-                <CardTitle className="text-fg">Déficits</CardTitle>
+                <CardTitle className="text-xl tracking-tight text-fg md:text-2xl">Déficits</CardTitle>
                 <CardDescription className="text-fg-subtle">
                   Historial del mes, causas recurrentes y exporte rápido para cierre financiero.
                 </CardDescription>
@@ -692,10 +692,10 @@ export function PlanningView(p: PlanningViewProps) {
         )}
 
         {planningSection === "commitments" && (
-          <Card className="ds-soft-card">
+          <Card className="ds-soft-card overflow-hidden">
             <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div>
-                <CardTitle className="text-fg">Compromisos</CardTitle>
+                <CardTitle className="text-xl tracking-tight text-fg md:text-2xl">Compromisos</CardTitle>
                 <CardDescription className="text-fg-subtle">
                   Pagos recurrentes visibles sin mezclar formularios ni resúmenes redundantes.
                 </CardDescription>
@@ -707,10 +707,10 @@ export function PlanningView(p: PlanningViewProps) {
             <CardContent className="space-y-3">
               {commitments.length === 0 && <p className="text-sm text-fg-subtle">No hay compromisos para este mes.</p>}
               {commitments.map((item) => (
-                <article key={item.id} className="rounded-2xl border border-surface-2 bg-surface-1/80 px-4 py-3">
+                <article key={item.id} className="rounded-2xl border border-surface-2 bg-surface-1/80 px-5 py-4 transition-colors hover:bg-surface-1">
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div>
-                      <p className="text-sm font-medium text-fg">{item.name}</p>
+                      <p className="text-base font-semibold tracking-tight text-fg">{item.name}</p>
                       <p className="mt-1 text-xs text-fg-subtle">
                         {item.cadence} · próximo: {formatDate(item.next_run_at)}
                       </p>
@@ -726,7 +726,7 @@ export function PlanningView(p: PlanningViewProps) {
                       >
                         {item.is_active ? "Activo" : "Pausado"}
                       </Badge>
-                      <span className="text-sm font-semibold text-fg">
+                      <span className="text-lg font-semibold tracking-tight text-fg">
                         {formatMoney(Number(item.payload.amount || 0), item.payload.currency || "COP")}
                       </span>
                     </div>
@@ -739,10 +739,10 @@ export function PlanningView(p: PlanningViewProps) {
         )}
 
         {planningSection === "projections" && (
-          <Card className="ds-soft-card">
+          <Card className="ds-soft-card overflow-hidden">
             <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
               <div>
-                <CardTitle className="text-fg">Proyecciones</CardTitle>
+                <CardTitle className="text-xl tracking-tight text-fg md:text-2xl">Proyecciones</CardTitle>
                 <CardDescription className="text-fg-subtle">
                   Escenarios guardados con las métricas útiles para evaluar caja futura.
                 </CardDescription>
@@ -754,10 +754,10 @@ export function PlanningView(p: PlanningViewProps) {
             <CardContent className="space-y-3">
               {projectionScenarios.length === 0 && <p className="text-sm text-fg-subtle">No hay escenarios ejecutados.</p>}
               {projectionScenarios.map((scenario) => (
-                <article key={scenario.id} className="rounded-2xl border border-surface-2 bg-surface-1/80 p-4">
+                <article key={scenario.id} className="rounded-2xl border border-surface-2 bg-surface-1/80 p-5 md:p-6">
                   <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                     <div>
-                      <p className="text-sm font-medium text-fg">{scenario.title}</p>
+                      <p className="text-base font-semibold tracking-tight text-fg">{scenario.title}</p>
                       <p className="text-xs text-fg-subtle">{formatDate(scenario.created_at)}</p>
                     </div>
                     <Badge variant="secondary" className="border border-brand/30 bg-brand-soft text-brand">

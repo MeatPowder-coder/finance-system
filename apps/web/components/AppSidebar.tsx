@@ -58,13 +58,13 @@ function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
   return (
     <div
       className={cn(
-        "space-y-4 pt-14 pb-4 flex flex-col h-full text-white transition-all duration-300 overflow-x-hidden",
+        "space-y-4 pt-14 pb-4 flex flex-col h-full text-fg transition-all duration-300 overflow-x-hidden",
         collapsed ? "items-center" : ""
       )}
     >
       <div className="px-3 py-2 flex-1 w-full">
         <Link href="/" className={cn("flex items-center mb-14 pl-3 transition-all", collapsed ? "justify-center pl-0" : "")}>
-          <div className="relative h-8 w-8 bg-gradient-to-br from-cyan-300 to-fuchsia-300 text-black p-1.5 rounded-lg flex items-center justify-center shrink-0 shadow-lg shadow-cyan-500/30">
+          <div className="relative h-9 w-9 bg-brand text-primary-foreground p-1.5 rounded-xl flex items-center justify-center shrink-0 shadow-md">
             <Zap className="h-5 w-5 fill-current" />
           </div>
           {!collapsed && <h1 className="text-xl font-bold ml-4 animate-in fade-in duration-300 truncate tracking-tight">FinanceSystem</h1>}
@@ -77,7 +77,7 @@ function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
               title={collapsed ? route.label : undefined}
               className={cn(
                 "text-sm group flex p-3 w-full font-medium cursor-pointer rounded-lg transition-all relative",
-                route.active ? "text-white bg-cyan-500/15 border border-cyan-500/30" : "text-zinc-400 hover:text-white hover:bg-white/8",
+                route.active ? "text-fg bg-brand-soft border border-brand/25" : "text-fg-secondary hover:text-fg hover:bg-surface-3",
                 collapsed ? "justify-center" : "justify-start"
               )}
             >
@@ -87,7 +87,7 @@ function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
                   className={cn(
                     "h-5 w-5 shrink-0",
                     collapsed ? "" : "mr-3",
-                    route.active ? "text-cyan-300" : "text-zinc-400 group-hover:text-cyan-300"
+                  route.active ? "text-brand" : "text-fg-subtle group-hover:text-brand"
                   )}
                 />
                 {!collapsed && <span className="truncate">{route.label}</span>}
@@ -96,7 +96,7 @@ function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
           ))}
         </div>
       </div>
-      <div className={cn("px-3 py-2 border-t border-zinc-800 w-full", collapsed ? "flex flex-col items-center" : "")}>
+      <div className={cn("px-3 py-2 border-t border-[var(--ui-border)] w-full", collapsed ? "flex flex-col items-center" : "")}>
         {!collapsed && (
           <div className="mb-3">
             <BackendStatusPill />
@@ -108,7 +108,7 @@ function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
             variant="outline"
             size={collapsed ? "icon" : "sm"}
             className={cn(
-              "border-zinc-700 bg-zinc-900/80 text-zinc-200 hover:bg-zinc-800 hover:text-white",
+              "border-[var(--ui-border-strong)] bg-surface-2 text-fg hover:bg-surface-3 hover:text-fg",
               collapsed ? "h-9 w-9" : "w-full"
             )}
             onClick={() => {
@@ -149,7 +149,7 @@ export function AppSidebar({
           type="button"
           onClick={() => onCollapsedChange(!collapsed)}
           className={cn(
-            "h-9 rounded-full border border-zinc-700/80 bg-zinc-900/90 text-zinc-200 hover:text-white hover:border-cyan-500/70",
+            "h-9 rounded-full border border-[var(--ui-border-strong)] bg-surface-2 text-fg hover:text-brand hover:border-[var(--ui-accent)]",
             "flex items-center gap-1.5 px-3 shadow-lg shadow-black/30 transition-all"
           )}
           aria-label={collapsed ? "Expandir sidebar" : "Contraer sidebar"}
@@ -163,7 +163,7 @@ export function AppSidebar({
         type="button"
         onClick={() => onCollapsedChange(!collapsed)}
         className={cn(
-          "absolute -right-3 top-14 h-6 w-6 rounded-full border border-zinc-700 bg-zinc-900 text-zinc-300 hover:text-white hover:border-zinc-500 flex items-center justify-center shadow-md",
+          "absolute -right-3 top-14 h-6 w-6 rounded-full border border-[var(--ui-border-strong)] bg-surface-2 text-fg-secondary hover:text-brand hover:border-[var(--ui-accent)] flex items-center justify-center shadow-md",
           "transition-colors"
         )}
         aria-hidden

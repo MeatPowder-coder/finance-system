@@ -8,9 +8,10 @@ export function App() {
   const pathname = usePathname();
 
   useEffect(() => {
-    document.documentElement.classList.add("dark");
+    document.documentElement.classList.remove("dark");
+    document.documentElement.classList.add("light", "theme-light");
     return () => {
-      document.documentElement.classList.remove("dark");
+      document.documentElement.classList.remove("light", "theme-light");
     };
   }, []);
 

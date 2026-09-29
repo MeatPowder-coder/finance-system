@@ -2,7 +2,7 @@
 
 import { type FormEvent, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowRight, Chrome, Loader2, Lock, Mail, ShieldCheck, Sparkles, UserRound } from "lucide-react";
+import { ArrowRight, ChartNoAxesCombined, Chrome, Compass, Loader2, Lock, LockKeyhole, Mail, ShieldCheck, Sparkles, UserRound, WalletCards } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -189,27 +189,50 @@ export function AuthLoginScreen() {
     <div className="auth-screen auth-screen-quiet">
       <div className="auth-screen-orb auth-screen-orb-one" aria-hidden="true" />
       <div className="auth-screen-orb auth-screen-orb-two" aria-hidden="true" />
-      <Card className="auth-card relative w-full max-w-xl">
-        <CardHeader className="space-y-4">
-          <div className="inline-flex items-center gap-2 self-start rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-200">
-            <Sparkles className="h-3.5 w-3.5" />
-            Acceso a {appName}
+      <main className="auth-editorial-layout">
+        <aside className="auth-editorial-aside" aria-label="FinanceSystem, finanzas personales con claridad">
+          <a href="/" className="auth-editorial-brand" aria-label="Volver al inicio de FinanceSystem">
+            <span><WalletCards className="h-5 w-5" /></span> FinanceSystem
+          </a>
+          <div className="auth-editorial-aside-copy">
+            <div className="auth-editorial-eyebrow"><Sparkles className="h-3.5 w-3.5" /> UN ESPACIO PARA TI</div>
+            <h1>Que tus finanzas<br /><em>tengan sentido.</em></h1>
+            <p>Revisa lo que entra, lo que sale y lo que quieres construir, con una mirada más clara.</p>
           </div>
-          <div>
-            <CardTitle className="text-3xl text-zinc-50">Iniciar sesi&oacute;n</CardTitle>
-            <CardDescription className="mt-2 text-base text-zinc-400">
-              Usa Google o tu correo y contrase&ntilde;a. La sesi&oacute;n queda lista para web y desktop.
-            </CardDescription>
+          <div className="auth-editorial-preview" aria-hidden="true">
+            <div className="auth-editorial-preview-head"><span>MAPA FINANCIERO</span><span>01 / 03</span></div>
+            <div className="auth-editorial-preview-title"><span>Un buen plan</span><strong>empieza por<br />entender el hoy.</strong></div>
+            <div className="auth-editorial-mini-chart"><span /><span /><span /><span /><span /><span /><span /><span /><span /><span /></div>
+            <div className="auth-editorial-preview-foot"><span><ChartNoAxesCombined className="h-4 w-4" /> VISIÓN COMPLETA</span><span className="auth-editorial-preview-arrow"><ArrowRight className="h-4 w-4" /></span></div>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-5">
+          <div className="auth-editorial-aside-foot"><LockKeyhole className="h-4 w-4" /> Tu espacio financiero, protegido.</div>
+        </aside>
+
+        <Card className="auth-card auth-editorial-card relative w-full">
+          <CardHeader className="space-y-4">
+            <div className="inline-flex items-center gap-2 self-start rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-200">
+              <Compass className="h-3.5 w-3.5" />
+              {authMode === "login" ? `Bienvenido a ${appName}` : `Comienza con ${appName}`}
+            </div>
+            <div>
+              <CardTitle className="text-3xl text-zinc-50">{authMode === "login" ? "Qué bueno verte." : "Tu próximo capítulo."}</CardTitle>
+              <CardDescription className="mt-2 text-base text-zinc-400">
+                {authMode === "login"
+                  ? "Entra a tu espacio y continúa justo donde lo dejaste."
+                  : "Crea tu espacio para organizar tus finanzas a tu manera."}
+              </CardDescription>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-5">
           <div className={`auth-access-note auth-access-note-${authMode} rounded-2xl border border-cyan-500/20 bg-cyan-500/10 p-4 text-sm text-cyan-50`}>
             <div className="flex items-center gap-2 font-medium">
               <ShieldCheck className="h-4 w-4" />
-              Un solo acceso para toda la app
+              {authMode === "login" ? "Un solo acceso para toda la app" : "Un solo espacio para tus finanzas"}
             </div>
             <p className="mt-2 text-cyan-100/90">
-              Despu&eacute;s del login volver&aacute;s exactamente al lugar donde estabas trabajando.
+              {authMode === "login"
+                ? "Después del login volverás exactamente al lugar donde estabas trabajando."
+                : "Tu sesión estará lista para continuar desde web y desktop."}
             </p>
           </div>
 
@@ -235,6 +258,7 @@ export function AuthLoginScreen() {
             <button
               type="button"
               onClick={() => setAuthMode("login")}
+              aria-pressed={authMode === "login"}
               className={cn(
                 "rounded-full px-4 py-2 text-sm font-medium transition-colors",
                 authMode === "login"
@@ -247,6 +271,7 @@ export function AuthLoginScreen() {
             <button
               type="button"
               onClick={() => setAuthMode("register")}
+              aria-pressed={authMode === "register"}
               className={cn(
                 "rounded-full px-4 py-2 text-sm font-medium transition-colors",
                 authMode === "register"
@@ -320,20 +345,21 @@ export function AuthLoginScreen() {
           </form>
 
           {error ? (
-            <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+            <div role="alert" aria-live="polite" className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
               {error}
             </div>
           ) : (
-            <div className="text-center text-xs leading-relaxed text-zinc-500">
+            <div aria-live="polite" className="text-center text-xs leading-relaxed text-zinc-500">
               {configLoading
-                ? "Cargando configuracion de acceso..."
+                ? "Cargando configuración de acceso..."
                 : googleEnabled
-                  ? "Google y correo estan disponibles."
-                  : "Google no esta disponible todavia, pero el correo y la contrasena siguen activos."}
+                  ? "Google y correo están disponibles."
+                  : "Google no está disponible todavía, pero el correo y la contraseña siguen activos."}
             </div>
           )}
-        </CardContent>
-      </Card>
+          </CardContent>
+        </Card>
+      </main>
     </div>
   );
 }
@@ -404,7 +430,7 @@ export function AuthCallbackScreen() {
 
   return (
     <div className="auth-screen auth-screen-quiet">
-      <Card className="auth-card w-full max-w-lg">
+      <Card className="auth-card auth-editorial-callback w-full max-w-lg">
         <CardHeader className="space-y-4">
           <div className="inline-flex items-center gap-2 self-start rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-200">
             <ShieldCheck className="h-3.5 w-3.5" />

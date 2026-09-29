@@ -6,6 +6,7 @@ import {
   CalendarDays,
   Clock3,
   CreditCard,
+  Expand,
   Search,
   Sparkles,
   Wallet,
@@ -15,6 +16,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import DashboardBudgetStrip from "@/components/DashboardBudgetStrip";
 import type { Account, Budget, Commitment, Transaction } from "@/lib/types";
 import { formatMoney, formatDate, toNumber } from "@/lib/format";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export interface MonthCoachState {
   badge: string;
@@ -74,6 +82,7 @@ export function DashboardView(props: DashboardViewProps) {
     latestTransaction,
     topAccounts,
   } = props;
+  const [focusedPanel, setFocusedPanel] = React.useState<null | "month" | "today" | "payments" | "transactions" | "accounts">(null);
   const actionByKey = React.useMemo(() => {
     const map: Record<string, DashboardActionDef> = {};
     dashboardActions.forEach((action) => { map[action.key] = action; });
@@ -86,14 +95,77 @@ export function DashboardView(props: DashboardViewProps) {
   const listRowCls = "ui-panel-soft rounded-xl px-3 py-3 transition hover:border-brand/30";
   const countBadgeCls =
     "border border-surface-2 bg-surface-1 text-fg-subtle";
+  const focusCopy = {
+    month: {
+      title: monthCoach.title,
+      eyebrow: "Lectura del mes",
+      summary: monthCoach.detail,
+      rows: [
+        { label: "Resultado del mes", value: monthCoach.amount },
+        { label: "Estado", value: monthCoach.badge },
+        { label: "Contexto", value: monthCoach.caption },
+      ],
+    },
+    today: {
+      title: "Lo importante hoy",
+      eyebrow: "Resumen de actividad",
+      summary: "Una lectura rápida de presupuestos, compromisos y tu movimiento más reciente.",
+      rows: [
+        { label: "Presupuestos activos", value: String(dashboardBudgets.length) },
+        { label: "Próximo pago", value: nextCommitment?.name ?? "Sin pagos cercanos" },
+        { label: "Último movimiento", value: latestTransaction?.description || "Sin movimientos aún" },
+      ],
+    },
+    payments: {
+      title: "Próximos pagos",
+      eyebrow: "Agenda financiera",
+      summary: "Compromisos próximos para anticipar lo que saldrá de tus cuentas.",
+      rows: upcomingCommitments.slice(0, 8).map((item) => ({
+        label: `${item.name} · ${formatDate(item.next_run_at)}`,
+        value: formatMoney(Number(item.payload.amount || 0), item.payload.currency || "COP"),
+      })),
+    },
+    transactions: {
+      title: "Movimientos recientes",
+      eyebrow: "Entradas y salidas",
+      summary: "Actividad reciente registrada en tus cuentas.",
+      rows: recentTransactions.slice(0, 8).map((tx) => ({
+        label: `${tx.description || "Sin descripción"} · ${formatDate(tx.transaction_date)}`,
+        value: `${tx.direction === "INFLOW" ? "+" : "−"} ${formatMoney(toNumber(tx.amount), tx.currency)}`,
+      })),
+    },
+    accounts: {
+      title: "Tu dinero",
+      eyebrow: "Liquidez por cuenta",
+      summary: "Saldos actuales en las cuentas que concentran tu liquidez.",
+      rows: topAccounts.slice(0, 8).map((account) => ({
+        label: account.name,
+        value: formatMoney(toNumber(account.balance_current), account.currency),
+      })),
+    },
+  };
+  const focusPanel = focusedPanel ? focusCopy[focusedPanel] : null;
+  const focusButton = (panel: NonNullable<typeof focusedPanel>, label: string) => (
+    <button
+      type="button"
+      onClick={() => setFocusedPanel(panel)}
+      aria-label={`Ampliar ${label}`}
+      title={`Ampliar ${label}`}
+      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-surface-2 bg-surface-1 text-fg-subtle transition hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 motion-safe:hover:scale-105"
+    >
+      <Expand className="h-4 w-4" aria-hidden="true" />
+    </button>
+  );
 
   return (
     <div className="dashboard-view-compact section-enter space-y-5">
-      <section className="grid gap-4 xl:grid-cols-[1.25fr_0.75fr]">
-        <Card className={heroCardCls}>
+      <Dialog open={focusedPanel !== null} onOpenChange={(open) => { if (!open) setFocusedPanel(null); }}>
+      <section className="grid gap-4 xl:grid-cols-[1.4fr_0.8fr]">
+        <Card className={`${heroCardCls} relative min-h-[300px] overflow-hidden p-6 md:p-8`}>
           <CardContent className="relative p-0">
+            <div className="absolute right-0 top-0">{focusButton("month", "el resumen del mes")}</div>
             <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-              <div className="max-w-2xl space-y-4">
+              <div className="max-w-2xl space-y-5 pr-10">
                 <Badge
                   variant="secondary"
                   className={
@@ -107,13 +179,13 @@ export function DashboardView(props: DashboardViewProps) {
                 </Badge>
                 <div className="space-y-2">
                   <p className="text-sm uppercase tracking-[0.24em] ui-subtle">Tu mes, en simple</p>
-                  <h2 className="max-w-xl text-3xl font-semibold tracking-[-0.04em] text-fg md:text-5xl">
+                  <h2 className="max-w-xl text-4xl font-semibold tracking-[-0.055em] text-fg md:text-6xl">
                     {monthCoach.title}
                   </h2>
                 </div>
                 <div>
                   <p
-                    className="text-4xl font-bold tracking-tight md:text-6xl text-brand"
+                    className="text-5xl font-bold tracking-[-0.06em] md:text-7xl text-brand"
                   >
                     {monthCoach.amount}
                   </p>
@@ -153,12 +225,11 @@ export function DashboardView(props: DashboardViewProps) {
           </CardContent>
         </Card>
 
-        <Card className="ds-soft-card">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-fg">Lo importante hoy</CardTitle>
-            <CardDescription className="text-fg-subtle">
-              Una lectura corta para no perderte entre datos.
-            </CardDescription>
+        <Card className="ds-soft-card relative overflow-hidden">
+          <CardHeader className="pb-3 pr-14">
+            <CardTitle className="text-fg text-xl">Lo importante hoy</CardTitle>
+            <CardDescription className="text-fg-subtle">Una lectura corta para no perderte entre datos.</CardDescription>
+            <div className="absolute right-5 top-5">{focusButton("today", "lo importante hoy")}</div>
           </CardHeader>
           <CardContent className="space-y-3">
             <div className={insightRowCls}>
@@ -215,18 +286,19 @@ export function DashboardView(props: DashboardViewProps) {
         onEditBudget={(budget) => openEditBudgetDialog(budget.id)}
       />
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[0.85fr_1.15fr_1fr]">
-        <Card className="ds-soft-card">
-          <CardHeader className="pb-3">
+      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[0.92fr_1.25fr_0.95fr]">
+        <Card className="ds-soft-card relative overflow-hidden">
+          <CardHeader className="pb-3 pr-14">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <CardTitle className="text-fg">Próximos pagos</CardTitle>
+                <CardTitle className="text-fg text-xl">Próximos pagos</CardTitle>
                 <CardDescription className="text-fg-subtle">Solo lo que necesitas anticipar.</CardDescription>
               </div>
               <Badge variant="secondary" className={countBadgeCls}>
                 {upcomingCommitments.length}
               </Badge>
             </div>
+            <div className="absolute right-5 top-5">{focusButton("payments", "los próximos pagos")}</div>
           </CardHeader>
           <CardContent className="space-y-2">
             {upcomingCommitments.length === 0 && (
@@ -256,17 +328,18 @@ export function DashboardView(props: DashboardViewProps) {
           </CardContent>
         </Card>
 
-        <Card className="ds-soft-card">
-          <CardHeader className="pb-3">
+        <Card className="ds-soft-card relative overflow-hidden">
+          <CardHeader className="pb-3 pr-14">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <CardTitle className="text-fg">Movimientos</CardTitle>
+                <CardTitle className="text-fg text-xl">Movimientos</CardTitle>
                 <CardDescription className="text-fg-subtle">Una lista corta para leer rápido.</CardDescription>
               </div>
               <Badge variant="secondary" className={countBadgeCls}>
                 {recentTransactions.length}
               </Badge>
             </div>
+            <div className="absolute right-5 top-5">{focusButton("transactions", "los movimientos recientes")}</div>
           </CardHeader>
           <CardContent className="space-y-2">
             {recentTransactions.map((tx) => {
@@ -292,17 +365,18 @@ export function DashboardView(props: DashboardViewProps) {
           </CardContent>
         </Card>
 
-        <Card className="ds-soft-card">
-          <CardHeader className="pb-3">
+        <Card className="ds-soft-card relative overflow-hidden">
+          <CardHeader className="pb-3 pr-14">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <CardTitle className="text-fg">Tu dinero</CardTitle>
+                <CardTitle className="text-fg text-xl">Tu dinero</CardTitle>
                 <CardDescription className="text-fg-subtle">Donde vive hoy tu liquidez.</CardDescription>
               </div>
               <Badge variant="secondary" className={countBadgeCls}>
                 {topAccounts.length}
               </Badge>
             </div>
+            <div className="absolute right-5 top-5">{focusButton("accounts", "los saldos por cuenta")}</div>
           </CardHeader>
           <CardContent className="space-y-3">
             {topAccounts.map((account) => {
@@ -338,6 +412,26 @@ export function DashboardView(props: DashboardViewProps) {
           </CardContent>
         </Card>
       </div>
+      <DialogContent className="max-w-2xl ui-shell-card border border-surface-2 shadow-2xl motion-reduce:duration-0">
+        {focusPanel && (
+          <>
+            <DialogHeader>
+              <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brand">{focusPanel.eyebrow}</p>
+              <DialogTitle className="text-3xl tracking-[-0.04em] sm:text-4xl">{focusPanel.title}</DialogTitle>
+              <DialogDescription>{focusPanel.summary}</DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-2 sm:grid-cols-2">
+              {focusPanel.rows.length ? focusPanel.rows.map((row, index) => (
+                <div key={`${row.label}-${index}`} className={`rounded-2xl border border-surface-2 p-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300 ${index === 0 ? "bg-brand-soft" : "bg-surface-1"}`} style={{ animationDelay: `${index * 45}ms`, animationFillMode: "both" }}>
+                  <p className="text-xs ui-muted">{row.label}</p>
+                  <p className="mt-1 break-words text-lg font-semibold tracking-tight text-fg">{row.value}</p>
+                </div>
+              )) : <p className="rounded-2xl border border-dashed border-surface-2 p-5 text-sm ui-muted">No hay datos para mostrar todavía.</p>}
+            </div>
+          </>
+        )}
+      </DialogContent>
+      </Dialog>
     </div>
   );
 }
