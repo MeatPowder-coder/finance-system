@@ -145,15 +145,26 @@ const TAB_META: Record<
   settings: { label: "Configuracion", caption: "Perfil, temas y accesos", icon: Settings },
 };
 
+async function requestFinanceApi(path: string, init: RequestInit = {}) {
+  try {
+    return await fetch(`${API_BASE}${path}`, { ...init, cache: "no-store" });
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error("No se pudo conectar con el servicio de finanzas. Comprueba la conexión e inténtalo de nuevo.");
+    }
+    throw error;
+  }
+}
+
 async function apiGet<T>(path: string) {
-  const res = await fetch(`${API_BASE}${path}`, { cache: "no-store", headers: buildFinanceHeaders() });
+  const res = await requestFinanceApi(path, { headers: buildFinanceHeaders() });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
   return json.data as T;
 }
 
 async function apiPost<T>(path: string, body: unknown) {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await requestFinanceApi(path, {
     method: "POST",
     headers: buildFinanceHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
@@ -164,7 +175,7 @@ async function apiPost<T>(path: string, body: unknown) {
 }
 
 async function apiPatch<T>(path: string, body: unknown) {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await requestFinanceApi(path, {
     method: "PATCH",
     headers: buildFinanceHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
@@ -1492,6 +1503,7 @@ function HomeContent() {
             recentTransactions={recentTransactions}
             latestTransaction={latestTransaction}
             topAccounts={topAccounts}
+            onReviewPayments={() => goPlanningSection("commitments")}
           />
         )}
 

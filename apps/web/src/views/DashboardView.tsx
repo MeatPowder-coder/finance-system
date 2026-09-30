@@ -46,6 +46,7 @@ export interface DashboardViewProps {
   upcomingCommitments: Commitment[];
   nextCommitment?: Commitment;
   onReviewExpenses: () => void;
+  onReviewPayments: () => void;
   recentTransactions: Transaction[];
   latestTransaction?: Transaction;
   topAccounts: Account[];
@@ -69,6 +70,7 @@ export function DashboardView(props: DashboardViewProps) {
     upcomingCommitments,
     nextCommitment,
     onReviewExpenses,
+    onReviewPayments,
     recentTransactions,
     topAccounts,
   } = props;
@@ -83,18 +85,22 @@ export function DashboardView(props: DashboardViewProps) {
     if (focusedPanel || closeTimerRef.current) return;
     focusReturnRef.current = trigger || (document.activeElement instanceof HTMLElement ? document.activeElement : null);
     const grid = gridRef.current;
-    const targetPanel = panel === "payments" ? "flow" : panel;
+    const targetPanel = panel;
     const tile = grid?.querySelector<HTMLElement>(`[data-finance-panel="${targetPanel}"]`);
     if (grid && tile) {
       const tileRect = tile.getBoundingClientRect();
-      const origin = { left: tileRect.left, top: tileRect.top, width: tileRect.width, height: tileRect.height };
+      const gridRect = grid.getBoundingClientRect();
+      const origin = { left: tileRect.left - gridRect.left, top: tileRect.top - gridRect.top, width: tileRect.width, height: tileRect.height };
       originBoxRef.current = origin;
       setFocusBox(origin);
       setFocusedPanel(panel);
       requestAnimationFrame(() => requestAnimationFrame(() => {
-        const maxWidth = Math.min(920, window.innerWidth - 36);
-        const targetHeight = Math.min(760, window.innerHeight - 48);
-        setFocusBox({ left: (window.innerWidth - maxWidth) / 2, top: (window.innerHeight - targetHeight) / 2, width: maxWidth, height: targetHeight });
+        // Expand inside the dashboard canvas, matching the prototype's shared-element motion.
+        const liveGrid = gridRef.current;
+        if (!liveGrid) return;
+        const maxWidth = Math.min(860, liveGrid.clientWidth - 40);
+        const targetHeight = Math.min(620, window.innerHeight - 80);
+        setFocusBox({ left: (liveGrid.clientWidth - maxWidth) / 2, top: Math.max(18, (liveGrid.clientHeight - targetHeight) / 2), width: maxWidth, height: targetHeight });
       }));
       return;
     }
@@ -190,7 +196,7 @@ export function DashboardView(props: DashboardViewProps) {
     },
   };
   const focusPanel = focusedPanel ? focusCopy[focusedPanel] : null;
-  const visualPanel = focusedPanel === "payments" ? "flow" : focusedPanel;
+  const visualPanel = focusedPanel;
   const openTileOnClick = (panel: NonNullable<typeof focusedPanel>) => (event: React.MouseEvent<HTMLElement>) => {
     if ((event.target as HTMLElement).closest("button, a")) return;
     openFocus(panel, event.currentTarget);
@@ -212,7 +218,7 @@ export function DashboardView(props: DashboardViewProps) {
       <Expand className="h-4 w-4" aria-hidden="true" />
     </button>
   );
-  const focusControl = (panel: NonNullable<typeof focusedPanel>, label: string) => focusedPanel === panel || (panel === "flow" && focusedPanel === "payments")
+  const focusControl = (panel: NonNullable<typeof focusedPanel>, label: string) => focusedPanel === panel
     ? <button type="button" className="finance-bento-close" aria-label="Cerrar detalle ampliado" onClick={(event) => { event.stopPropagation(); closeFocus(); }}>×</button>
     : focusButton(panel, label);
 
@@ -230,9 +236,9 @@ export function DashboardView(props: DashboardViewProps) {
             ["budgets", "Presupuestos"],
             ["transactions", "Movimientos recientes"],
             ["accounts", "Cuentas"],
+            ["payments", "Próximos pagos"],
           ] as const).map(([panel, label], index) => <button key={panel} type="button" className={focusedPanel === panel || (panel === "flow" && focusedPanel === "payments") || (!focusedPanel && index === 0) ? "is-current" : ""} aria-label={`Enfocar ${label}`} onClick={(event) => openFocus(panel, event.currentTarget)}>{String(index + 1).padStart(2, "0")}</button>)}
         </nav>
-        {focusedPanel && <button type="button" className="finance-bento-veil" aria-label="Cerrar detalle ampliado" onClick={closeFocus} />}
         <div ref={gridRef} className={`finance-bento-grid${focusedPanel ? " is-focused" : ""}`}>
           <section data-finance-panel="month" style={focusedPanel === "month" && focusBox ? focusBox : undefined} className={`finance-bento-tile finance-bento-hero${focusedPanel === "month" ? " is-focused" : ""}${focusClosing ? " is-closing" : ""}`} aria-label="Balance del mes; ampliar para ver el detalle" aria-expanded={focusedPanel === "month"} aria-labelledby="finance-bento-balance-title" aria-roledescription="Panel ampliable" tabIndex={0} role="group" onClick={openTileOnClick("month")} onKeyDown={openTileOnKey("month")}>
             <header className="finance-bento-tile-head">
@@ -343,6 +349,23 @@ export function DashboardView(props: DashboardViewProps) {
               })}
             </div> : <div className="finance-bento-empty"><Wallet aria-hidden="true" /><span>Agrega una cuenta para ver dónde está tu dinero.</span></div>}
             {focusedPanel === "accounts" && focusPanel && <ExpandedDetails panel={focusPanel} rows={focusPanel.rows} />}
+          </section>
+
+          <section data-finance-panel="payments" style={focusedPanel === "payments" && focusBox ? focusBox : undefined} className={`finance-bento-tile finance-bento-payments${focusedPanel === "payments" ? " is-focused" : ""}${focusClosing ? " is-closing" : ""}`} aria-label="Próximos pagos; ampliar para ver el detalle" aria-expanded={focusedPanel === "payments"} aria-labelledby="finance-bento-payments-title" aria-roledescription="Panel ampliable" tabIndex={0} role="group" onClick={openTileOnClick("payments")} onKeyDown={openTileOnKey("payments")}>
+            <header className="finance-bento-tile-head">
+              <div><p>06 / A LA VUELTA</p><h3 id="finance-bento-payments-title">Próximos pagos</h3></div>
+              <div className="finance-bento-pager"><span>{upcomingCommitments.length} activos</span><button className="finance-bento-see-all" type="button" onClick={onReviewPayments}>Ver agenda</button>{focusControl("payments", "los próximos pagos")}</div>
+            </header>
+            {upcomingCommitments.length ? <div className="finance-bento-payment-list">
+              {upcomingCommitments.slice(0, 2).map((item) => (
+                <article key={item.id}>
+                  <time>{formatDate(item.next_run_at)}</time>
+                  <span><strong>{item.name}</strong><small>{item.cadence === "YEARLY" ? "Anual" : item.cadence === "WEEKLY" ? "Semanal" : "Mensual"}</small></span>
+                  <b>{formatMoney(Number(item.payload.amount || 0), item.payload.currency || "COP")}</b>
+                </article>
+              ))}
+            </div> : <div className="finance-bento-empty"><Clock3 aria-hidden="true" /><span>No tienes pagos próximos programados.</span><button type="button" onClick={() => actionByKey.commitment?.onClick()}>Agregar pago</button></div>}
+            {focusedPanel === "payments" && focusPanel && <ExpandedDetails panel={focusPanel} rows={focusPanel.rows} />}
           </section>
         </div>
         </div>

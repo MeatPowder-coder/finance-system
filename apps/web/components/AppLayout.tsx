@@ -81,7 +81,7 @@ export default function AppLayout({
 
             {/* Desktop Sidebar - Fixed width, hidden on mobile */}
             {!isDesktopEmbed && (
-                <div className="hidden md:flex flex-col fixed inset-y-0 z-50 h-full">
+                <div className="finance-app-sidebar hidden md:flex flex-col fixed inset-y-0 z-50 h-full">
                     <AppSidebar collapsed={collapsed} onCollapsedChange={setCollapsed} />
                 </div>
             )}

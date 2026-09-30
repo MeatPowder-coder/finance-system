@@ -89,7 +89,7 @@ export function NotificationBell({ copilotOpen = false }: { copilotOpen?: boolea
   }
 
   return (
-    <div className={cn("pointer-events-none fixed top-4 z-[45] transition-[right] duration-300", copilotOpen ? "right-[21rem]" : "right-16")}>
+    <div className={cn("finance-notification pointer-events-none fixed top-4 z-[45] transition-[right] duration-300", copilotOpen ? "right-[21rem]" : "right-16")}>
       <div className="relative pointer-events-auto">
         <Button
           type="button"
