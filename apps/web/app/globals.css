@@ -3384,6 +3384,55 @@ main[data-finance-tab="dashboard"] .finance-dashboard-heading .text-zinc-400 { c
   .finance-bento-tile:hover,.finance-bento-tile:active,.finance-bento-rail button:hover,.finance-bento-rail button.is-current { transform:none; }
 }
 
+/* Make palette choice and card expansion discoverable without changing the ledger layout. */
+.welcome-screen-quiet .welcome-theme-picker .theme-selector-trigger,
+.auth-screen-quiet .auth-theme-picker .theme-selector-trigger { min-height:36px; border:1px solid var(--ui-editorial-ink); border-radius:0; padding-inline:10px; color:var(--ui-editorial-ink); background:color-mix(in srgb,var(--ui-editorial-paper) 88%,transparent); }
+.finance-bento-open-detail { display:inline-flex !important; min-width:max-content; height:30px !important; width:auto !important; align-items:center; justify-content:center; gap:6px; border-radius:0 !important; padding:0 8px !important; color:inherit !important; background:color-mix(in srgb,currentColor 7%,transparent) !important; font:650 .58rem ui-monospace,SFMono-Regular,Consolas,monospace !important; letter-spacing:.08em; text-transform:uppercase; white-space:nowrap; }
+.finance-bento-open-detail:hover { background:var(--ui-editorial-lime) !important; color:#171717 !important; }
+.finance-bento-tile-head > button.finance-bento-open-detail { width:auto !important; }
+.finance-bento-pager > button.finance-bento-open-detail { width:auto !important; }
+.finance-bento-flow-figures h3 { font-size:clamp(1.2rem,1.7vw,1.55rem); }
+.finance-bento-flow-figures p { font-size:.62rem; }
+.finance-bento-flow-figures strong { font-size:.9rem; }
+.finance-bento-donut strong { font-size:1.25rem; }
+.finance-bento-donut span { font-size:.55rem; }
+.finance-bento-budget-main strong { font-size:.76rem; }
+.finance-bento-budget-main em { font-size:.58rem; }
+.finance-bento-budget-main small { font-size:.56rem; }
+.finance-bento-pager > span,.finance-bento-see-all { font-size:.57rem !important; }
+.finance-bento-timeline time { font-size:.56rem; }
+.finance-bento-timeline article > strong { font-size:.82rem; }
+.finance-bento-timeline article > b { font-size:.64rem; }
+.finance-bento-account-list article > div { font-size:.68rem; }
+.finance-bento-account-list article > div strong { font-size:.67rem; }
+.finance-bento-payment-list article { gap:10px; padding:9px 0; }
+.finance-bento-payment-list article > span strong { font-size:.76rem; }
+.finance-bento-payment-list article > b { font-size:.69rem; }
+.finance-bento-expanded-toolbar button { min-height:40px; font-size:.68rem; }
+.finance-bento-expanded-rows article { min-height:48px; }
+.finance-bento-expanded-rows article span { font-size:.7rem; }
+.finance-bento-expanded-rows article strong { font-size:clamp(1rem,2vw,1.4rem); }
+.finance-bento-close { width:34px; height:34px; }
+.finance-bento-hero-pulse { position:absolute; z-index:1; right:clamp(20px,4vw,48px); bottom:clamp(62px,8vw,84px); width:min(24%,220px); }
+.finance-bento-hero-pulse > span { display:block; margin-bottom:6px; color:color-mix(in srgb,var(--ui-editorial-hero-text) 70%,transparent); font:600 .52rem ui-monospace,SFMono-Regular,Consolas,monospace; letter-spacing:.13em; }
+.finance-bento-hero-pulse > div { display:flex; height:58px; align-items:end; gap:5px; border-bottom:1px solid color-mix(in srgb,var(--ui-editorial-hero-text) 45%,transparent); }
+.finance-bento-hero-pulse i { flex:1; min-width:5px; border:1px solid color-mix(in srgb,var(--ui-editorial-hero-text) 65%,transparent); background:var(--ui-editorial-lime); transform-origin:bottom; animation:editorialBarIn .54s cubic-bezier(.18,.78,.25,1) both; }
+.finance-bento-hero-pulse i:nth-child(even) { background:var(--ui-editorial-hero-text); }
+.finance-bento-hero-pulse i:nth-child(2) { animation-delay:55ms; }
+.finance-bento-hero-pulse i:nth-child(3) { animation-delay:110ms; }
+.finance-bento-hero-pulse i:nth-child(4) { animation-delay:165ms; }
+.finance-bento-hero-pulse i:nth-child(5) { animation-delay:220ms; }
+.finance-bento-hero-pulse i:nth-child(6) { animation-delay:275ms; }
+.finance-bento-tile.is-focused .finance-bento-hero-pulse { bottom:clamp(68px,7vw,92px); width:min(20%,240px); }
+@media(max-width:620px) {
+  .finance-bento-open-detail { min-width:30px; width:30px !important; padding:0 !important; }
+  .finance-bento-open-detail span { display:none; }
+  .finance-bento-budget-main { grid-template-columns:minmax(70px,1fr) minmax(50px,1fr) 40px; }
+  .finance-bento-expanded-rows article { gap:10px; }
+  .finance-bento-hero-pulse { width:24%; right:18px; bottom:68px; }
+  .finance-bento-hero-pulse > span { font-size:.43rem; letter-spacing:.06em; }
+}
+
 /* Carry the same print-like Bento language through the public entry and auth flow. */
 .welcome-screen-quiet,
 .auth-screen-quiet {

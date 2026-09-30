@@ -190,7 +190,7 @@ export function AuthLoginScreen() {
     <div className="auth-screen auth-screen-quiet">
       <div className="auth-screen-orb auth-screen-orb-one" aria-hidden="true" />
       <div className="auth-screen-orb auth-screen-orb-two" aria-hidden="true" />
-      <div className="auth-theme-picker"><span>Paleta</span><ThemeSelector collapsed /></div>
+      <div className="auth-theme-picker"><span>Temas</span><ThemeSelector collapsed showCurrentTheme /></div>
       <main className="auth-editorial-layout">
         <aside className="auth-editorial-aside" aria-label="FinanceSystem, finanzas personales con claridad">
           <a href="/" className="auth-editorial-brand" aria-label="Volver al inicio de FinanceSystem">
@@ -432,7 +432,7 @@ export function AuthCallbackScreen() {
 
   return (
     <div className="auth-screen auth-screen-quiet">
-      <div className="auth-theme-picker"><span>Paleta</span><ThemeSelector collapsed /></div>
+      <div className="auth-theme-picker"><span>Temas</span><ThemeSelector collapsed showCurrentTheme /></div>
       <Card className="auth-card auth-editorial-callback w-full max-w-lg">
         <CardHeader className="space-y-4">
           <div className="inline-flex items-center gap-2 self-start rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-200">

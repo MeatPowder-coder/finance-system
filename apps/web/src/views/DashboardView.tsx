@@ -108,7 +108,7 @@ export function DashboardView(props: DashboardViewProps) {
         if (!liveCanvas) return;
         const maxWidth = liveCanvas.clientWidth < 620
           ? liveCanvas.clientWidth - 16
-          : Math.min(1040, liveCanvas.clientWidth * 0.86);
+        : Math.min(1120, liveCanvas.clientWidth * 0.88);
         const availableHeight = Math.max(320, Math.min(liveCanvas.clientHeight - 24, window.innerHeight - 112));
         const targetHeight = Math.min(Math.max(440, tile.scrollHeight), availableHeight);
         setFocusBox({
@@ -134,7 +134,7 @@ export function DashboardView(props: DashboardViewProps) {
         setFocusClosing(false);
         closeTimerRef.current = null;
         focusReturnRef.current?.focus();
-      }, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 520);
+      }, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 760);
     } else {
       setFocusedPanel(null);
     }
@@ -258,9 +258,10 @@ export function DashboardView(props: DashboardViewProps) {
       aria-label={`Ampliar ${label}`}
       title={`Ampliar ${label}`}
       aria-expanded={focusedPanel === panel}
-      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-surface-2 bg-surface-1 text-fg-subtle transition hover:border-brand/40 hover:text-brand focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50 motion-safe:hover:scale-105"
+      className="finance-bento-open-detail inline-flex shrink-0 items-center justify-center border transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand/50"
     >
-      <Expand className="h-4 w-4" aria-hidden="true" />
+      <Expand className="h-3.5 w-3.5" aria-hidden="true" />
+      <span>Ver detalle</span>
     </button>
   );
   const focusControl = (panel: NonNullable<typeof focusedPanel>, label: string) => focusedPanel === panel
@@ -270,6 +271,8 @@ export function DashboardView(props: DashboardViewProps) {
   const visibleBudgets = dashboardBudgetWindow.slice(0, 3);
   const maximumAccountBalance = Math.max(...topAccounts.map((account) => Math.abs(toNumber(account.balance_current))), 1);
   const spendingRatio = Math.max(0, Math.min(100, monthFlow.spentPercent));
+  const pulseTransactions = recentTransactions.slice(0, 6).reverse();
+  const pulseMax = Math.max(...pulseTransactions.map((transaction) => Math.abs(toNumber(transaction.amount))), 1);
 
   return (
     <div className={`finance-bento-dashboard section-enter${focusedPanel ? " has-focus" : ""}`}>
@@ -306,6 +309,10 @@ export function DashboardView(props: DashboardViewProps) {
                 <button type="button" onClick={onReviewExpenses}><ArrowRight aria-hidden="true" />Ver movimientos</button>
               </div>
             </div>
+            {pulseTransactions.length > 0 && <div className="finance-bento-hero-pulse" role="img" aria-label={`Volumen relativo de los ${pulseTransactions.length} movimientos más recientes`}>
+              <span>ÚLTIMOS MOVIMIENTOS</span>
+              <div>{pulseTransactions.map((transaction) => <i key={transaction.id} style={{ height: `${Math.max(20, Math.round(Math.abs(toNumber(transaction.amount)) / pulseMax * 100))}%` }} />)}</div>
+            </div>}
             <svg className="finance-bento-hero-orbit" viewBox="0 0 280 300" fill="none" aria-hidden="true">
               <ellipse cx="158" cy="150" rx="104" ry="137" />
               <ellipse cx="158" cy="150" rx="75" ry="106" />
@@ -322,7 +329,7 @@ export function DashboardView(props: DashboardViewProps) {
             </header>
             {visualPanel === "flow" && focusPanel && <ExpandedDetails panel={focusPanel} rows={focusPanel.rows} actions={focusActions.flow} />}
             <div className="finance-bento-flow-layout">
-              <div className="finance-bento-donut" style={{ background: `conic-gradient(var(--ui-editorial-coral) 0 ${spendingRatio}%, var(--ui-editorial-forest) ${spendingRatio}% 100%)` }} aria-label={`${Math.round(spendingRatio)} por ciento del ingreso gastado`}>
+              <div className="finance-bento-donut" style={{ background: `conic-gradient(var(--ui-editorial-coral) 0 ${spendingRatio}%, var(--ui-editorial-lime) ${spendingRatio}% 100%)` }} aria-label={`${Math.round(spendingRatio)} por ciento del ingreso gastado; ${100 - Math.round(spendingRatio)} por ciento disponible`}>
                 <div><strong>{Math.round(spendingRatio)}%</strong><span>gastado</span></div>
               </div>
               <div className="finance-bento-flow-figures">

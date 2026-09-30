@@ -246,7 +246,7 @@ export function ThemeSelector({ collapsed, showCurrentTheme = false, panel = fal
         <Button
           variant="ghost"
           size={collapsed && !showCurrentTheme ? "icon" : "default"}
-          className={cn("h-9 gap-2", collapsed && !showCurrentTheme ? "w-9" : showCurrentTheme ? "w-auto px-2" : "w-full justify-start px-2")}
+          className={cn("theme-selector-trigger h-9 gap-2", collapsed && !showCurrentTheme ? "w-9" : showCurrentTheme ? "w-auto px-2" : "w-full justify-start px-2")}
           aria-label={`Paleta activa: ${currentTheme.label}. Cambiar paleta de colores.`}
         >
           <Palette className="h-4 w-4 shrink-0 text-current opacity-75" />
