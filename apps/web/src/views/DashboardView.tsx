@@ -106,11 +106,11 @@ export function DashboardView(props: DashboardViewProps) {
         // Expand inside the dashboard canvas, matching the prototype's shared-element motion.
         const liveCanvas = canvasRef.current;
         if (!liveCanvas) return;
-        const maxWidth = liveCanvas.clientWidth < 620
-          ? liveCanvas.clientWidth - 16
-        : Math.min(1120, liveCanvas.clientWidth * 0.88);
-        const availableHeight = Math.max(320, Math.min(liveCanvas.clientHeight - 24, window.innerHeight - 112));
-        const targetHeight = Math.min(Math.max(440, tile.scrollHeight), availableHeight);
+        // Keep the focused tile close to the prototype's editorial scale. Filling
+        // most of the app canvas made the motion read like a conventional modal.
+        const maxWidth = Math.min(660, liveCanvas.clientWidth - (liveCanvas.clientWidth < 620 ? 20 : 48));
+        const availableHeight = Math.max(300, Math.min(620, liveCanvas.clientHeight - 44, window.innerHeight - 120));
+        const targetHeight = Math.min(Math.max(360, tile.scrollHeight), availableHeight);
         setFocusBox({
           left: Math.max(8, (liveCanvas.clientWidth - maxWidth) / 2),
           top: Math.max(8, (liveCanvas.clientHeight - targetHeight) / 2),
@@ -134,7 +134,7 @@ export function DashboardView(props: DashboardViewProps) {
         setFocusClosing(false);
         closeTimerRef.current = null;
         focusReturnRef.current?.focus();
-      }, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 760);
+      }, window.matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : 540);
     } else {
       setFocusedPanel(null);
     }
@@ -277,7 +277,7 @@ export function DashboardView(props: DashboardViewProps) {
   return (
     <div className={`finance-bento-dashboard section-enter${focusedPanel ? " has-focus" : ""}`}>
         <div ref={canvasRef} className="finance-bento-layout">
-        <div className="finance-bento-veil" aria-hidden="true" />
+        <button type="button" className="finance-bento-veil" aria-label="Cerrar tarjeta ampliada" tabIndex={focusedPanel ? 0 : -1} onClick={closeFocus} />
         <nav className="finance-bento-rail" aria-label="Enfoques del resumen">
           {([
             ["month", "Balance del mes"],
