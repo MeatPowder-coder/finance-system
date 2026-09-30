@@ -84,32 +84,51 @@ async function sha256Base64Url(value: string) {
 
 function readStoredFlow(): AuthFlow | null {
   if (typeof window === "undefined") return null;
-  try {
-    const raw = window.sessionStorage.getItem(FLOW_STORAGE_KEY);
-    if (!raw) return null;
-    const parsed = JSON.parse(raw) as Partial<AuthFlow>;
-    if (!parsed.state || !parsed.codeVerifier || !parsed.redirectUri || !parsed.returnTo) {
-      return null;
+  for (const storage of [window.sessionStorage, window.localStorage]) {
+    try {
+      const raw = storage.getItem(FLOW_STORAGE_KEY);
+      if (!raw) continue;
+      const parsed = JSON.parse(raw) as Partial<AuthFlow>;
+      if (!parsed.state || !parsed.codeVerifier || !parsed.redirectUri || !parsed.returnTo) {
+        continue;
+      }
+      return {
+        state: parsed.state,
+        codeVerifier: parsed.codeVerifier,
+        redirectUri: parsed.redirectUri,
+        returnTo: parsed.returnTo,
+      };
+    } catch {
+      // Try the other store; browsers can disable storage independently.
     }
-    return {
-      state: parsed.state,
-      codeVerifier: parsed.codeVerifier,
-      redirectUri: parsed.redirectUri,
-      returnTo: parsed.returnTo,
-    };
-  } catch {
-    return null;
   }
+  return null;
 }
 
 function saveStoredFlow(flow: AuthFlow) {
   if (typeof window === "undefined") return;
-  window.sessionStorage.setItem(FLOW_STORAGE_KEY, JSON.stringify(flow));
+  const serialized = JSON.stringify(flow);
+  // Keep the PKCE verifier available if Google returns to a separate tab or
+  // browser context on the same origin. The flow is short-lived and removed
+  // immediately after a successful exchange.
+  for (const storage of [window.sessionStorage, window.localStorage]) {
+    try {
+      storage.setItem(FLOW_STORAGE_KEY, serialized);
+    } catch {
+      // Keep the flow in whichever browser store remains available.
+    }
+  }
 }
 
 export function clearStoredAuthFlow() {
   if (typeof window === "undefined") return;
-  window.sessionStorage.removeItem(FLOW_STORAGE_KEY);
+  for (const storage of [window.sessionStorage, window.localStorage]) {
+    try {
+      storage.removeItem(FLOW_STORAGE_KEY);
+    } catch {
+      // Cleanup should continue even if a browser store is unavailable.
+    }
+  }
 }
 
 export function getStoredAuthFlow() {

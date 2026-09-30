@@ -148,18 +148,22 @@ export function AuthLoginScreen() {
           headers: buildFinanceHeaders(),
         });
 
-        if (!cancelled && res.ok) {
+        if (cancelled) return;
+        if (res.ok) {
           window.location.replace(returnTo);
           return;
         }
 
-        if (!cancelled) {
+        if (res.status === 401 || res.status === 403) {
           clearAuthSession();
+          return;
         }
+
+        // A temporary API failure is not proof that the saved session is
+        // invalid. Let EntryGate open the app shell and show its offline state.
+        window.location.replace(returnTo);
       } catch {
-        if (!cancelled) {
-          clearAuthSession();
-        }
+        if (!cancelled) window.location.replace(returnTo);
       }
     }
 
@@ -446,28 +450,25 @@ export function AuthCallbackScreen() {
       .then((result) => {
         persistAuthTokens(result.tokens);
         setMessage("Google confirmó tu cuenta. Verificando la sesión con FinanceSystem...");
-        return fetch(`${resolveFinanceApiBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4100")}/v1/auth/me`, {
-          cache: "no-store",
-          headers: buildFinanceHeaders(),
-        }).then(async (response) => {
-          if (!response.ok) {
-            throw new Error(`Google autorizó el acceso, pero FinanceSystem no validó la sesión (HTTP ${response.status}).`);
-          }
-
-          clearStoredAuthFlow();
-          setStatus("done");
-          setMessage("Sesión iniciada. Abriendo el sistema...");
-          // Force a fresh app boot after OAuth. The desktop shell emulates the
-          // Next router with History API navigation; reloading here guarantees
-          // EntryGate and the data views read the tokens just persisted above.
-          window.location.replace(normalizeReturnTo(flow.returnTo));
-        });
+        clearStoredAuthFlow();
+        setStatus("done");
+        setMessage("Sesión iniciada. Abriendo el sistema...");
+        // The token exchange is the authoritative OAuth response. EntryGate
+        // checks the API session after the app opens; a transient health-check
+        // or CORS failure must not discard the newly issued tokens here.
+        // Reload after OAuth so both the Next app and desktop shell start with
+        // the persisted session and route state.
+        window.location.replace(normalizeReturnTo(flow.returnTo));
       })
       .catch((callbackError: unknown) => {
         console.error(callbackError);
-        clearAuthSession();
+        if (callbackError instanceof Error && /HTTP (401|403)|unauthorized|no autorizado/i.test(callbackError.message)) {
+          clearAuthSession();
+        }
         setStatus("error");
-        setMessage(callbackError instanceof Error ? callbackError.message : "No se pudo completar el login.");
+        setMessage(callbackError instanceof Error && /failed to fetch|fetch failed|networkerror|network request failed/i.test(callbackError.message)
+          ? "Google autorizó el acceso, pero FinanceSystem no responde ahora. Tus credenciales se conservan; vuelve a intentar en unos segundos."
+          : callbackError instanceof Error ? callbackError.message : "No se pudo completar el login.");
       });
   }, [code, state, callbackError, errorDescription]);
 
