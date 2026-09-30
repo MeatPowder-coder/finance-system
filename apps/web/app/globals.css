@@ -3149,21 +3149,18 @@ main[data-finance-tab="dashboard"] > .finance-dashboard-heading > div:first-chil
 .finance-bento-layout { position:relative; isolation:isolate; }
 .finance-bento-dashboard.has-focus { position:relative; z-index:80; }
 main[data-finance-tab="dashboard"]:has(.finance-bento-dashboard.has-focus) { z-index:80; }
-body:has(.finance-bento-dashboard.has-focus)::before {
-  content:""; position:fixed; inset:0; z-index:70; pointer-events:none;
-  background:rgba(15,24,18,.38); backdrop-filter:blur(7px) saturate(.72);
-  animation:finance-veil-in .42s ease both;
-}
 body:has(.finance-bento-dashboard.has-focus) main[data-finance-tab="dashboard"] > :not(.finance-bento-dashboard),
 body:has(.finance-bento-dashboard.has-focus) .finance-app-sidebar,
 body:has(.finance-bento-dashboard.has-focus) .finance-notification,
 body:has(.finance-bento-dashboard.has-focus) .copilot-rail { filter:blur(6px); opacity:.23; pointer-events:none; transition:filter .38s ease,opacity .38s ease; }
+.finance-bento-veil { position:absolute; inset:-12px; z-index:2; display:block; border:0; padding:0; background:rgba(12,20,16,.4); opacity:0; pointer-events:none; backdrop-filter:blur(0); transition:opacity .38s ease,backdrop-filter .42s ease; }
+.finance-bento-dashboard.has-focus .finance-bento-veil { opacity:1; pointer-events:auto; backdrop-filter:blur(7px); }
 .finance-bento-rail,.finance-bento-grid { transition:filter .38s ease,opacity .38s ease,transform .38s ease; }
 .finance-bento-dashboard.has-focus .finance-bento-rail { filter:blur(5px); opacity:.2; transform:scale(.98); pointer-events:none; }
-.finance-bento-grid { position:relative; z-index:1; }
-.finance-bento-grid.is-focused { z-index:81; }
+.finance-bento-grid { position:static; }
+.finance-bento-grid.is-focused { position:static; }
 .finance-bento-grid.is-focused > .finance-bento-tile:not(.is-focused) { filter:blur(5px); opacity:.2; transform:scale(.975); pointer-events:none; }
-.finance-bento-tile.is-focused { position:absolute; z-index:5; display:block; min-height:0; max-width:calc(100% - 24px); overflow:auto; overscroll-behavior:contain; padding:clamp(20px,3vw,36px); border-width:1.5px; border-radius:2px; box-shadow:12px 14px 0 var(--ui-editorial-card-shadow),0 28px 90px rgba(0,0,0,.32); cursor:default; animation:none !important; transition:left .62s cubic-bezier(.18,.86,.24,1),top .62s cubic-bezier(.18,.86,.24,1),width .62s cubic-bezier(.18,.86,.24,1),height .62s cubic-bezier(.18,.86,.24,1),transform .34s cubic-bezier(.2,.8,.2,1),box-shadow .42s ease,filter .3s ease,opacity .3s ease; }
+.finance-bento-tile.is-focused { position:absolute; z-index:5; display:block; min-height:0; max-width:calc(100% - 24px); overflow:auto; overscroll-behavior:contain; padding:clamp(20px,3vw,36px); border-width:1.5px; border-radius:2px; box-shadow:8px 9px 0 var(--ui-editorial-card-shadow),0 28px 90px rgba(0,0,0,.28); cursor:default; animation:none !important; transition:left .52s cubic-bezier(.2,.8,.2,1),top .52s cubic-bezier(.2,.8,.2,1),width .52s cubic-bezier(.2,.8,.2,1),height .52s cubic-bezier(.2,.8,.2,1),transform .26s cubic-bezier(.2,.8,.2,1),box-shadow .42s ease,filter .3s ease,opacity .3s ease; }
 .finance-bento-tile.is-focused:hover,.finance-bento-tile.is-focused:active { transform:none; }
 .finance-bento-tile.is-focused .finance-bento-tile-head h3 { font-size:clamp(1.5rem,3vw,2.5rem); letter-spacing:-.06em; }
 .finance-bento-tile.is-focused .finance-bento-expanded { margin-top:24px; padding-top:16px; }
@@ -3173,6 +3170,10 @@ body:has(.finance-bento-dashboard.has-focus) .copilot-rail { filter:blur(6px); o
 .finance-bento-expanded-eyebrow { margin:0 0 8px; font:600 .62rem ui-monospace,SFMono-Regular,Consolas,monospace; letter-spacing:.14em; text-transform:uppercase; opacity:.72; }
 .finance-bento-expanded h3 { margin:0; font-size:clamp(1.7rem,3vw,2.5rem); line-height:1; letter-spacing:-.055em; }
 .finance-bento-expanded-summary { max-width:48rem; margin:.65rem 0 1.1rem; opacity:.78; font-size:.9rem; }
+.finance-bento-expanded-toolbar { display:flex; flex-wrap:wrap; gap:8px; margin:0 0 18px; }
+.finance-bento-expanded-toolbar button { display:inline-flex; min-height:36px; align-items:center; gap:12px; border:1px solid color-mix(in srgb,currentColor 64%,transparent); padding:8px 11px; background:color-mix(in srgb,currentColor 8%,transparent); color:inherit; font:650 .61rem ui-monospace,SFMono-Regular,Consolas,monospace; text-transform:uppercase; transition:transform .2s ease,background-color .2s ease; }
+.finance-bento-expanded-toolbar button:hover { transform:translate(-2px,-2px); background:var(--ui-editorial-lime); color:#171717; }
+.finance-bento-expanded-toolbar button span { font-size:.9rem; }
 .finance-bento-expanded-rows { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:0 24px; border-top:1px solid color-mix(in srgb,currentColor 32%,transparent); }
 .finance-bento-expanded-rows article { display:flex; min-width:0; justify-content:space-between; align-items:baseline; gap:18px; padding:13px 0; border-bottom:1px solid color-mix(in srgb,currentColor 24%,transparent); animation:finance-detail-reveal .32s calc(80ms + var(--unused,0ms)) ease both; }
 .finance-bento-expanded-rows article span { opacity:.72; font:600 .64rem ui-monospace,SFMono-Regular,Consolas,monospace; text-transform:uppercase; }
@@ -3212,15 +3213,11 @@ body:has(.finance-bento-dashboard.has-focus) .copilot-rail { filter:blur(6px); o
 @keyframes finance-detail-reveal { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
 @keyframes finance-close-pop { from { opacity:0; transform:scale(.6) rotate(-12deg); } to { opacity:1; transform:scale(1) rotate(0); } }
 @media(max-width:620px) {
+  .finance-bento-veil { inset:-8px; }
   .finance-bento-tile.is-focused { max-width:calc(100% - 16px); }
   .finance-bento-expanded-rows { grid-template-columns:minmax(0,1fr); }
 }
 
-@media(prefers-reduced-motion:reduce) {
-  body:has(.finance-bento-dashboard.has-focus)::before { animation:none; }
-  .finance-bento-tile.is-focused { transition-duration:1ms; }
-  .finance-bento-expanded,.finance-bento-expanded-rows article { animation:none; }
-}
 @media(prefers-reduced-motion:reduce) {
   .finance-bento-rail,.finance-bento-grid,.finance-bento-veil,.finance-bento-tile,.finance-bento-expanded,.finance-bento-expanded-rows article,.finance-bento-close { animation:none !important; transition:none !important; }
 }

@@ -31,18 +31,18 @@ type ThemeOption = {
 
 const THEME_OPTIONS: ThemeOption[] = [
   {
-    value: "light",
-    label: "Editorial",
-    description: "Papel cálido, verde botánico y acentos coral",
-    icon: Sun,
-    swatch: "from-[#f2f0e4] via-[#9dbf67] to-[#e98765]",
+    value: "dark",
+    label: "Cuaderno nocturno",
+    description: "Tinta verde, lima y coral · referencia Bento",
+    icon: Moon,
+    swatch: "from-[#122019] via-[#d8ff63] to-[#df5a43]",
   },
   {
-    value: "dark",
-    label: "Oscuro",
-    description: "Neutro, limpio y sin distracciones",
-    icon: Moon,
-    swatch: "from-zinc-300 via-zinc-500 to-zinc-700",
+    value: "light",
+    label: "Papel editorial",
+    description: "Papel cálido, verde botánico, coral y azul",
+    icon: Sun,
+    swatch: "from-[#f2f0e4] via-[#9dbf67] to-[#e98765]",
   },
   {
     value: "sand",
@@ -112,7 +112,7 @@ const THEME_OPTIONS: ThemeOption[] = [
 const THEME_CLASS_NAMES = THEME_OPTIONS.map((option) => "theme-" + option.value);
 
 export function ThemeSelector({ collapsed, panel = false, onThemeChange, onBackgroundChange }: ThemeSelectorProps) {
-  const [theme, setTheme] = useState<ThemeId>("light");
+  const [theme, setTheme] = useState<ThemeId>("dark");
   const [backgroundMode, setBackgroundMode] = useState<BackgroundMode>("auto");
 
   const currentTheme = useMemo(
@@ -145,10 +145,10 @@ export function ThemeSelector({ collapsed, panel = false, onThemeChange, onBackg
   };
 
   useEffect(() => {
-    const savedThemeRaw = localStorage.getItem("theme") || "light";
+    const savedThemeRaw = localStorage.getItem("theme") || "dark";
     const savedTheme = THEME_OPTIONS.some((option) => option.value === savedThemeRaw)
       ? (savedThemeRaw as ThemeId)
-      : "light";
+      : "dark";
 
     if (savedThemeRaw !== savedTheme) {
       localStorage.setItem("theme", savedTheme);
@@ -165,7 +165,7 @@ export function ThemeSelector({ collapsed, panel = false, onThemeChange, onBackg
   const handleThemeChange = (newTheme: string) => {
     const nextTheme = THEME_OPTIONS.some((option) => option.value === newTheme)
       ? (newTheme as ThemeId)
-      : "light";
+      : "dark";
     setTheme(nextTheme);
     localStorage.setItem("theme", nextTheme);
     applyTheme(nextTheme);

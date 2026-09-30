@@ -68,7 +68,6 @@ export default function EntryGate({ children }: EntryGateProps) {
     () => resolveFinanceApiBaseUrl(configuredApiBaseUrl),
     [configuredApiBaseUrl]
   );
-  const apiBaseLabel = useMemo(() => displayApiBaseUrl(configuredApiBaseUrl), [configuredApiBaseUrl]);
 
   useEffect(() => {
     if (isAuthScreen) return;
@@ -87,12 +86,21 @@ export default function EntryGate({ children }: EntryGateProps) {
           signal: controller.signal,
         });
         if (!healthResponse.ok) throw new Error(`Healthcheck HTTP ${healthResponse.status}`);
+        if (!healthResponse.headers.get("content-type")?.includes("application/json")) {
+          throw new Error("Healthcheck no devolvió JSON de Finance System API.");
+        }
+        const healthPayload = await healthResponse.json();
+        if (healthPayload?.ok !== true) throw new Error("Finance System API no confirmó disponibilidad.");
 
         const authConfigResponse = await fetch(`${apiBaseUrl}/v1/auth/config`, {
           cache: "no-store",
           signal: controller.signal,
         });
         if (!authConfigResponse.ok) throw new Error(`Auth config HTTP ${authConfigResponse.status}`);
+        if (!authConfigResponse.headers.get("content-type")?.includes("application/json")) {
+          throw new Error("Auth config no devolvió JSON de Finance System API.");
+        }
+        await authConfigResponse.json();
         if (cancelled) return;
 
         const token = readFinanceAuthToken();
@@ -136,10 +144,10 @@ export default function EntryGate({ children }: EntryGateProps) {
   if (isAuthScreen) return <>{children}</>;
   if (state === "authenticated") return <>{children}</>;
   if (state === "offline") {
-    return <ConnectionScreen apiBaseUrl={apiBaseLabel} message={message} retry={() => setRetryKey((value) => value + 1)} />;
+    return <ConnectionScreen apiBaseUrl={configuredApiBaseUrl} message={message} retry={() => setRetryKey((value) => value + 1)} />;
   }
   if (state === "unauthenticated") {
-    return <WelcomeScreen returnTo={returnTo} apiBaseUrl={apiBaseLabel} />;
+    return <WelcomeScreen returnTo={returnTo} apiBaseUrl={displayApiBaseUrl(configuredApiBaseUrl)} />;
   }
 
   return (

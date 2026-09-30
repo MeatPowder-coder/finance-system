@@ -628,13 +628,13 @@ function HomeContent() {
   const recentTransactions = useMemo(() => {
     return [...transactions]
       .sort((a, b) => new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime())
-      .slice(0, 4);
+      .slice(0, 10);
   }, [transactions]);
 
   const topAccounts = useMemo(() => {
     return [...accounts]
       .sort((a, b) => Math.abs(toNumber(b.balance_current)) - Math.abs(toNumber(a.balance_current)))
-      .slice(0, 3);
+      .slice(0, 6);
   }, [accounts]);
 
   const dashboardBudgets = useMemo(() => {
@@ -695,7 +695,7 @@ function HomeContent() {
     return [...commitments]
       .filter((item) => item.is_active)
       .sort((a, b) => new Date(a.next_run_at).getTime() - new Date(b.next_run_at).getTime())
-      .slice(0, 3);
+      .slice(0, 6);
   }, [commitments]);
 
   const maxCategoryTotal = useMemo(() => {
@@ -1491,6 +1491,8 @@ function HomeContent() {
             upcomingCommitments={upcomingCommitments}
             nextCommitment={nextCommitment}
             onReviewExpenses={() => goTab("transactions")}
+            onReviewPlanning={() => goTab("planning")}
+            onReviewAccounts={() => goTab("accounts")}
             recentTransactions={recentTransactions}
             latestTransaction={latestTransaction}
             topAccounts={topAccounts}
