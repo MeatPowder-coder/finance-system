@@ -106,11 +106,11 @@ export function DashboardView(props: DashboardViewProps) {
         // Expand inside the dashboard canvas, matching the prototype's shared-element motion.
         const liveCanvas = canvasRef.current;
         if (!liveCanvas) return;
-        const maxWidth = Math.min(660, liveCanvas.clientWidth - 60);
-        const targetHeight = Math.min(620, liveCanvas.clientHeight - 44);
+        const maxWidth = Math.min(960, liveCanvas.clientWidth - 48);
+        const targetHeight = Math.min(760, liveCanvas.clientHeight - 36);
         setFocusBox({
-          left: Math.max(12, (liveCanvas.clientWidth - maxWidth) / 2),
-          top: Math.max(12, (liveCanvas.clientHeight - targetHeight) / 2),
+          left: Math.max(10, (liveCanvas.clientWidth - maxWidth) / 2),
+          top: Math.max(10, (liveCanvas.clientHeight - targetHeight) / 2),
           width: maxWidth,
           height: targetHeight,
         });

@@ -3153,20 +3153,20 @@ body:has(.finance-bento-dashboard.has-focus) main[data-finance-tab="dashboard"] 
 body:has(.finance-bento-dashboard.has-focus) .finance-app-sidebar,
 body:has(.finance-bento-dashboard.has-focus) .finance-notification,
 body:has(.finance-bento-dashboard.has-focus) .copilot-rail { filter:blur(6px); opacity:.23; pointer-events:none; transition:filter .38s ease,opacity .38s ease; }
-.finance-bento-veil { position:absolute; inset:-12px; z-index:2; display:block; border:0; padding:0; background:rgba(12,20,16,.4); opacity:0; pointer-events:none; backdrop-filter:blur(0); transition:opacity .38s ease,backdrop-filter .42s ease; }
-.finance-bento-dashboard.has-focus .finance-bento-veil { opacity:1; pointer-events:auto; backdrop-filter:blur(7px); }
+.finance-bento-veil { position:absolute; inset:-12px; z-index:2; display:block; border:0; padding:0; background:rgba(12,20,16,.12); opacity:0; pointer-events:none; backdrop-filter:blur(0); transition:opacity .38s ease,backdrop-filter .42s ease; }
+.finance-bento-dashboard.has-focus .finance-bento-veil { opacity:1; pointer-events:auto; backdrop-filter:blur(11px); }
 .finance-bento-rail,.finance-bento-grid { transition:filter .38s ease,opacity .38s ease,transform .38s ease; }
 .finance-bento-dashboard.has-focus .finance-bento-rail { filter:blur(5px); opacity:.2; transform:scale(.98); pointer-events:none; }
 .finance-bento-grid { position:static; }
 .finance-bento-grid.is-focused { position:static; }
 .finance-bento-grid.is-focused > .finance-bento-tile:not(.is-focused) { filter:blur(5px); opacity:.2; transform:scale(.975); pointer-events:none; }
-.finance-bento-tile.is-focused { position:absolute; z-index:5; display:block; min-height:0; max-width:calc(100% - 24px); overflow:auto; overscroll-behavior:contain; padding:clamp(20px,3vw,36px); border-width:1.5px; border-radius:2px; box-shadow:8px 9px 0 var(--ui-editorial-card-shadow),0 28px 90px rgba(0,0,0,.28); cursor:default; animation:none !important; transition:left .52s cubic-bezier(.2,.8,.2,1),top .52s cubic-bezier(.2,.8,.2,1),width .52s cubic-bezier(.2,.8,.2,1),height .52s cubic-bezier(.2,.8,.2,1),transform .26s cubic-bezier(.2,.8,.2,1),box-shadow .42s ease,filter .3s ease,opacity .3s ease; }
+.finance-bento-tile.is-focused { position:absolute; z-index:5; display:block; min-height:0; max-width:calc(100% - 16px); overflow:auto; overscroll-behavior:contain; padding:clamp(24px,4vw,48px); border-width:2px; border-radius:0; box-shadow:10px 10px 0 var(--ui-editorial-card-shadow),0 0 0 2px var(--ui-editorial-lime); cursor:default; animation:none !important; transition:left .68s cubic-bezier(.16,.92,.22,1),top .68s cubic-bezier(.16,.92,.22,1),width .68s cubic-bezier(.16,.92,.22,1),height .68s cubic-bezier(.16,.92,.22,1),transform .3s ease,box-shadow .42s ease,filter .3s ease,opacity .3s ease; }
 .finance-bento-tile.is-focused:hover,.finance-bento-tile.is-focused:active { transform:none; }
 .finance-bento-tile.is-focused .finance-bento-tile-head h3 { font-size:clamp(1.5rem,3vw,2.5rem); letter-spacing:-.06em; }
 .finance-bento-tile.is-focused .finance-bento-expanded { margin-top:24px; padding-top:16px; }
 .finance-bento-tile.is-focused .finance-bento-expanded h3 { font-size:clamp(1.7rem,3.5vw,3rem); }
 .finance-bento-tile.is-focused .finance-bento-hero-foot,.finance-bento-tile.is-focused .finance-bento-hero-orbit { display:none; }
-.finance-bento-expanded { position:relative; margin-top:24px; padding-top:19px; border-top:1px solid currentColor; animation:finance-detail-reveal .4s 100ms ease both; }
+.finance-bento-expanded { position:relative; margin-top:24px; padding-top:19px; border-top:2px solid currentColor; animation:finance-detail-reveal .5s 180ms cubic-bezier(.16,.8,.2,1) both; }
 .finance-bento-expanded-eyebrow { margin:0 0 8px; font:600 .62rem ui-monospace,SFMono-Regular,Consolas,monospace; letter-spacing:.14em; text-transform:uppercase; opacity:.72; }
 .finance-bento-expanded h3 { margin:0; font-size:clamp(1.7rem,3vw,2.5rem); line-height:1; letter-spacing:-.055em; }
 .finance-bento-expanded-summary { max-width:48rem; margin:.65rem 0 1.1rem; opacity:.78; font-size:.9rem; }
