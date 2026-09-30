@@ -957,8 +957,9 @@ function HomeContent() {
         <section className={`section-enter ui-shell-card mb-6 rounded-[32px] p-5 md:p-6 ${tab === "dashboard" ? "finance-dashboard-heading" : ""}`}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-1">
-              <h1 className="text-[clamp(2rem,4vw,2.75rem)] font-semibold tracking-tight text-zinc-100">{tab === "dashboard" ? monthCoach.title : TAB_META[tab]?.label || "Dashboard"}</h1>
-              <p className="text-sm text-zinc-400">{tab === "dashboard" ? "Una lectura clara de lo que tienes, lo que entra y lo que viene." : TAB_META[tab]?.caption}</p>
+              {tab === "dashboard" && <div className="finance-editorial-brand"><strong>F/S</strong><span>Cuaderno financiero</span><small>Bogotá · {new Intl.DateTimeFormat("es-CO", { day: "2-digit", month: "short", year: "numeric", timeZone: "America/Bogota" }).format(new Date())} · Personal / COP</small></div>}
+              <h1 className="text-[clamp(2rem,4vw,2.75rem)] font-semibold tracking-tight text-zinc-100">{tab === "dashboard" ? <>{positiveMonth ? "El mes va " : "El mes pide "}<em>{positiveMonth ? "a favor" : "pausa"}</em></> : TAB_META[tab]?.label || "Dashboard"}</h1>
+              <p className="text-sm text-zinc-400">{tab === "dashboard" ? "Una lectura clara de tu dinero" : TAB_META[tab]?.caption}</p>
             </div>
 
             <div className="flex items-center gap-2">
@@ -1103,8 +1104,8 @@ function HomeContent() {
         )}
 
         {error && (
-          <Card className="section-enter border-rose-400/40 bg-rose-500/10 mb-6">
-            <CardContent className="py-4 text-rose-100">{error}</CardContent>
+          <Card className={`section-enter mb-4 ${tab === "dashboard" ? "finance-dashboard-error" : "border-rose-400/40 bg-rose-500/10"}`} role="alert">
+            <CardContent className={tab === "dashboard" ? "finance-dashboard-error-content" : "py-4 text-rose-100"}>{error}</CardContent>
           </Card>
         )}
 
