@@ -8,9 +8,11 @@ module.exports = defineConfig(({ mode }) => {
   const env = loadEnv(mode, envDir, "");
   const apiProxyTarget = env.API_PROXY_TARGET || "http://localhost:4100";
   const localPreview = mode === "local-preview";
-  const previewProxyTarget = env.FINANCE_LOCAL_PREVIEW_API_TARGET || env.VITE_API_BASE_URL || apiProxyTarget;
   const apiBaseUrl = localPreview
-    ? "/v1"
+    // The preview is a browser client. Call the configured API directly so
+    // Vite's Node proxy is not a second network dependency (CORS explicitly
+    // allows localhost/127.0.0.1 preview origins on the Finance API).
+    ? (env.FINANCE_LOCAL_PREVIEW_API_URL || env.VITE_API_BASE_URL || env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4100")
     : mode === "development"
     ? (env.NEXT_PUBLIC_API_BASE_URL || "/v1")
     : (env.VITE_API_BASE_URL || env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4100");
@@ -39,6 +41,5 @@ module.exports = defineConfig(({ mode }) => {
       },
       proxy: makeApiProxy(apiProxyTarget),
     },
-    ...(localPreview ? { preview: { proxy: makeApiProxy(previewProxyTarget) } } : {}),
   };
 });
