@@ -1,6 +1,6 @@
 "use client";
 
-import { type FormEvent, useEffect, useMemo, useState } from "react";
+import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowRight, ChartNoAxesCombined, Chrome, Compass, Loader2, Lock, LockKeyhole, Mail, ShieldCheck, Sparkles, UserRound, WalletCards } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -369,6 +369,7 @@ export function AuthLoginScreen() {
 export function AuthCallbackScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const processedCallbackRef = useRef<string | null>(null);
   const [status, setStatus] = useState<"idle" | "exchanging" | "error" | "done">("idle");
   const [message, setMessage] = useState("Validando tu sesion...");
 
@@ -389,6 +390,13 @@ export function AuthCallbackScreen() {
       setMessage("No llego el codigo de autenticacion desde Google.");
       return;
     }
+
+    // Desktop runs under React.StrictMode, which replays effects in development.
+    // Google authorization codes are single-use, so never exchange the same
+    // callback twice during one page lifetime.
+    const callbackKey = `${state}:${code}`;
+    if (processedCallbackRef.current === callbackKey) return;
+    processedCallbackRef.current = callbackKey;
 
     const flow = getStoredAuthFlow();
     if (!flow) {
@@ -428,7 +436,7 @@ export function AuthCallbackScreen() {
         setStatus("error");
         setMessage(callbackError instanceof Error ? callbackError.message : "No se pudo completar el login.");
       });
-  }, [router, searchParams]);
+  }, [searchParams]);
 
   return (
     <div className="auth-screen auth-screen-quiet">
