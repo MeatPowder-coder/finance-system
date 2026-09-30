@@ -108,9 +108,9 @@ export function DashboardView(props: DashboardViewProps) {
         if (!liveCanvas) return;
         const maxWidth = liveCanvas.clientWidth < 620
           ? liveCanvas.clientWidth - 16
-          : Math.min(800, liveCanvas.clientWidth * 0.7);
-        const availableHeight = Math.max(280, Math.min(liveCanvas.clientHeight - 32, window.innerHeight - 136));
-        const targetHeight = Math.min(Math.max(320, tile.scrollHeight), availableHeight);
+          : Math.min(1040, liveCanvas.clientWidth * 0.86);
+        const availableHeight = Math.max(320, Math.min(liveCanvas.clientHeight - 24, window.innerHeight - 112));
+        const targetHeight = Math.min(Math.max(440, tile.scrollHeight), availableHeight);
         setFocusBox({
           left: Math.max(8, (liveCanvas.clientWidth - maxWidth) / 2),
           top: Math.max(8, (liveCanvas.clientHeight - targetHeight) / 2),
@@ -432,8 +432,8 @@ function ExpandedDetails({ panel, rows, actions = [], budgets, onBudgetExpense, 
           const allocated = Math.max(0, toNumber(budget.allocated_amount));
           const spent = Math.max(0, toNumber(budget.actual_amount));
           const ratio = allocated ? Math.min(100, Math.round((spent / allocated) * 100)) : 0;
-          return <article key={budget.id} style={{ animationDelay: `${index * 55}ms` }}><span>{budget.name} · {ratio}% usado · {formatMoney(Math.max(0, allocated - spent), budget.currency)} libre</span><div className="finance-bento-expanded-actions"><button type="button" onClick={() => onBudgetExpense?.(budget)}>Registrar gasto</button><button type="button" onClick={() => onBudgetEdit?.(budget.id)}>Editar</button></div></article>;
-        }) : rows.length ? rows.map((row, index) => <article key={`${row.label}-${index}`} style={{ animationDelay: `${index * 55}ms` }}><span>{row.label}</span><strong>{row.value}</strong></article>) : <p>No hay datos para mostrar todavía.</p>}
+          return <article key={budget.id} style={{ animationDelay: `${320 + index * 55}ms` }}><span>{budget.name} · {ratio}% usado · {formatMoney(Math.max(0, allocated - spent), budget.currency)} libre</span><div className="finance-bento-expanded-actions"><button type="button" onClick={() => onBudgetExpense?.(budget)}>Registrar gasto</button><button type="button" onClick={() => onBudgetEdit?.(budget.id)}>Editar</button></div></article>;
+        }) : rows.length ? rows.map((row, index) => <article key={`${row.label}-${index}`} style={{ animationDelay: `${320 + index * 55}ms` }}><span>{row.label}</span><strong>{row.value}</strong></article>) : <p>No hay datos para mostrar todavía.</p>}
       </div>
     </div>
   );
