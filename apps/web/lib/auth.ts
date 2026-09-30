@@ -1,6 +1,6 @@
 "use client";
 
-import { readFinanceRefreshToken, resolveFinanceApiBaseUrl, setFinanceAuthToken, setFinanceRefreshToken } from "./runtime-config";
+import { readFinanceRefreshToken, requestFinanceApi, resolveFinanceApiBaseUrl, setFinanceAuthToken, setFinanceRefreshToken } from "./runtime-config";
 
 export type AuthPublicConfig = {
   enabled: boolean;
@@ -118,7 +118,7 @@ export function getStoredAuthFlow() {
 
 async function apiGet<T>(path: string) {
   const apiBaseUrl = resolveFinanceApiBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4100");
-  const res = await fetch(`${apiBaseUrl}${path}`, { cache: "no-store" });
+  const res = await requestFinanceApi(`${apiBaseUrl}${path}`, { cache: "no-store" });
   const json = await readResponsePayload(res);
   if (!res.ok) {
     const errorMessage = typeof json.error === "string" ? json.error : typeof json.message === "string" ? json.message : typeof json.raw === "string" ? json.raw : `HTTP ${res.status}`;
@@ -129,7 +129,7 @@ async function apiGet<T>(path: string) {
 
 async function apiPost<T>(path: string, body: unknown) {
   const apiBaseUrl = resolveFinanceApiBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4100");
-  const res = await fetch(`${apiBaseUrl}${path}`, {
+  const res = await requestFinanceApi(`${apiBaseUrl}${path}`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",

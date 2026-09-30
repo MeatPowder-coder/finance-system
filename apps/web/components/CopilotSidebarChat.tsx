@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Bot, FileText, Image as ImageIcon, Loader2, Paperclip, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { buildFinanceHeaders, requestFinanceApi, resolveFinanceApiBaseUrl } from "@/lib/runtime-config";
 
 type SessionMode = "ACCOUNTANT" | "ANALYST";
 
@@ -30,23 +31,24 @@ type PendingAttachment = {
   size: number;
 };
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4100";
+const API_BASE = resolveFinanceApiBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4100");
 const SIDEBAR_MAX_FILES = 4;
 const SIDEBAR_MAX_DATA_URL_CHARS_PER_FILE = 12_000_000;
 const SIDEBAR_MAX_DATA_URL_CHARS_TOTAL = 24_000_000;
 
 async function apiGet<T>(path: string) {
-  const res = await fetch(`${API_BASE}${path}`, { cache: "no-store" });
+  const res = await requestFinanceApi(`${API_BASE}${path}`, { cache: "no-store", headers: buildFinanceHeaders() });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
   return json.data as T;
 }
 
 async function apiPost<T>(path: string, body: unknown) {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await requestFinanceApi(`${API_BASE}${path}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: buildFinanceHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
+    cache: "no-store",
   });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);

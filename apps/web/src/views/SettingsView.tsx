@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ThemeSelector } from "@/components/ThemeSelector";
-import { buildFinanceHeaders, resolveFinanceApiBaseUrl } from "@/lib/runtime-config";
+import { buildFinanceHeaders, requestFinanceApi, resolveFinanceApiBaseUrl } from "@/lib/runtime-config";
 import { cn } from "@/lib/utils";
 
 type Permission = "READ" | "WRITE" | "UPLOAD" | "ANALYZE";
@@ -77,7 +77,7 @@ const PERMISSIONS: Array<{ value: Permission; label: string; hint: string }> = [
 ];
 
 async function apiRequest<T>(path: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await requestFinanceApi(`${API_BASE}${path}`, {
     ...init,
     cache: "no-store",
     headers: buildFinanceHeaders({ "Content-Type": "application/json", ...(init?.headers || {}) }),

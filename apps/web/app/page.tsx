@@ -34,7 +34,7 @@ import { InvestmentsView } from "@/src/views/InvestmentsView";
 import { PlanningView } from "@/src/views/PlanningView";
 import { DashboardView } from "@/src/views/DashboardView";
 import { SettingsView } from "@/src/views/SettingsView";
-import { buildFinanceHeaders, resolveFinanceApiBaseUrl } from "@/lib/runtime-config";
+import { buildFinanceHeaders, requestFinanceApi, resolveFinanceApiBaseUrl } from "@/lib/runtime-config";
 import { clearAuthSession } from "@/lib/auth";
 import {
   AlertTriangle,
@@ -145,29 +145,19 @@ const TAB_META: Record<
   settings: { label: "Configuracion", caption: "Perfil, temas y accesos", icon: Settings },
 };
 
-async function requestFinanceApi(path: string, init: RequestInit = {}) {
-  try {
-    return await fetch(`${API_BASE}${path}`, { ...init, cache: "no-store" });
-  } catch (error) {
-    if (error instanceof TypeError) {
-      throw new Error("No se pudo conectar con el servicio de finanzas. Comprueba la conexión e inténtalo de nuevo.");
-    }
-    throw error;
-  }
-}
-
 async function apiGet<T>(path: string) {
-  const res = await requestFinanceApi(path, { headers: buildFinanceHeaders() });
+  const res = await requestFinanceApi(`${API_BASE}${path}`, { headers: buildFinanceHeaders(), cache: "no-store" });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
   return json.data as T;
 }
 
 async function apiPost<T>(path: string, body: unknown) {
-  const res = await requestFinanceApi(path, {
+  const res = await requestFinanceApi(`${API_BASE}${path}`, {
     method: "POST",
     headers: buildFinanceHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
+    cache: "no-store",
   });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
@@ -175,10 +165,11 @@ async function apiPost<T>(path: string, body: unknown) {
 }
 
 async function apiPatch<T>(path: string, body: unknown) {
-  const res = await requestFinanceApi(path, {
+  const res = await requestFinanceApi(`${API_BASE}${path}`, {
     method: "PATCH",
     headers: buildFinanceHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),
+    cache: "no-store",
   });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);

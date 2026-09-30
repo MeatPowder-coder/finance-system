@@ -5,7 +5,7 @@ import { Bot, FileText, Image as ImageIcon, Loader2, MessageSquare, Paperclip, P
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { buildFinanceHeaders, resolveFinanceApiBaseUrl } from "@/lib/runtime-config";
+import { buildFinanceHeaders, requestFinanceApi, resolveFinanceApiBaseUrl } from "@/lib/runtime-config";
 
 type SessionMode = "ACCOUNTANT" | "ANALYST";
 
@@ -63,14 +63,14 @@ const FALLBACK_MAX_DATA_URL_CHARS_PER_FILE = 20_000_000;
 const FALLBACK_MAX_DATA_URL_CHARS_TOTAL = 45_000_000;
 
 async function apiGet<T>(path: string) {
-  const res = await fetch(`${API_BASE}${path}`, { cache: "no-store", headers: buildFinanceHeaders() });
+  const res = await requestFinanceApi(`${API_BASE}${path}`, { cache: "no-store", headers: buildFinanceHeaders() });
   const json = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
   return json.data as T;
 }
 
 async function apiPost<T>(path: string, body: unknown) {
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await requestFinanceApi(`${API_BASE}${path}`, {
     method: "POST",
     headers: buildFinanceHeaders({ "Content-Type": "application/json" }),
     body: JSON.stringify(body),

@@ -2,6 +2,17 @@ const API_BASE_URL_STORAGE_KEY = "finance-system.apiBaseUrl";
 const AUTH_TOKEN_STORAGE_KEY = "finance-system.authToken";
 const AUTH_REFRESH_TOKEN_STORAGE_KEY = "finance-system.authRefreshToken";
 
+export async function requestFinanceApi(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+  try {
+    return await fetch(input, init);
+  } catch (error) {
+    if (error instanceof TypeError) {
+      throw new Error("No se pudo conectar con Finance System. Revisa tu conexión e inténtalo de nuevo.");
+    }
+    throw error;
+  }
+}
+
 function normalizeBaseUrl(value: string) {
   return value.trim().replace(/\/+$/, "");
 }

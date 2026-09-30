@@ -98,9 +98,9 @@ export function DashboardView(props: DashboardViewProps) {
         // Expand inside the dashboard canvas, matching the prototype's shared-element motion.
         const liveGrid = gridRef.current;
         if (!liveGrid) return;
-        const maxWidth = Math.min(860, liveGrid.clientWidth - 40);
-        const targetHeight = Math.min(620, window.innerHeight - 80);
-        setFocusBox({ left: (liveGrid.clientWidth - maxWidth) / 2, top: Math.max(18, (liveGrid.clientHeight - targetHeight) / 2), width: maxWidth, height: targetHeight });
+        const maxWidth = Math.min(660, liveGrid.clientWidth - 60);
+        const targetHeight = Math.min(620, liveGrid.clientHeight - 44);
+        setFocusBox({ left: Math.max(20, (liveGrid.clientWidth - maxWidth) / 2), top: Math.max(20, (liveGrid.clientHeight - targetHeight) / 2), width: maxWidth, height: targetHeight });
       }));
       return;
     }

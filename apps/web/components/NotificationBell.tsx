@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Bell, Check, CheckCheck, ExternalLink, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { buildFinanceHeaders, resolveFinanceApiBaseUrl } from "@/lib/runtime-config";
+import { buildFinanceHeaders, requestFinanceApi, resolveFinanceApiBaseUrl } from "@/lib/runtime-config";
 import { cn } from "@/lib/utils";
 
 type NotificationItem = {
@@ -20,7 +20,7 @@ type NotificationItem = {
 const API_BASE = resolveFinanceApiBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4100");
 
 async function requestNotifications<T>(path: string, init?: RequestInit) {
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await requestFinanceApi(`${API_BASE}${path}`, {
     ...init,
     cache: "no-store",
     headers: buildFinanceHeaders({ "Content-Type": "application/json", ...(init?.headers || {}) }),
