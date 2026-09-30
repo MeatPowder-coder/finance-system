@@ -11,7 +11,7 @@ import {
   Wallet,
 } from "lucide-react";
 import type { Account, Budget, Commitment, Transaction } from "@/lib/types";
-import { formatMoney, formatDate, toNumber } from "@/lib/format";
+import { formatMoney, formatDate, getAccountTypeLabel, toNumber } from "@/lib/format";
 
 export interface MonthCoachState {
   badge: string;
@@ -161,9 +161,9 @@ export function DashboardView(props: DashboardViewProps) {
         { label: "Resultado del mes", value: monthCoach.amount },
         { label: "Estado", value: monthCoach.badge },
         { label: "Contexto", value: monthCoach.caption },
-        { label: "Presupuestos activos", value: String(dashboardBudgets.length) },
-        { label: "Próximo pago", value: nextCommitment?.name || "Sin pagos cercanos" },
-        { label: "Último movimiento", value: latestTransaction?.description || (latestTransaction ? "Movimiento reciente" : "Sin movimientos aún") },
+        { label: "Presupuestos activos", value: String(dashboardBudgets.length), detail: "Sobres del periodo actual" },
+        { label: "Próximo pago", value: nextCommitment?.name || "Sin pagos cercanos", detail: nextCommitment ? `${formatDate(nextCommitment.next_run_at)} · ${formatMoney(Number(nextCommitment.payload.amount || 0), nextCommitment.payload.currency || "COP")}` : "Tu agenda está despejada" },
+        { label: "Último movimiento", value: latestTransaction?.description || (latestTransaction ? "Movimiento reciente" : "Sin movimientos aún"), detail: latestTransaction ? `${latestTransaction.account_name} · ${formatDate(latestTransaction.transaction_date)}` : "Al registrar uno aparecerá aquí" },
       ],
     },
     flow: {
@@ -191,8 +191,9 @@ export function DashboardView(props: DashboardViewProps) {
       eyebrow: "Agenda financiera",
       summary: "Compromisos próximos para anticipar lo que saldrá de tus cuentas.",
       rows: upcomingCommitments.map((item) => ({
-        label: `${item.name} · ${formatDate(item.next_run_at)}`,
+        label: item.name,
         value: formatMoney(Number(item.payload.amount || 0), item.payload.currency || "COP"),
+        detail: `${formatDate(item.next_run_at)} · ${item.cadence === "YEARLY" ? "Anual" : item.cadence === "WEEKLY" ? "Semanal" : "Mensual"}`,
       })),
     },
     transactions: {
@@ -200,8 +201,9 @@ export function DashboardView(props: DashboardViewProps) {
       eyebrow: "Entradas y salidas",
       summary: "Actividad reciente registrada en tus cuentas.",
       rows: recentTransactions.map((tx) => ({
-        label: `${tx.description || "Sin descripción"} · ${formatDate(tx.transaction_date)}`,
+        label: tx.description || "Sin descripción",
         value: `${tx.direction === "INFLOW" ? "+" : "−"} ${formatMoney(toNumber(tx.amount), tx.currency)}`,
+        detail: [formatDate(tx.transaction_date), tx.account_name, tx.category_name, tx.status].filter(Boolean).join(" · "),
       })),
     },
     accounts: {
@@ -211,6 +213,7 @@ export function DashboardView(props: DashboardViewProps) {
       rows: topAccounts.map((account) => ({
         label: account.name,
         value: formatMoney(toNumber(account.balance_current), account.currency),
+        detail: `${getAccountTypeLabel(account.account_type)} · ${account.code}`,
       })),
     },
   };
@@ -427,7 +430,7 @@ export function DashboardView(props: DashboardViewProps) {
   );
 }
 
-function ExpandedDetails({ panel, rows, actions = [], budgets, onBudgetExpense, onBudgetEdit }: { panel: { title: string; eyebrow: string; summary: string; rows: { label: string; value: string }[] }; rows: { label: string; value: string }[]; actions?: { label: string; onClick: () => void }[]; budgets?: Budget[]; onBudgetExpense?: (budget: Budget) => void; onBudgetEdit?: (budgetId: number) => void }) {
+function ExpandedDetails({ panel, rows, actions = [], budgets, onBudgetExpense, onBudgetEdit }: { panel: { title: string; eyebrow: string; summary: string; rows: { label: string; value: string; detail?: string }[] }; rows: { label: string; value: string; detail?: string }[]; actions?: { label: string; onClick: () => void }[]; budgets?: Budget[]; onBudgetExpense?: (budget: Budget) => void; onBudgetEdit?: (budgetId: number) => void }) {
   return (
     <div className="finance-bento-expanded" role="region" aria-label={`Detalle: ${panel.title}`}>
       <p className="finance-bento-expanded-eyebrow">{panel.eyebrow}</p>
@@ -439,8 +442,9 @@ function ExpandedDetails({ panel, rows, actions = [], budgets, onBudgetExpense, 
           const allocated = Math.max(0, toNumber(budget.allocated_amount));
           const spent = Math.max(0, toNumber(budget.actual_amount));
           const ratio = allocated ? Math.min(100, Math.round((spent / allocated) * 100)) : 0;
-          return <article key={budget.id} style={{ animationDelay: `${320 + index * 55}ms` }}><span>{budget.name} · {ratio}% usado · {formatMoney(Math.max(0, allocated - spent), budget.currency)} libre</span><div className="finance-bento-expanded-actions"><button type="button" onClick={() => onBudgetExpense?.(budget)}>Registrar gasto</button><button type="button" onClick={() => onBudgetEdit?.(budget.id)}>Editar</button></div></article>;
-        }) : rows.length ? rows.map((row, index) => <article key={`${row.label}-${index}`} style={{ animationDelay: `${320 + index * 55}ms` }}><span>{row.label}</span><strong>{row.value}</strong></article>) : <p>No hay datos para mostrar todavía.</p>}
+          const status = budget.deficit_summary.status === "over_budget" ? "Excedido" : budget.deficit_summary.status === "warning" ? "Atención" : "En control";
+          return <article key={budget.id} style={{ animationDelay: `${170 + index * 65}ms` }}><span>{budget.name} · {status}</span><strong>{formatMoney(Math.max(0, allocated - spent), budget.currency)} libre</strong><small>{formatMoney(spent, budget.currency)} de {formatMoney(allocated, budget.currency)} · {ratio}% usado</small><div className="finance-bento-expanded-meter" aria-label={`${ratio}% del presupuesto usado`}><i style={{ width: `${ratio}%` }} /></div><div className="finance-bento-expanded-actions"><button type="button" onClick={() => onBudgetExpense?.(budget)}>Registrar gasto</button><button type="button" onClick={() => onBudgetEdit?.(budget.id)}>Editar</button></div></article>;
+        }) : rows.length ? rows.map((row, index) => <article key={`${row.label}-${index}`} style={{ animationDelay: `${170 + index * 65}ms` }}><span>{row.label}</span><strong>{row.value}</strong>{row.detail && <small>{row.detail}</small>}</article>) : <p>No hay datos para mostrar todavía.</p>}
       </div>
     </div>
   );
