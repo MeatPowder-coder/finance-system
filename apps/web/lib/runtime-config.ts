@@ -62,18 +62,18 @@ export function resolveFinanceApiBaseUrl(fallback = "http://localhost:4100") {
   const inferredBrowserBaseUrl = inferBrowserApiBaseUrl();
   const fallbackIsExplicitRemote = Boolean(normalizedFallback && !normalizedFallback.startsWith("/") && !isLocalhostUrl(normalizedFallback));
 
-  // A stale same-origin path or localhost value must not shadow the API URL
-  // configured by the current deployment or desktop preview.
-  if (stored && !isRelativeApiBaseUrl(stored) && !isLocalhostUrl(stored)) {
-    return normalizeBaseUrl(stored);
-  }
-
+  // The current deployment's explicit or host-inferred API is authoritative.
+  // This also recovers from an obsolete remote URL left in browser storage.
   if (fallbackIsExplicitRemote) {
     return normalizedFallback;
   }
 
   if (inferredBrowserBaseUrl) {
     return normalizeBaseUrl(inferredBrowserBaseUrl);
+  }
+
+  if (stored && !isRelativeApiBaseUrl(stored) && !isLocalhostUrl(stored)) {
+    return normalizeBaseUrl(stored);
   }
 
   if ((stored && isRelativeApiBaseUrl(stored)) || normalizedFallback.startsWith("/")) {
