@@ -3481,3 +3481,19 @@ body:has(.finance-focus-dialog) .finance-modal-overlay { background:rgba(10,20,1
   .auth-screen-quiet .auth-editorial-aside { padding:20px; }
   .auth-screen-quiet .auth-editorial-aside-copy { margin:1.2rem 0; }
 }
+
+/* Dark editorial cards need ink-dark type on their bright lime and coral surfaces. */
+.theme-dark .welcome-screen-quiet .welcome-editorial-art-top,
+.theme-dark .welcome-screen-quiet .welcome-editorial-balance>span,
+.theme-dark .welcome-screen-quiet .welcome-editorial-balance strong,
+.theme-dark .welcome-screen-quiet .welcome-button-primary,
+.theme-dark .welcome-screen-quiet .welcome-editorial-stat:nth-child(2) { color:#171717 !important; }
+.theme-dark .welcome-screen-quiet .welcome-editorial-chart-label,
+.theme-dark .welcome-screen-quiet .welcome-editorial-chart-foot { color:var(--ui-editorial-ink); }
+.theme-dark .auth-screen-quiet .auth-editorial-preview,
+.theme-dark .auth-screen-quiet .auth-editorial-preview-head,
+.theme-dark .auth-screen-quiet .auth-editorial-preview-foot,
+.theme-dark .auth-screen-quiet .auth-editorial-preview-foot>span:first-child,
+.theme-dark .auth-screen-quiet .auth-editorial-preview-title,
+.theme-dark .auth-screen-quiet .auth-editorial-preview-title strong,
+.theme-dark .auth-screen-quiet .auth-editorial-card .auth-mode-tabs button[aria-pressed="true"] { color:#171717 !important; }
