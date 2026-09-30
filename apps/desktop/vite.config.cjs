@@ -7,9 +7,18 @@ const envDir = path.resolve(__dirname, "../..");
 module.exports = defineConfig(({ mode }) => {
   const env = loadEnv(mode, envDir, "");
   const apiProxyTarget = env.API_PROXY_TARGET || "http://localhost:4100";
-  const apiBaseUrl = mode === "development"
+  const localPreview = mode === "local-preview";
+  const previewProxyTarget = env.FINANCE_LOCAL_PREVIEW_API_TARGET || env.VITE_API_BASE_URL || apiProxyTarget;
+  const apiBaseUrl = localPreview
+    ? "/v1"
+    : mode === "development"
     ? (env.NEXT_PUBLIC_API_BASE_URL || "/v1")
     : (env.VITE_API_BASE_URL || env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4100");
+  const makeApiProxy = (target) => ({
+    "/v1": { target, changeOrigin: true, secure: true },
+    "/health": { target, changeOrigin: true, secure: true },
+    "/ready": { target, changeOrigin: true, secure: true },
+  });
 
   return {
     envDir,
@@ -28,11 +37,8 @@ module.exports = defineConfig(({ mode }) => {
       fs: {
         allow: [path.resolve(__dirname, "..")],
       },
-      proxy: {
-        "/v1": { target: apiProxyTarget, changeOrigin: true, secure: true },
-        "/health": { target: apiProxyTarget, changeOrigin: true, secure: true },
-        "/ready": { target: apiProxyTarget, changeOrigin: true, secure: true },
-      },
+      proxy: makeApiProxy(apiProxyTarget),
     },
+    ...(localPreview ? { preview: { proxy: makeApiProxy(previewProxyTarget) } } : {}),
   };
 });
