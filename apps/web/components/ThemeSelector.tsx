@@ -240,7 +240,7 @@ export function ThemeSelector({ collapsed, showCurrentTheme = false, panel = fal
     );
   }
 
-  return (
+  const selectorMenu = (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
@@ -325,5 +325,28 @@ export function ThemeSelector({ collapsed, showCurrentTheme = false, panel = fal
           })}
         </DropdownMenuContent>
     </DropdownMenu>
+  );
+
+  if (!showCurrentTheme) return selectorMenu;
+
+  return (
+    <div className="theme-selector-control">
+      {selectorMenu}
+      <div className="theme-swatch-strip" role="group" aria-label="Elegir paleta de colores">
+        {THEME_OPTIONS.map((option) => (
+          <button
+            key={option.value}
+            type="button"
+            title={option.label}
+            aria-label={`Usar paleta ${option.label}`}
+            aria-pressed={theme === option.value}
+            onClick={() => handleThemeChange(option.value)}
+            className={cn("theme-swatch bg-gradient-to-br", option.swatch, theme === option.value && "is-active")}
+          >
+            <span className="sr-only">{option.label}</span>
+          </button>
+        ))}
+      </div>
+    </div>
   );
 }
