@@ -99,8 +99,14 @@ export function DashboardView(props: DashboardViewProps) {
         const liveGrid = gridRef.current;
         if (!liveGrid) return;
         const maxWidth = Math.min(660, liveGrid.clientWidth - 60);
-        const targetHeight = Math.min(620, liveGrid.clientHeight - 44);
-        setFocusBox({ left: Math.max(20, (liveGrid.clientWidth - maxWidth) / 2), top: Math.max(20, (liveGrid.clientHeight - targetHeight) / 2), width: maxWidth, height: targetHeight });
+        const targetHeight = Math.min(620, window.innerHeight - 44);
+        const gridTop = liveGrid.getBoundingClientRect().top;
+        setFocusBox({
+          left: Math.max(20, (liveGrid.clientWidth - maxWidth) / 2),
+          top: window.innerHeight / 2 - gridTop - targetHeight / 2,
+          width: maxWidth,
+          height: targetHeight,
+        });
       }));
       return;
     }
