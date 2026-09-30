@@ -16,7 +16,6 @@ import {
   Receipt,
   Settings,
   Wallet,
-  Zap,
 } from "lucide-react";
 import { ThemeSelector } from "@/components/ThemeSelector";
 import { BackendStatusPill } from "@/components/BackendStatusPill";
@@ -64,9 +63,7 @@ function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
     >
       <div className="px-3 py-2 flex-1 w-full">
         <Link href="/" className={cn("flex items-center mb-14 pl-3 transition-all", collapsed ? "justify-center pl-0" : "")}>
-          <div className="relative h-9 w-9 bg-brand text-primary-foreground p-1.5 rounded-xl flex items-center justify-center shrink-0 shadow-md">
-            <Zap className="h-5 w-5 fill-current" />
-          </div>
+          <div className="finance-nav-brand-mark" aria-hidden="true">F/S</div>
           {!collapsed && <h1 className="text-xl font-bold ml-4 animate-in fade-in duration-300 truncate tracking-tight">FinanceSystem</h1>}
         </Link>
         <div className="space-y-1 w-full">
@@ -139,7 +136,7 @@ export function AppSidebar({
   return (
     <div
       className={cn(
-        "relative flex flex-col h-full ui-panel transition-[width] duration-300 ease-out z-50 overflow-x-hidden",
+        "finance-nav-rail relative flex flex-col h-full ui-panel transition-[width] duration-300 ease-out z-50 overflow-x-hidden",
         className,
         collapsed ? "w-20" : "w-64"
       )}

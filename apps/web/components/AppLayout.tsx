@@ -26,7 +26,10 @@ export default function AppLayout({
     const authMode = searchParams.get("auth");
     const isAuthScreen = authMode === "login" || authMode === "callback" || pathname.startsWith("/auth/");
     const isDesktopEmbed = false;
-    const [collapsed, setCollapsed] = useState(false);
+    // The editorial navigation is an icon rail by default, matching the compact
+    // reference. Every destination remains named through its tooltip and can be
+    // expanded from the rail control at any time.
+    const [collapsed, setCollapsed] = useState(true);
     const [copilotRailOpen, setCopilotRailOpen] = useState(false);
 
     useEffect(() => {

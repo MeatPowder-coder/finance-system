@@ -106,10 +106,11 @@ export function DashboardView(props: DashboardViewProps) {
         // Expand inside the dashboard canvas, matching the prototype's shared-element motion.
         const liveCanvas = canvasRef.current;
         if (!liveCanvas) return;
-        // Let the same Bento tile grow into a broad reading surface. A fixed
-        // 660px cap looked like a dialog on the full-width app, unlike the demo.
-        const maxWidth = Math.min(920, liveCanvas.clientWidth - (liveCanvas.clientWidth < 620 ? 20 : 48));
-        const availableHeight = Math.max(300, Math.min(680, liveCanvas.clientHeight - 44, window.innerHeight - 96));
+        // The demo makes the selected Bento panel occupy most of its canvas.
+        // Keep the transition anchored to the original tile, then let it become
+        // a near full-canvas reading surface so it feels like a scene change.
+        const maxWidth = Math.min(1180, liveCanvas.clientWidth - (liveCanvas.clientWidth < 620 ? 16 : 36));
+        const availableHeight = Math.max(300, Math.min(liveCanvas.clientHeight - 24, window.innerHeight - 48));
         const targetHeight = Math.min(Math.max(360, tile.scrollHeight), availableHeight);
         setFocusBox({
           left: Math.max(8, (liveCanvas.clientWidth - maxWidth) / 2),
