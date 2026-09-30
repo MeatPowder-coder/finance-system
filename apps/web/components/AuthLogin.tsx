@@ -1,7 +1,7 @@
 "use client";
 
 import { type FormEvent, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { ArrowRight, ChartNoAxesCombined, Chrome, Compass, Loader2, Lock, LockKeyhole, Mail, ShieldCheck, Sparkles, UserRound, WalletCards } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -389,7 +389,6 @@ export function AuthLoginScreen() {
 }
 
 export function AuthCallbackScreen() {
-  const router = useRouter();
   const searchParams = useSearchParams();
   const wrappedCallbackParams = readWrappedGoogleCallback(searchParams.get("returnTo"));
   const callbackParams = wrappedCallbackParams || searchParams;
@@ -458,7 +457,10 @@ export function AuthCallbackScreen() {
           clearStoredAuthFlow();
           setStatus("done");
           setMessage("Sesión iniciada. Abriendo el sistema...");
-          router.replace(normalizeReturnTo(flow.returnTo));
+          // Force a fresh app boot after OAuth. The desktop shell emulates the
+          // Next router with History API navigation; reloading here guarantees
+          // EntryGate and the data views read the tokens just persisted above.
+          window.location.replace(normalizeReturnTo(flow.returnTo));
         });
       })
       .catch((callbackError: unknown) => {
@@ -467,7 +469,7 @@ export function AuthCallbackScreen() {
         setStatus("error");
         setMessage(callbackError instanceof Error ? callbackError.message : "No se pudo completar el login.");
       });
-  }, [router, code, state, callbackError, errorDescription]);
+  }, [code, state, callbackError, errorDescription]);
 
   return (
     <div className="auth-screen auth-screen-quiet">
@@ -514,7 +516,7 @@ export function AuthCallbackScreen() {
               className="w-full"
               onClick={() => {
                 clearAuthSession();
-                router.replace("/?auth=login");
+                window.location.replace("/?auth=login");
               }}
             >
               Volver a intentar
