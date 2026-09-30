@@ -60,25 +60,24 @@ export function resolveFinanceApiBaseUrl(fallback = "http://localhost:4100") {
   const normalizedFallback = normalizeBaseUrl(fallback || "http://localhost:4100");
   const stored = readLocalStorageValue(API_BASE_URL_STORAGE_KEY);
   const inferredBrowserBaseUrl = inferBrowserApiBaseUrl();
+  const fallbackIsExplicitRemote = Boolean(normalizedFallback && !normalizedFallback.startsWith("/") && !isLocalhostUrl(normalizedFallback));
 
-  if (stored && isRelativeApiBaseUrl(stored)) {
-    return "";
-  }
-
-  if (normalizedFallback.startsWith("/")) {
-    return "";
-  }
-
-  if (stored && !isLocalhostUrl(stored)) {
+  // A stale same-origin path or localhost value must not shadow the API URL
+  // configured by the current deployment or desktop preview.
+  if (stored && !isRelativeApiBaseUrl(stored) && !isLocalhostUrl(stored)) {
     return normalizeBaseUrl(stored);
   }
 
-  if (normalizedFallback && !isLocalhostUrl(normalizedFallback)) {
+  if (fallbackIsExplicitRemote) {
     return normalizedFallback;
   }
 
   if (inferredBrowserBaseUrl) {
     return normalizeBaseUrl(inferredBrowserBaseUrl);
+  }
+
+  if ((stored && isRelativeApiBaseUrl(stored)) || normalizedFallback.startsWith("/")) {
+    return "";
   }
 
   return normalizeBaseUrl(stored || normalizedFallback || "http://localhost:4100");

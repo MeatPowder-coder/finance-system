@@ -91,7 +91,6 @@ import type {
 } from "@/lib/types";
 import {
   TABS,
-  MOBILE_TABS,
   NONE_VALUE,
   DASHBOARD_BUDGET_PAGE_SIZE,
 } from "@/lib/types";
@@ -1083,9 +1082,9 @@ function HomeContent() {
           </div>}
         </section>
 
-        <section className="section-enter mb-6 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-2 md:p-3 backdrop-blur-sm md:hidden">
-          <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-2">
-            {MOBILE_TABS.map((item) => {
+        <nav aria-label="Navegación principal" className="finance-primary-tabs section-enter mb-6">
+          <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8">
+            {TABS.map((item, index) => {
               const tabConfig = TAB_META[item];
               const Icon = tabConfig.icon;
               const active = tab === item;
@@ -1094,24 +1093,22 @@ function HomeContent() {
                   key={item}
                   variant="outline"
                   onClick={() => goTab(item)}
-                  className={`h-auto justify-start rounded-xl border px-3 py-2 text-left transition-all ${
-                    active
-                      ? "border-cyan-500/60 bg-cyan-500/15 text-cyan-100 shadow-md shadow-cyan-500/15"
-                      : "border-zinc-800 bg-zinc-950/70 text-zinc-300 hover:border-zinc-700 hover:bg-zinc-900"
-                  }`}
+                  aria-current={active ? "page" : undefined}
+                  className={`finance-primary-tab-button ${active ? "is-active" : ""}`}
                 >
                   <div className="flex items-center gap-2">
-                    <Icon className={`h-4 w-4 shrink-0 ${active ? "text-cyan-300" : "text-zinc-500"}`} />
+                    <span className="finance-primary-tab-index">{String(index + 1).padStart(2, "0")}</span>
+                    <Icon className="h-4 w-4 shrink-0" />
                     <div>
-                      <div className="text-xs font-semibold">{tabConfig.label}</div>
-                      <div className="text-[10px] opacity-80">{tabConfig.caption}</div>
+                      <div className="finance-primary-tab-label">{tabConfig.label}</div>
+                      <div className="finance-primary-tab-caption">{tabConfig.caption}</div>
                     </div>
                   </div>
                 </Button>
               );
             })}
           </div>
-        </section>
+        </nav>
           </>
         )}
 
