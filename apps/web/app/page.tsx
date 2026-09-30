@@ -1,7 +1,7 @@
 ﻿"use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -1640,15 +1640,19 @@ function HomeContent() {
 }
 
 export default function HomePage() {
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const authMode = searchParams.get("auth");
 
-  if (authMode === "login") {
-    return <AuthLoginScreen />;
+  // The desktop Vite shell renders this page for deep links such as
+  // /auth/callback. Keep OAuth callback handling working when its static
+  // server falls back to the root document instead of a Next route file.
+  if (pathname === "/auth/callback" || authMode === "callback") {
+    return <AuthCallbackScreen />;
   }
 
-  if (authMode === "callback") {
-    return <AuthCallbackScreen />;
+  if (authMode === "login") {
+    return <AuthLoginScreen />;
   }
 
   return <HomeContent />;
