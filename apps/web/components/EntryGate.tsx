@@ -11,6 +11,7 @@ import {
   resolveFinanceApiBaseUrl,
 } from "@/lib/runtime-config";
 import WelcomeScreen from "@/components/WelcomeScreenQuiet";
+import { ThemeSelector } from "@/components/ThemeSelector";
 
 type GateState = "checking" | "offline" | "unauthenticated" | "authenticated";
 
@@ -27,6 +28,7 @@ function ConnectionScreen({ apiBaseUrl, message, retry }: { apiBaseUrl: string; 
     <div className="entry-connection-screen">
       <div className="entry-connection-glow" aria-hidden="true" />
       <div className="entry-connection-card">
+        <div className="entry-connection-theme"><span>Paleta</span><ThemeSelector collapsed /></div>
         <div className="entry-connection-icon"><CloudOff className="h-6 w-6" /></div>
         <span className="welcome-eyebrow"><ShieldCheck className="h-3.5 w-3.5" /> FinanceSystem</span>
         <h1>No pudimos conectar tu espacio.</h1>

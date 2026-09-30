@@ -92,8 +92,8 @@ export function DashboardView(props: DashboardViewProps) {
       setFocusBox(origin);
       setFocusedPanel(panel);
       requestAnimationFrame(() => requestAnimationFrame(() => {
-        const maxWidth = Math.min(700, window.innerWidth - 36);
-        const targetHeight = Math.min(640, window.innerHeight - 48);
+        const maxWidth = Math.min(920, window.innerWidth - 36);
+        const targetHeight = Math.min(760, window.innerHeight - 48);
         setFocusBox({ left: (window.innerWidth - maxWidth) / 2, top: (window.innerHeight - targetHeight) / 2, width: maxWidth, height: targetHeight });
       }));
       return;

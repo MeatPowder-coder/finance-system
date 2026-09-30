@@ -112,7 +112,7 @@ const THEME_OPTIONS: ThemeOption[] = [
 const THEME_CLASS_NAMES = THEME_OPTIONS.map((option) => "theme-" + option.value);
 
 export function ThemeSelector({ collapsed, panel = false, onThemeChange, onBackgroundChange }: ThemeSelectorProps) {
-  const [theme, setTheme] = useState<ThemeId>("light");
+  const [theme, setTheme] = useState<ThemeId>("dark");
   const [backgroundMode, setBackgroundMode] = useState<BackgroundMode>("auto");
 
   const currentTheme = useMemo(
@@ -145,10 +145,10 @@ export function ThemeSelector({ collapsed, panel = false, onThemeChange, onBackg
   };
 
   useEffect(() => {
-    const savedThemeRaw = localStorage.getItem("theme") || "light";
+    const savedThemeRaw = localStorage.getItem("theme") || "dark";
     const savedTheme = THEME_OPTIONS.some((option) => option.value === savedThemeRaw)
       ? (savedThemeRaw as ThemeId)
-      : "light";
+      : "dark";
 
     if (savedThemeRaw !== savedTheme) {
       localStorage.setItem("theme", savedTheme);

@@ -1,6 +1,7 @@
 "use client";
 
 import { ArrowDownRight, ArrowRight, ChartNoAxesCombined, LockKeyhole, WalletCards } from "lucide-react";
+import { ThemeSelector } from "@/components/ThemeSelector";
 
 type WelcomeScreenProps = {
   returnTo: string;
@@ -46,10 +47,11 @@ export default function WelcomeScreenQuiet({ returnTo, apiBaseUrl }: WelcomeScre
             <span className="welcome-brand-mark"><WalletCards className="h-5 w-5" /></span>
             <span>FinanceSystem</span>
           </a>
-          <div className="welcome-connection" aria-label="Estado del servicio: backend conectado">
+          <div className="welcome-connection" aria-label="FinanceSystem está listo para iniciar sesión">
             <span className="welcome-connection-dot" />
-            <span>Backend conectado</span>
+            <span>Tu espacio financiero</span>
           </div>
+          <div className="welcome-theme-picker" aria-label="Paleta de colores"><span>Paleta</span><ThemeSelector collapsed /></div>
         </header>
 
         <section className="welcome-quiet-layout welcome-editorial-layout" aria-labelledby="welcome-title">

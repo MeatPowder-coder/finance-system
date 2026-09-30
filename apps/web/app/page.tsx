@@ -19,6 +19,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ChatInterfaceFinance from "@/components/ChatInterfaceFinance";
 import { AuthCallbackScreen, AuthLoginScreen } from "@/components/AuthLogin";
+import { ThemeSelector } from "@/components/ThemeSelector";
 import PlanningSegmentedNav from "@/components/PlanningSegmentedNav";
 import { AccountsView, type AccountFormState } from "@/src/views/AccountsView";
 import {
@@ -34,6 +35,7 @@ import { PlanningView } from "@/src/views/PlanningView";
 import { DashboardView } from "@/src/views/DashboardView";
 import { SettingsView } from "@/src/views/SettingsView";
 import { buildFinanceHeaders, resolveFinanceApiBaseUrl } from "@/lib/runtime-config";
+import { clearAuthSession } from "@/lib/auth";
 import {
   AlertTriangle,
   ArrowDownLeft,
@@ -312,8 +314,15 @@ function HomeContent() {
       setCounterparties(counterpartyData);
       setTags(tagData);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "No se pudo cargar la data.";
-      setError(message);
+      const rawMessage = err instanceof Error ? err.message : "No se pudo cargar la información.";
+      if (/autenticaci[oó]n requerida|unauthorized/i.test(rawMessage)) {
+        clearAuthSession();
+        router.replace(`/?auth=login&returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+      } else if (/failed to fetch|fetch failed|networkerror/i.test(rawMessage)) {
+        setError("No se pudo conectar con el servicio de finanzas. Revisa que la API esté encendida e inténtalo de nuevo; no mostramos saldos de muestra.");
+      } else {
+        setError(rawMessage);
+      }
     } finally {
       setLoading(false);
     }
@@ -963,7 +972,8 @@ function HomeContent() {
             </div>
 
             <div className="flex items-center gap-2">
-                <Select value={planningMonth} onValueChange={setPlanningMonth}>
+              <div className="finance-header-palette"><span>Paleta</span><ThemeSelector collapsed /></div>
+                {tab !== "dashboard" && <Select value={planningMonth} onValueChange={setPlanningMonth}>
                   <SelectTrigger className="ui-control h-11 w-[170px] rounded-2xl px-4">
                     <div className="flex items-center gap-2">
                       <CalendarDays className="h-4 w-4 text-zinc-400" />
@@ -977,7 +987,7 @@ function HomeContent() {
                     </SelectItem>
                   ))}
                 </SelectContent>
-              </Select>
+              </Select>}
               <Button
                 variant="outline"
                 onClick={() => void refreshData()}
@@ -1454,7 +1464,7 @@ function HomeContent() {
           </>
         )}
 
-        {tab === "dashboard" && (
+        {tab === "dashboard" && summary && (
           <DashboardView
             monthCoach={monthCoach}
             monthFlow={{
@@ -1483,6 +1493,17 @@ function HomeContent() {
             latestTransaction={latestTransaction}
             topAccounts={topAccounts}
           />
+        )}
+
+        {tab === "dashboard" && !summary && !loading && error && (
+          <section className="finance-dashboard-unavailable" role="status">
+            <span>01 / ESPACIO FINANCIERO</span>
+            <h2>Conecta tu espacio para ver los datos reales.</h2>
+            <p>{error}</p>
+            <Button type="button" variant="outline" onClick={() => void refreshData()}>
+              <RefreshCw className="mr-2 h-4 w-4" /> Reintentar
+            </Button>
+          </section>
         )}
 
         {tab === "accounts" && (
