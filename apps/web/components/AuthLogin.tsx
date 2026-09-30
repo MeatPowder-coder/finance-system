@@ -58,6 +58,28 @@ function normalizeReturnTo(rawValue: string | null | undefined) {
   }
 }
 
+const CALLBACK_SENTINEL_ORIGIN = "https://finance-system.invalid";
+
+function readWrappedGoogleCallback(rawValue: string | null | undefined) {
+  if (!rawValue) return null;
+
+  try {
+    const callbackUrl = new URL(rawValue, CALLBACK_SENTINEL_ORIGIN);
+    if (callbackUrl.origin !== CALLBACK_SENTINEL_ORIGIN || callbackUrl.pathname !== "/auth/callback") {
+      return null;
+    }
+
+    const params = callbackUrl.searchParams;
+    return params.has("code") || params.has("error") ? params : null;
+  } catch {
+    return null;
+  }
+}
+
+export function hasWrappedGoogleCallback(rawValue: string | null | undefined) {
+  return readWrappedGoogleCallback(rawValue) !== null;
+}
+
 export function AuthLoginScreen() {
   const searchParams = useSearchParams();
   const requestedAuthMode: AuthMode = searchParams.get("mode") === "register" ? "register" : "login";
@@ -369,19 +391,20 @@ export function AuthLoginScreen() {
 export function AuthCallbackScreen() {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const wrappedCallbackParams = readWrappedGoogleCallback(searchParams.get("returnTo"));
+  const callbackParams = wrappedCallbackParams || searchParams;
+  const code = callbackParams.get("code") || "";
+  const state = callbackParams.get("state") || "";
+  const callbackError = callbackParams.get("error") || "";
+  const errorDescription = callbackParams.get("error_description") || "";
   const processedCallbackRef = useRef<string | null>(null);
   const [status, setStatus] = useState<"idle" | "exchanging" | "error" | "done">("idle");
   const [message, setMessage] = useState("Validando tu sesion...");
 
   useEffect(() => {
-    const code = searchParams.get("code") || "";
-    const state = searchParams.get("state") || "";
-    const error = searchParams.get("error") || "";
-    const errorDescription = searchParams.get("error_description") || "";
-
-    if (error) {
+    if (callbackError) {
       setStatus("error");
-      setMessage(errorDescription ? `${error}: ${errorDescription}` : error);
+      setMessage(errorDescription ? `${callbackError}: ${errorDescription}` : callbackError);
       return;
     }
 
@@ -444,7 +467,7 @@ export function AuthCallbackScreen() {
         setStatus("error");
         setMessage(callbackError instanceof Error ? callbackError.message : "No se pudo completar el login.");
       });
-  }, [router, searchParams]);
+  }, [router, code, state, callbackError, errorDescription]);
 
   return (
     <div className="auth-screen auth-screen-quiet">

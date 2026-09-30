@@ -18,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import ChatInterfaceFinance from "@/components/ChatInterfaceFinance";
-import { AuthCallbackScreen, AuthLoginScreen } from "@/components/AuthLogin";
+import { AuthCallbackScreen, AuthLoginScreen, hasWrappedGoogleCallback } from "@/components/AuthLogin";
 import { ThemeSelector } from "@/components/ThemeSelector";
 import PlanningSegmentedNav from "@/components/PlanningSegmentedNav";
 import { AccountsView, type AccountFormState } from "@/src/views/AccountsView";
@@ -1667,7 +1667,11 @@ export default function HomePage() {
   // The desktop Vite shell renders this page for deep links such as
   // /auth/callback. Keep OAuth callback handling working when its static
   // server falls back to the root document instead of a Next route file.
-  if (pathname === "/auth/callback" || authMode === "callback") {
+  if (
+    pathname === "/auth/callback" ||
+    authMode === "callback" ||
+    (authMode === "login" && hasWrappedGoogleCallback(searchParams.get("returnTo")))
+  ) {
     return <AuthCallbackScreen />;
   }
 
