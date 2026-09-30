@@ -350,7 +350,7 @@ export function ThemeSelector({ collapsed, showCurrentTheme = false, panel = fal
     <div className="theme-selector-control">
       {selectorMenu}
       <div className="theme-swatch-strip" role="group" aria-label="Elegir paleta de colores">
-        <span className="theme-swatch-label">Paletas</span>
+        <span className="theme-swatch-label">{THEME_OPTIONS.length} paletas</span>
         {THEME_OPTIONS.map((option) => (
           <button
             key={option.value}

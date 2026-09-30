@@ -298,14 +298,22 @@ function HomeContent() {
     setLoading(true);
     setError(null);
     try {
+      const load = async <T,>(path: string) => {
+        try {
+          return await apiGet<T>(path);
+        } catch (requestError) {
+          const detail = requestError instanceof Error ? requestError.message : "Error desconocido";
+          throw new Error(`${path} — ${detail}`);
+        }
+      };
       const [summaryData, accountData, txData, invData, categoryData, counterpartyData, tagData] = await Promise.all([
-        apiGet<Summary>("/v1/summary"),
-        apiGet<Account[]>("/v1/accounts"),
-        apiGet<Transaction[]>("/v1/transactions?limit=250"),
-        apiGet<Investment[]>("/v1/investments"),
-        apiGet<Category[]>("/v1/categories"),
-        apiGet<Counterparty[]>("/v1/counterparties"),
-        apiGet<TxTag[]>("/v1/tags"),
+        load<Summary>("/v1/summary"),
+        load<Account[]>("/v1/accounts"),
+        load<Transaction[]>("/v1/transactions?limit=250"),
+        load<Investment[]>("/v1/investments"),
+        load<Category[]>("/v1/categories"),
+        load<Counterparty[]>("/v1/counterparties"),
+        load<TxTag[]>("/v1/tags"),
       ]);
       setSummary(summaryData);
       setAccounts(accountData);
@@ -319,8 +327,9 @@ function HomeContent() {
       if (/autenticaci[oó]n requerida|unauthorized/i.test(rawMessage)) {
         clearAuthSession();
         router.replace(`/?auth=login&returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`);
-      } else if (/failed to fetch|fetch failed|networkerror/i.test(rawMessage)) {
-        setError("No se pudo conectar con el servicio de finanzas. Revisa que la API esté encendida e inténtalo de nuevo; no mostramos saldos de muestra.");
+      } else if (/failed to fetch|fetch failed|networkerror|no se pudo conectar con finance system/i.test(rawMessage)) {
+        const endpoint = rawMessage.split(" — ")[0];
+        setError(`No se pudo conectar con la API al cargar ${endpoint}. Revisa la conexión y vuelve a intentarlo. No mostramos saldos de muestra.`);
       } else {
         setError(rawMessage);
       }
@@ -961,9 +970,36 @@ function HomeContent() {
 
   return (
     <div className={tab === "copilot" ? "h-full min-h-0 overflow-hidden pt-12 md:pt-0" : "min-h-screen bg-transparent overflow-x-hidden pt-12 pb-6 md:pt-0"}>
-      <main data-finance-tab={tab} className={tab === "copilot" ? "h-full min-h-0 w-full mx-auto px-4 py-4 md:px-6 md:py-6 lg:px-8" : "w-full xl:max-w-[1600px] mx-auto px-4 py-4 md:px-6 md:py-8 lg:px-8"}>
+      <main data-finance-tab={tab} className={tab === "copilot" ? "h-full min-h-0 w-full mx-auto px-4 py-4 md:px-6 md:py-6 lg:px-8" : "w-full xl:max-w-[1600px] mx-auto px-4 py-4 md:px-6 md:py-5 lg:px-8"}>
         {tab !== "copilot" && (
           <>
+        <nav aria-label="Navegación principal" className="finance-primary-tabs section-enter mb-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8">
+            {TABS.map((item, index) => {
+              const tabConfig = TAB_META[item];
+              const Icon = tabConfig.icon;
+              const active = tab === item;
+              return (
+                <Button
+                  key={item}
+                  variant="outline"
+                  onClick={() => goTab(item)}
+                  aria-current={active ? "page" : undefined}
+                  className={`finance-primary-tab-button ${active ? "is-active" : ""}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="finance-primary-tab-index">{String(index + 1).padStart(2, "0")}</span>
+                    <Icon className="h-4 w-4 shrink-0" />
+                    <div>
+                      <div className="finance-primary-tab-label">{tabConfig.label}</div>
+                      <div className="finance-primary-tab-caption">{tabConfig.caption}</div>
+                    </div>
+                  </div>
+                </Button>
+              );
+            })}
+          </div>
+        </nav>
         <section className={`section-enter ui-shell-card mb-6 rounded-[32px] p-5 md:p-6 ${tab === "dashboard" ? "finance-dashboard-heading" : ""}`}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-1">
@@ -1082,33 +1118,6 @@ function HomeContent() {
           </div>}
         </section>
 
-        <nav aria-label="Navegación principal" className="finance-primary-tabs section-enter mb-6">
-          <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8">
-            {TABS.map((item, index) => {
-              const tabConfig = TAB_META[item];
-              const Icon = tabConfig.icon;
-              const active = tab === item;
-              return (
-                <Button
-                  key={item}
-                  variant="outline"
-                  onClick={() => goTab(item)}
-                  aria-current={active ? "page" : undefined}
-                  className={`finance-primary-tab-button ${active ? "is-active" : ""}`}
-                >
-                  <div className="flex items-center gap-2">
-                    <span className="finance-primary-tab-index">{String(index + 1).padStart(2, "0")}</span>
-                    <Icon className="h-4 w-4 shrink-0" />
-                    <div>
-                      <div className="finance-primary-tab-label">{tabConfig.label}</div>
-                      <div className="finance-primary-tab-caption">{tabConfig.caption}</div>
-                    </div>
-                  </div>
-                </Button>
-              );
-            })}
-          </div>
-        </nav>
           </>
         )}
 

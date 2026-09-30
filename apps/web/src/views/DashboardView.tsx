@@ -103,25 +103,21 @@ export function DashboardView(props: DashboardViewProps) {
       setFocusBox(origin);
       setFocusedPanel(panel);
       requestAnimationFrame(() => requestAnimationFrame(() => {
-        // Expand inside the dashboard canvas, matching the prototype's shared-element motion.
+        // Let the original Bento tile grow from its own position instead of
+        // flying to the center like a dialog.
         const liveCanvas = canvasRef.current;
         if (!liveCanvas) return;
-        // Keep the card anchored to its own center and grow it into a roomy
-        // reading surface while leaving the surrounding Bento layout visible.
         const maxWidth = Math.max(0, liveCanvas.clientWidth - 24);
-        const targetWidth = Math.min(
-          maxWidth,
-          liveCanvas.clientWidth < 620 ? maxWidth : Math.max(520, Math.min(960, liveCanvas.clientWidth * 0.8))
-        );
+        const targetWidth = Math.min(maxWidth, liveCanvas.clientWidth < 620
+          ? origin.width
+          : Math.max(origin.width, Math.min(780, liveCanvas.clientWidth * 0.72)));
         const targetHeight = Math.min(
           Math.max(0, liveCanvas.clientHeight - 20),
-          Math.max(300, Math.min(580, liveCanvas.clientHeight * 0.82, window.innerHeight * 0.8))
+          Math.max(origin.height + 150, Math.min(500, liveCanvas.clientHeight * 0.68, window.innerHeight * 0.7))
         );
-        const leftFromOrigin = origin.left + origin.width / 2 - targetWidth / 2;
-        const topFromOrigin = origin.top + origin.height / 2 - targetHeight / 2;
         setFocusBox({
-          left: Math.max(8, Math.min(leftFromOrigin, liveCanvas.clientWidth - targetWidth - 8)),
-          top: Math.max(8, Math.min(topFromOrigin, liveCanvas.clientHeight - targetHeight - 8)),
+          left: Math.max(8, Math.min(origin.left, liveCanvas.clientWidth - targetWidth - 8)),
+          top: Math.max(8, Math.min(origin.top, liveCanvas.clientHeight - targetHeight - 8)),
           width: targetWidth,
           height: targetHeight,
         });
@@ -288,7 +284,6 @@ export function DashboardView(props: DashboardViewProps) {
   return (
     <div className={`finance-bento-dashboard section-enter${focusedPanel ? " has-focus" : ""}`}>
         <div ref={canvasRef} className="finance-bento-layout">
-        <button type="button" className="finance-bento-veil" aria-label="Cerrar tarjeta ampliada" tabIndex={focusedPanel ? 0 : -1} onClick={closeFocus} />
         <nav className="finance-bento-rail" aria-label="Enfoques del resumen">
           {([
             ["month", "Balance del mes"],
