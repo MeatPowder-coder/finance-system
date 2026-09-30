@@ -3008,6 +3008,16 @@ main[data-finance-tab="dashboard"] .finance-dashboard-metric p.text-2xl { font-s
 .theme-ember { --ui-editorial-ink:#fff0e7; --ui-editorial-forest:#4a3027; --ui-editorial-coral:#eb7452; --ui-editorial-blue:#b8c5c8; --ui-editorial-paper:#241b18; --ui-editorial-lime:#e7cf64; --ui-editorial-mint:#90b58b; --ui-editorial-pink:#e3a18f; --ui-editorial-hero-text:#fff4ea; --ui-editorial-card-shadow:#311d17; --ui-editorial-flow:#30231e; --ui-editorial-budget:#302520; --ui-editorial-movements:#392723; --ui-editorial-accounts:#2a2723; }
 .theme-neon { --ui-editorial-ink:#f5ffe9; --ui-editorial-forest:#173a32; --ui-editorial-coral:#ff6177; --ui-editorial-blue:#83dfe9; --ui-editorial-paper:#1b1b23; --ui-editorial-lime:#dcff43; --ui-editorial-mint:#44e0b0; --ui-editorial-pink:#ff91e8; --ui-editorial-hero-text:#f5ffe3; --ui-editorial-card-shadow:#101710; --ui-editorial-flow:#1e2928; --ui-editorial-budget:#25252d; --ui-editorial-movements:#302431; --ui-editorial-accounts:#1d2c31; }
 
+/* The default night palette keeps the reference's distinct, saturated Bento tiles. */
+.theme-dark {
+  --ui-editorial-card-ink:#171717;
+  --ui-editorial-flow:#d8ff63;
+  --ui-editorial-budget:#e8eadf;
+  --ui-editorial-movements:#df5a43;
+  --ui-editorial-accounts:#afd3dc;
+  --ui-editorial-payments:#e3a5dc;
+}
+
 /* Every palette also colors the shared application surfaces, controls and finance states. */
 .theme-light { --ui-bg:#f4f0e3; --ui-bg-grid:rgba(32,70,51,.08); --ui-text:#171b18; --ui-muted:#596159; --ui-subtle:#70796f; --ui-panel:#fffaf0; --ui-panel-strong:#fffdf6; --ui-panel-soft:#e8eadf; --ui-border:rgba(26,47,36,.16); --ui-border-strong:rgba(26,47,36,.24); --ui-input:#fffdf6; --ui-input-border:rgba(26,47,36,.2); --ui-accent:#204936; --ui-accent-2:#d8ff63; --ui-accent-soft:rgba(216,255,99,.2); --ui-positive:#18734d; --ui-positive-soft:rgba(23,130,81,.13); --ui-warning:#a55a08; --ui-warning-soft:rgba(224,137,25,.15); --ui-danger:#c94e3d; --ui-danger-soft:rgba(201,78,61,.13); }
 .theme-sand { --ui-bg:#f1e8d9; --ui-bg-grid:rgba(74,57,44,.08); --ui-text:#241e19; --ui-muted:#665b50; --ui-subtle:#84786c; --ui-panel:#fff8ed; --ui-panel-strong:#fffcf4; --ui-panel-soft:#eadfce; --ui-border:rgba(74,57,44,.17); --ui-border-strong:rgba(74,57,44,.27); --ui-input:#fffaf1; --ui-input-border:rgba(74,57,44,.22); --ui-accent:#6d442b; --ui-accent-2:#e3c55b; --ui-accent-soft:rgba(201,108,80,.15); --ui-positive:#58734a; --ui-positive-soft:rgba(88,115,74,.14); --ui-warning:#a35c11; --ui-warning-soft:rgba(227,197,91,.18); --ui-danger:#bd5c45; --ui-danger-soft:rgba(189,92,69,.14); }
@@ -3062,9 +3072,10 @@ main[data-finance-tab="dashboard"] > .finance-dashboard-heading > div:first-chil
   position:relative; min-width:0; overflow:hidden; padding:clamp(14px,1.65vw,22px);
   border:1.5px solid var(--ui-editorial-ink); border-radius:3px;
   box-shadow:5px 6px 0 var(--ui-editorial-card-shadow);
+  cursor:pointer;
   transition:transform .22s ease,box-shadow .22s ease;
 }
-.finance-bento-tile:hover { transform:translateY(-2px); box-shadow:7px 8px 0 var(--ui-editorial-card-shadow); }
+.finance-bento-tile:hover { transform:translateY(-4px) rotate(-.25deg); box-shadow:7px 8px 0 var(--ui-editorial-card-shadow); }
 .finance-bento-tile:focus-visible { outline:3px solid var(--ui-editorial-coral); outline-offset:4px; }
 .finance-bento-tile-head { position:relative; z-index:2; display:flex; min-height:28px; align-items:flex-start; justify-content:space-between; gap:12px; }
 .finance-bento-tile-head > p,.finance-bento-tile-head > div > p { margin:0; font:600 .57rem/1.3 ui-monospace,SFMono-Regular,Consolas,monospace; letter-spacing:.16em; text-transform:uppercase; opacity:.75; }
@@ -3193,14 +3204,14 @@ body:has(.finance-bento-dashboard.has-focus) main[data-finance-tab="dashboard"] 
 body:has(.finance-bento-dashboard.has-focus) .finance-app-sidebar,
 body:has(.finance-bento-dashboard.has-focus) .finance-notification,
 body:has(.finance-bento-dashboard.has-focus) .copilot-rail { filter:blur(4px); opacity:.42; pointer-events:none; transition:filter .38s ease,opacity .38s ease; }
-.finance-bento-veil { position:absolute; inset:-12px; z-index:4; display:block; border:0; padding:0; background:rgba(12,20,16,.4); opacity:0; backdrop-filter:blur(0); pointer-events:none; transition:opacity .38s ease,backdrop-filter .42s ease; }
+.finance-bento-veil { position:absolute; inset:-12px; z-index:4; display:block; border:0; padding:0; background:rgba(12,20,16,.22); opacity:0; backdrop-filter:blur(0); pointer-events:none; transition:opacity .38s ease,backdrop-filter .42s ease; }
 .finance-bento-dashboard.has-focus .finance-bento-veil { opacity:1; backdrop-filter:blur(7px); pointer-events:auto; }
 .finance-bento-rail,.finance-bento-grid { transition:filter .38s ease,opacity .38s ease,transform .38s ease; }
 .finance-bento-dashboard.has-focus .finance-bento-rail { filter:blur(3px); opacity:.46; transform:scale(.99); pointer-events:none; }
 .finance-bento-grid { position:static; }
 .finance-bento-grid.is-focused { position:static; }
 .finance-bento-grid.is-focused > .finance-bento-tile:not(.is-focused) { filter:blur(5px); opacity:.22; transform:scale(.97); pointer-events:none; }
-.finance-bento-tile.is-focused { position:absolute; z-index:10; display:block; min-height:0; max-width:calc(100% - 16px); overflow:auto; overscroll-behavior:contain; padding:clamp(22px,3.2vw,42px); border-width:1.5px; border-radius:2px; box-shadow:8px 9px 0 var(--ui-editorial-card-shadow); cursor:default; animation:none !important; transition:left .52s cubic-bezier(.2,.8,.2,1),top .52s cubic-bezier(.2,.8,.2,1),width .52s cubic-bezier(.2,.8,.2,1),height .52s cubic-bezier(.2,.8,.2,1),padding .5s ease,box-shadow .5s ease,filter .3s ease,opacity .3s ease; }
+.finance-bento-tile.is-focused { position:absolute; z-index:10; display:block; min-height:0; max-width:calc(100% - 16px); overflow:auto; overscroll-behavior:contain; padding:clamp(22px,3.2vw,42px); border-width:2px; border-radius:3px; box-shadow:10px 11px 0 var(--ui-editorial-card-shadow),0 22px 70px rgba(0,0,0,.2); cursor:default; animation:none !important; transition:left .52s cubic-bezier(.2,.8,.2,1),top .52s cubic-bezier(.2,.8,.2,1),width .52s cubic-bezier(.2,.8,.2,1),height .52s cubic-bezier(.2,.8,.2,1),padding .5s ease,box-shadow .5s ease,filter .3s ease,opacity .3s ease; }
 .finance-bento-tile.is-focused:hover,.finance-bento-tile.is-focused:active { transform:none; }
 .finance-bento-tile.is-focused .finance-bento-tile-head h3 { font-size:clamp(1.8rem,4vw,3.15rem); letter-spacing:-.06em; }
 .finance-bento-tile.is-focused .finance-bento-expanded { margin-top:24px; padding-top:16px; animation:finance-detail-reveal .38s .13s ease both; }
@@ -3252,6 +3263,24 @@ body:has(.finance-bento-dashboard.has-focus) .copilot-rail { filter:blur(4px); o
 :is(.theme-dark,.theme-graphite,.theme-midnight,.theme-ocean,.theme-forest,.theme-ember,.theme-neon) .finance-bento-timeline-dot { border-color:var(--ui-editorial-ink); }
 :is(.theme-dark,.theme-graphite,.theme-midnight,.theme-ocean,.theme-forest,.theme-ember,.theme-neon) .finance-bento-expanded-rows { border-color:color-mix(in srgb,var(--ui-editorial-hero-text) 25%,transparent); }
 :is(.theme-dark,.theme-graphite,.theme-midnight,.theme-ocean,.theme-forest,.theme-ember,.theme-neon) .finance-bento-expanded-rows article { border-color:color-mix(in srgb,var(--ui-editorial-hero-text) 20%,transparent); }
+
+/* Give each saturated tile in Cuaderno nocturno its own clear ink contrast. */
+.theme-dark .finance-bento-flow,
+.theme-dark .finance-bento-budgets,
+.theme-dark .finance-bento-movements,
+.theme-dark .finance-bento-accounts,
+.theme-dark .finance-bento-payments { color:var(--ui-editorial-card-ink); }
+.theme-dark .finance-bento-payments { background:var(--ui-editorial-payments); }
+.theme-dark .finance-bento-flow .finance-bento-donut > div { background:var(--ui-editorial-flow); color:var(--ui-editorial-card-ink); }
+.theme-dark .finance-bento-flow .finance-bento-tile-head > button,
+.theme-dark .finance-bento-budgets .finance-bento-tile-head > button,
+.theme-dark .finance-bento-movements .finance-bento-tile-head > button,
+.theme-dark .finance-bento-accounts .finance-bento-tile-head > button,
+.theme-dark .finance-bento-payments .finance-bento-tile-head > button { color:var(--ui-editorial-card-ink); }
+.theme-dark .finance-bento-progress i,
+.theme-dark .finance-bento-account-list article > i b { background:var(--ui-editorial-forest); }
+.theme-dark .finance-bento-timeline-dot { border-color:var(--ui-editorial-card-ink); }
+.theme-dark .finance-bento-timeline-dot.is-outflow { background:var(--ui-editorial-mint); }
 @keyframes finance-veil-in { to { opacity:1; backdrop-filter:blur(7px); } }
 @keyframes finance-detail-reveal { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:translateY(0); } }
 @keyframes finance-close-pop { from { opacity:0; transform:scale(.6) rotate(-12deg); } to { opacity:1; transform:scale(1) rotate(0); } }

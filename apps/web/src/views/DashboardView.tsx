@@ -106,10 +106,10 @@ export function DashboardView(props: DashboardViewProps) {
         // Expand inside the dashboard canvas, matching the prototype's shared-element motion.
         const liveCanvas = canvasRef.current;
         if (!liveCanvas) return;
-        // Keep the focused tile close to the prototype's editorial scale. Filling
-        // most of the app canvas made the motion read like a conventional modal.
-        const maxWidth = Math.min(660, liveCanvas.clientWidth - (liveCanvas.clientWidth < 620 ? 20 : 48));
-        const availableHeight = Math.max(300, Math.min(620, liveCanvas.clientHeight - 44, window.innerHeight - 120));
+        // Let the same Bento tile grow into a broad reading surface. A fixed
+        // 660px cap looked like a dialog on the full-width app, unlike the demo.
+        const maxWidth = Math.min(920, liveCanvas.clientWidth - (liveCanvas.clientWidth < 620 ? 20 : 48));
+        const availableHeight = Math.max(300, Math.min(680, liveCanvas.clientHeight - 44, window.innerHeight - 96));
         const targetHeight = Math.min(Math.max(360, tile.scrollHeight), availableHeight);
         setFocusBox({
           left: Math.max(8, (liveCanvas.clientWidth - maxWidth) / 2),
