@@ -957,7 +957,7 @@ function HomeContent() {
         <section className={`section-enter ui-shell-card mb-6 rounded-[32px] p-5 md:p-6 ${tab === "dashboard" ? "finance-dashboard-heading" : ""}`}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-1">
-              <h1 className="text-[clamp(2rem,4vw,2.75rem)] font-semibold tracking-tight text-zinc-100">{tab === "dashboard" ? "Tu dinero, en movimiento" : TAB_META[tab]?.label || "Dashboard"}</h1>
+              <h1 className="text-[clamp(2rem,4vw,2.75rem)] font-semibold tracking-tight text-zinc-100">{tab === "dashboard" ? monthCoach.title : TAB_META[tab]?.label || "Dashboard"}</h1>
               <p className="text-sm text-zinc-400">{tab === "dashboard" ? "Una lectura clara de lo que tienes, lo que entra y lo que viene." : TAB_META[tab]?.caption}</p>
             </div>
 
@@ -1460,6 +1460,9 @@ function HomeContent() {
               balance: formatMoney(summary?.totalBalance || 0, "COP"),
               income: formatMoney(summary?.monthInflow || 0, "COP"),
               expense: formatMoney(summary?.monthOutflow || 0, "COP"),
+              spentPercent: Number(summary?.monthInflow || 0) > 0
+                ? (Number(summary?.monthOutflow || 0) / Number(summary?.monthInflow || 0)) * 100
+                : 0,
             }}
             positiveMonth={positiveMonth}
             dashboardActions={dashboardActions}

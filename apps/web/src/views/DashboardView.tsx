@@ -7,22 +7,12 @@ import {
   Clock3,
   CreditCard,
   Expand,
-  Search,
-  Sparkles,
   Wallet,
 } from "lucide-react";
-import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import DashboardBudgetStrip from "@/components/DashboardBudgetStrip";
+import { DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import type { Account, Budget, Commitment, Transaction } from "@/lib/types";
 import { formatMoney, formatDate, toNumber } from "@/lib/format";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog } from "@/components/ui/dialog";
 
 export interface MonthCoachState {
   badge: string;
@@ -43,7 +33,7 @@ export interface DashboardActionDef {
 
 export interface DashboardViewProps {
   monthCoach: MonthCoachState;
-  monthFlow: { balance: string; income: string; expense: string };
+  monthFlow: { balance: string; income: string; expense: string; spentPercent: number };
   positiveMonth: boolean;
   dashboardActions: DashboardActionDef[];
   dashboardBudgets: Budget[];
@@ -71,6 +61,7 @@ export function DashboardView(props: DashboardViewProps) {
     dashboardActions,
     dashboardBudgets,
     dashboardBudgetWindow,
+    dashboardBudgetStart,
     setDashboardBudgetStart,
     dashboardBudgetMaxStart,
     dashboardBudgetCanPrev,
@@ -90,13 +81,6 @@ export function DashboardView(props: DashboardViewProps) {
     dashboardActions.forEach((action) => { map[action.key] = action; });
     return map;
   }, [dashboardActions]);
-  const heroCardCls = "ui-shell-card rounded-[28px] p-5 md:p-6";
-  const nextStepCls = "ui-panel-soft rounded-2xl p-3.5 flex items-center gap-3 transition hover:border-brand/40 hover:bg-brand-soft";
-  const insightRowCls = "ui-panel-soft rounded-2xl p-3.5 flex gap-3 items-start";
-  const insightIconCls = "inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-soft text-brand border border-brand/20";
-  const listRowCls = "ui-panel-soft rounded-xl px-3 py-3 transition hover:border-brand/30";
-  const countBadgeCls =
-    "border border-surface-2 bg-surface-1 text-fg-subtle";
   const focusCopy = {
     month: {
       title: monthCoach.title,
@@ -147,6 +131,15 @@ export function DashboardView(props: DashboardViewProps) {
     },
   };
   const focusPanel = focusedPanel ? focusCopy[focusedPanel] : null;
+  const openTileOnClick = (panel: NonNullable<typeof focusedPanel>) => (event: React.MouseEvent<HTMLElement>) => {
+    if ((event.target as HTMLElement).closest("button, a")) return;
+    setFocusedPanel(panel);
+  };
+  const openTileOnKey = (panel: NonNullable<typeof focusedPanel>) => (event: React.KeyboardEvent<HTMLElement>) => {
+    if (event.target !== event.currentTarget || (event.key !== "Enter" && event.key !== " ")) return;
+    event.preventDefault();
+    setFocusedPanel(panel);
+  };
   const focusButton = (panel: NonNullable<typeof focusedPanel>, label: string) => (
     <button
       type="button"
@@ -159,278 +152,123 @@ export function DashboardView(props: DashboardViewProps) {
     </button>
   );
 
+  const visibleBudgets = dashboardBudgetWindow.slice(0, 3);
+  const maximumAccountBalance = Math.max(...topAccounts.map((account) => Math.abs(toNumber(account.balance_current))), 1);
+  const spendingRatio = Math.max(0, Math.min(100, monthFlow.spentPercent));
+
   return (
-    <div className="dashboard-view-compact section-enter space-y-5">
+    <div className="finance-bento-dashboard section-enter">
       <Dialog open={focusedPanel !== null} onOpenChange={(open) => { if (!open) setFocusedPanel(null); }}>
-      <section className="grid gap-4 xl:grid-cols-[1.4fr_0.8fr]">
-        <Card className={`${heroCardCls} finance-month-hero relative min-h-[330px] overflow-hidden p-6 md:p-8`}>
-          <svg className="finance-month-orbit" viewBox="0 0 360 280" fill="none" aria-hidden="true">
-            <ellipse cx="214" cy="140" rx="126" ry="134" />
-            <ellipse cx="214" cy="140" rx="96" ry="108" />
-            <ellipse cx="214" cy="140" rx="62" ry="78" />
-            <path d="M40 140H352" />
-            <circle cx="91" cy="140" r="7" />
-            <circle cx="214" cy="140" r="7" />
-            <circle cx="290" cy="140" r="7" />
-          </svg>
-          <CardContent className="relative p-0">
-            <div className="absolute right-0 top-0">{focusButton("month", "el resumen del mes")}</div>
-            <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-              <div className="max-w-2xl space-y-5 pr-10">
-                <Badge
-                  variant="secondary"
-                  className={
-                    positiveMonth
-                      ? "border border-positive/40 bg-positive-soft text-positive"
-                      : "border border-warning/40 bg-warning-soft text-warning"
-                  }
-                >
-                  <Sparkles className="mr-1.5 h-3.5 w-3.5" />
-                  {monthCoach.badge}
-                </Badge>
-                <div className="space-y-2">
-                  <p className="text-sm uppercase tracking-[0.24em] ui-subtle">Tu mes, en simple</p>
-                  <h2 className="max-w-xl text-4xl font-semibold tracking-[-0.055em] text-fg md:text-6xl">
-                    {monthCoach.title}
-                  </h2>
-                </div>
-                <div>
-                  <p
-                    className="text-5xl font-bold tracking-[-0.06em] md:text-7xl text-brand"
-                  >
-                    {monthCoach.amount}
-                  </p>
-                  <p className="mt-1 text-sm ui-muted">{monthCoach.caption}</p>
-                </div>
-                <div className="finance-month-readouts" aria-label="Flujo financiero del periodo">
-                  <div><span>En tus cuentas</span><strong>{monthFlow.balance}</strong></div>
-                  <div><span>Entró este mes</span><strong>{monthFlow.income}</strong></div>
-                  <div><span>Salió este mes</span><strong>{monthFlow.expense}</strong></div>
-                </div>
-                <p className="max-w-xl text-sm leading-6 ui-muted">{monthCoach.detail}</p>
+        <div className="finance-bento-grid">
+          <section className="finance-bento-tile finance-bento-hero" aria-labelledby="finance-bento-balance-title" aria-roledescription="Tarjeta ampliable" tabIndex={0} role="group" onClick={openTileOnClick("month")} onKeyDown={openTileOnKey("month")}>
+            <header className="finance-bento-tile-head">
+              <p>01 / RESUMEN · {positiveMonth ? "EN POSITIVO" : "A TU RITMO"}</p>
+              {focusButton("month", "el resumen del mes")}
+            </header>
+            <div className="finance-bento-hero-content">
+              <div className="finance-bento-kicker">Balance del mes · COP</div>
+              <h2 id="finance-bento-balance-title">{monthCoach.title}</h2>
+              <p className="finance-bento-balance">{monthCoach.amount}</p>
+              <p className="finance-bento-caption">{monthCoach.caption}</p>
+            </div>
+            <div className="finance-bento-hero-foot">
+              <p>{monthCoach.detail}</p>
+              <div className="finance-bento-hero-actions">
+                {actionByKey.tx && <button type="button" onClick={actionByKey.tx.onClick}><CreditCard aria-hidden="true" />Nueva transacción</button>}
+                {actionByKey.budget && <button type="button" onClick={actionByKey.budget.onClick}><CalendarDays aria-hidden="true" />Crear presupuesto</button>}
               </div>
+            </div>
+            <svg className="finance-bento-hero-orbit" viewBox="0 0 280 300" fill="none" aria-hidden="true">
+              <ellipse cx="158" cy="150" rx="104" ry="137" />
+              <ellipse cx="158" cy="150" rx="75" ry="106" />
+              <ellipse cx="158" cy="150" rx="45" ry="69" />
+              <path d="M4 150h270" />
+              <circle cx="68" cy="150" r="6" /><circle cx="158" cy="150" r="6" /><circle cx="225" cy="150" r="6" />
+            </svg>
+          </section>
 
-              <div className="grid min-w-[240px] gap-2 sm:grid-cols-3 lg:grid-cols-1">
-                {actionByKey.tx && (
-                  <button type="button" onClick={actionByKey.tx.onClick} className="ui-panel-soft rounded-2xl p-3.5 flex items-center gap-3 text-left">
-                    <CreditCard className="h-4 w-4 text-brand" />
-                    <span>
-                      <strong className="block text-sm font-semibold text-fg">Nueva transacción</strong>
-                      <small className="mt-0.5 block text-xs ui-muted">Registrar en segundos</small>
-                    </span>
+          <section className="finance-bento-tile finance-bento-flow" aria-labelledby="finance-bento-flow-title" aria-roledescription="Tarjeta ampliable" tabIndex={0} role="group" onClick={openTileOnClick("today")} onKeyDown={openTileOnKey("today")}>
+            <header className="finance-bento-tile-head">
+              <p>02 / FLUJO DEL MES</p>
+              {focusButton("today", "el flujo del mes")}
+            </header>
+            <div className="finance-bento-flow-layout">
+              <div className="finance-bento-donut" style={{ background: `conic-gradient(var(--ui-editorial-coral) 0 ${spendingRatio}%, var(--ui-editorial-forest) ${spendingRatio}% 100%)` }} aria-label={`${Math.round(spendingRatio)} por ciento del ingreso gastado`}>
+                <div><strong>{Math.round(spendingRatio)}%</strong><span>gastado</span></div>
+              </div>
+              <div className="finance-bento-flow-figures">
+                <h3 id="finance-bento-flow-title">Entradas<br />y salidas</h3>
+                <p><span>Entró</span><strong>{monthFlow.income}</strong></p>
+                <p><span>Salió</span><strong>{monthFlow.expense}</strong></p>
+              </div>
+            </div>
+            <button className="finance-bento-next-payment" type="button" onClick={() => setFocusedPanel("payments")}>
+              <Clock3 aria-hidden="true" />
+              <span>{nextCommitment ? `Siguiente · ${nextCommitment.name}` : "Calendario despejado"}</span>
+              <strong>{nextCommitment ? formatMoney(Number(nextCommitment.payload.amount || 0), nextCommitment.payload.currency || "COP") : "Ver pagos"}</strong>
+            </button>
+          </section>
+
+          <section className="finance-bento-tile finance-bento-budgets" aria-labelledby="finance-bento-budgets-title" aria-roledescription="Tarjeta ampliable" tabIndex={0} role="group" onClick={openTileOnClick("today")} onKeyDown={openTileOnKey("today")}>
+            <header className="finance-bento-tile-head">
+              <div><p>03 / PRESUPUESTOS</p><h3 id="finance-bento-budgets-title">Presión del mes</h3></div>
+              <div className="finance-bento-pager">
+                <span>{String(Math.min(dashboardBudgetStart + visibleBudgets.length, dashboardBudgets.length)).padStart(2, "0")} / {String(dashboardBudgets.length).padStart(2, "0")}</span>
+                <button type="button" aria-label="Ver presupuestos anteriores" disabled={!dashboardBudgetCanPrev} onClick={() => setDashboardBudgetStart((start) => Math.max(0, start - 3))}>‹</button>
+                <button type="button" aria-label="Ver más presupuestos" disabled={!dashboardBudgetCanNext} onClick={() => setDashboardBudgetStart((start) => Math.min(dashboardBudgetMaxStart, start + 3))}>›</button>
+                {focusButton("today", "los presupuestos")}
+              </div>
+            </header>
+            {visibleBudgets.length ? <div className="finance-bento-budget-list">
+              {visibleBudgets.map((budget) => {
+                const allocated = Math.max(0, toNumber(budget.allocated_amount));
+                const spent = Math.max(0, toNumber(budget.actual_amount));
+                const ratio = allocated ? Math.min(100, Math.round((spent / allocated) * 100)) : 0;
+                const status = budget.deficit_summary.status === "over_budget" ? "alto" : budget.deficit_summary.status === "warning" ? "atención" : "bien";
+                return <article key={budget.id} className="finance-bento-budget-row">
+                  <button type="button" className="finance-bento-budget-main" onClick={() => startBudgetExpense(budget)} aria-label={`Registrar gasto en ${budget.name}`}>
+                    <span><strong>{budget.name}</strong><em>{status}</em></span>
+                    <span className="finance-bento-progress"><i style={{ width: `${ratio}%` }} /></span>
+                    <small>{ratio}% usado · {formatMoney(Math.max(0, allocated - spent), budget.currency)} disponible</small>
                   </button>
-                )}
-                {actionByKey.budget && (
-                  <button type="button" onClick={actionByKey.budget.onClick} className="ui-panel-soft rounded-2xl p-3.5 flex items-center gap-3 text-left">
-                    <CalendarDays className="h-4 w-4 text-brand" />
-                    <span>
-                      <strong className="block text-sm font-semibold text-fg">Crear presupuesto</strong>
-                      <small className="mt-0.5 block text-xs ui-muted">Armar un sobre mensual</small>
-                    </span>
-                  </button>
-                )}
-                <button type="button" onClick={onReviewExpenses} className="ui-panel-soft rounded-2xl p-3.5 flex items-center gap-3 text-left">
-                  <Search className="h-4 w-4 text-brand" />
-                  <span>
-                    <strong className="block text-sm font-semibold text-fg">Revisar gastos</strong>
-                    <small className="mt-0.5 block text-xs ui-muted">Ver movimientos recientes</small>
-                  </span>
-                </button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+                  <button type="button" className="finance-bento-edit" onClick={() => openEditBudgetDialog(budget.id)} aria-label={`Editar presupuesto ${budget.name}`}>↗</button>
+                </article>;
+              })}
+            </div> : <div className="finance-bento-empty"><Wallet aria-hidden="true" /><span>Aún no tienes sobres activos este mes.</span><button type="button" onClick={() => actionByKey.budget?.onClick()}>Crear presupuesto</button></div>}
+          </section>
 
-        <Card className="ds-soft-card relative overflow-hidden">
-          <CardHeader className="pb-3 pr-14">
-            <CardTitle className="text-fg text-xl">Lo importante hoy</CardTitle>
-            <CardDescription className="text-fg-subtle">Una lectura corta para no perderte entre datos.</CardDescription>
-            <div className="absolute right-5 top-5">{focusButton("today", "lo importante hoy")}</div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className={insightRowCls}>
-              <div className={insightIconCls}>
-                <Wallet className="h-4 w-4" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-fg">{dashboardBudgets.length} presupuestos activos</p>
-                <p className="text-xs ui-muted">Se actualizan con las transacciones vinculadas.</p>
-              </div>
-            </div>
-            <div className={insightRowCls}>
-              <div className={insightIconCls}>
-                <Clock3 className="h-4 w-4" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-fg">
-                  {nextCommitment ? nextCommitment.name : "Sin pagos cercanos"}
-                </p>
-                <p className="text-xs ui-muted">
-                  {nextCommitment
-                    ? "Pago programado"
-                    : "Cuando registres compromisos aparecerán aquí."}
-                </p>
-              </div>
-            </div>
-            <div className={insightRowCls}>
-              <div className={insightIconCls}>
-                <ArrowDownLeft className="h-4 w-4" />
-              </div>
-              <div>
-                <p className="text-sm font-medium text-fg">
-                  {latestTransaction ? latestTransaction.description || "Movimiento reciente" : "Sin movimientos aún"}
-                </p>
-                <p className="text-xs ui-muted">
-                  {latestTransaction
-                    ? "Movimiento registrado"
-                    : "Agrega tu primera transacción para empezar a leer patrones."}
-                </p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </section>
+          <section className="finance-bento-tile finance-bento-movements" aria-labelledby="finance-bento-movements-title" aria-roledescription="Tarjeta ampliable" tabIndex={0} role="group" onClick={openTileOnClick("transactions")} onKeyDown={openTileOnKey("transactions")}>
+            <header className="finance-bento-tile-head">
+              <div><p>04 / RASTRO RECIENTE</p><h3 id="finance-bento-movements-title">Lo que acaba de pasar</h3></div>
+              <div className="finance-bento-pager"><span>{recentTransactions.length} movimientos</span><button className="finance-bento-see-all" type="button" onClick={onReviewExpenses}>Ver actividad</button>{focusButton("transactions", "los movimientos recientes")}</div>
+            </header>
+            {recentTransactions.length ? <div className="finance-bento-timeline">
+              {recentTransactions.slice(0, 3).map((tx) => {
+                const isInflow = tx.direction === "INFLOW";
+                return <article key={tx.id}>
+                  <span className={`finance-bento-timeline-dot ${isInflow ? "is-inflow" : "is-outflow"}`} />
+                  <time>{formatDate(tx.transaction_date)} · {tx.account_name}</time>
+                  <strong>{tx.description || "Movimiento"}</strong>
+                  <b>{isInflow ? "+" : "−"}{formatMoney(toNumber(tx.amount), tx.currency)}</b>
+                </article>;
+              })}
+            </div> : <div className="finance-bento-empty"><ArrowDownLeft aria-hidden="true" /><span>Los movimientos aparecerán aquí cuando registres actividad.</span><button type="button" onClick={() => actionByKey.tx?.onClick()}>Registrar transacción</button></div>}
+          </section>
 
-      <DashboardBudgetStrip
-        budgets={dashboardBudgetWindow}
-        totalBudgets={dashboardBudgets.length}
-        onPrev={() => setDashboardBudgetStart((prev) => Math.max(0, prev - 5))}
-        onNext={() => setDashboardBudgetStart((prev) => Math.min(dashboardBudgetMaxStart, prev + 5))}
-        canPrev={dashboardBudgetCanPrev}
-        canNext={dashboardBudgetCanNext}
-        onRegisterExpense={(budget) => startBudgetExpense(budget as Budget)}
-        onEditBudget={(budget) => openEditBudgetDialog(budget.id)}
-      />
+          <section className="finance-bento-tile finance-bento-accounts" aria-labelledby="finance-bento-accounts-title" aria-roledescription="Tarjeta ampliable" tabIndex={0} role="group" onClick={openTileOnClick("accounts")} onKeyDown={openTileOnKey("accounts")}>
+            <header className="finance-bento-tile-head"><div><p>05 / TUS CUENTAS</p><h3 id="finance-bento-accounts-title">Dinero en varios lugares</h3></div>{focusButton("accounts", "los saldos por cuenta")}</header>
+            {topAccounts.length ? <div className="finance-bento-account-list">
+              {topAccounts.slice(0, 3).map((account) => {
+                const balance = toNumber(account.balance_current);
+                const ratio = Math.min(100, Math.round((Math.abs(balance) / maximumAccountBalance) * 100));
+                return <article key={account.id}><div><span>{account.name}</span><strong>{formatMoney(balance, account.currency)}</strong></div><i><b style={{ width: `${ratio}%` }} /></i></article>;
+              })}
+            </div> : <div className="finance-bento-empty"><Wallet aria-hidden="true" /><span>Agrega una cuenta para ver dónde está tu dinero.</span></div>}
+          </section>
+        </div>
 
-      <div className="grid grid-cols-1 gap-4 xl:grid-cols-[0.92fr_1.25fr_0.95fr]">
-        <Card className="ds-soft-card relative overflow-hidden">
-          <CardHeader className="pb-3 pr-14">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <CardTitle className="text-fg text-xl">Próximos pagos</CardTitle>
-                <CardDescription className="text-fg-subtle">Solo lo que necesitas anticipar.</CardDescription>
-              </div>
-              <Badge variant="secondary" className={countBadgeCls}>
-                {upcomingCommitments.length}
-              </Badge>
-            </div>
-            <div className="absolute right-5 top-5">{focusButton("payments", "los próximos pagos")}</div>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {upcomingCommitments.length === 0 && (
-              <div className="dashboard-empty-state">
-                <Clock3 className="h-5 w-5 text-brand" />
-                <div>
-                  <p className="text-sm font-medium text-fg">Tu calendario esta despejado</p>
-                  <p className="mt-1 text-xs ui-muted">Los pagos recurrentes apareceran aqui cuando los registres.</p>
-                </div>
-              </div>
-            )}
-            {upcomingCommitments.map((item) => (
-              <article key={item.id} className={listRowCls}>
-                <div className="flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-fg">{item.name}</p>
-                    <p className="text-xs text-fg-subtle">
-                      {formatDate(item.next_run_at)} · {item.cadence}
-                    </p>
-                  </div>
-                  <span className="text-sm font-semibold text-fg">
-                    {formatMoney(Number(item.payload.amount || 0), item.payload.currency || "COP")}
-                  </span>
-                </div>
-              </article>
-            ))}
-          </CardContent>
-        </Card>
-
-        <Card className="ds-soft-card relative overflow-hidden">
-          <CardHeader className="pb-3 pr-14">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <CardTitle className="text-fg text-xl">Movimientos</CardTitle>
-                <CardDescription className="text-fg-subtle">Una lista corta para leer rápido.</CardDescription>
-              </div>
-              <Badge variant="secondary" className={countBadgeCls}>
-                {recentTransactions.length}
-              </Badge>
-            </div>
-            <div className="absolute right-5 top-5">{focusButton("transactions", "los movimientos recientes")}</div>
-          </CardHeader>
-          <CardContent className="space-y-2">
-            {recentTransactions.map((tx) => {
-              const isInflow = tx.direction === "INFLOW";
-              const amount = toNumber(tx.amount);
-              return (
-                <article key={tx.id} className={listRowCls}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <p className="truncate text-sm font-medium text-fg">{tx.description || "Sin descripción"}</p>
-                      <p className="text-[11px] text-fg-subtle">
-                        {formatDate(tx.transaction_date)} · {tx.account_name}
-                      </p>
-                    </div>
-                    <div className={`text-sm font-semibold ${isInflow ? "text-positive" : "text-danger"}`}>
-                      {isInflow ? "+" : "−"} {formatMoney(amount, tx.currency)}
-                    </div>
-                  </div>
-                </article>
-              );
-            })}
-            {recentTransactions.length === 0 && <p className="text-sm text-fg-subtle">No hay actividad reciente.</p>}
-          </CardContent>
-        </Card>
-
-        <Card className="ds-soft-card relative overflow-hidden">
-          <CardHeader className="pb-3 pr-14">
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <CardTitle className="text-fg text-xl">Tu dinero</CardTitle>
-                <CardDescription className="text-fg-subtle">Donde vive hoy tu liquidez.</CardDescription>
-              </div>
-              <Badge variant="secondary" className={countBadgeCls}>
-                {topAccounts.length}
-              </Badge>
-            </div>
-            <div className="absolute right-5 top-5">{focusButton("accounts", "los saldos por cuenta")}</div>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {topAccounts.map((account) => {
-              const amount = Math.abs(toNumber(account.balance_current));
-              const maxAmount = Math.max(...topAccounts.map((item) => Math.abs(toNumber(item.balance_current))), 1);
-              const ratio = Math.min(100, (amount / maxAmount) * 100);
-              return (
-                <div key={account.id} className="dashboard-money-row space-y-2">
-                  <div className="flex items-center justify-between gap-2 text-xs">
-                    <span className="flex min-w-0 items-center gap-2 truncate text-fg-secondary">
-                      <span className="dashboard-money-icon"><Wallet className="h-3.5 w-3.5" /></span>
-                      <span className="truncate">{account.name}</span>
-                    </span>
-                    <span className="font-medium text-fg">
-                      {formatMoney(toNumber(account.balance_current), account.currency)}
-                    </span>
-                  </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-surface-2">
-                    <div className="h-full rounded-full bg-brand transition-all duration-500" style={{ width: `${ratio}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-            {topAccounts.length === 0 && (
-              <div className="dashboard-empty-state">
-                <Wallet className="h-5 w-5 text-brand" />
-                <div>
-                  <p className="text-sm font-medium text-fg">Tu liquidez aparecera aqui</p>
-                  <p className="mt-1 text-xs ui-muted">Agrega una cuenta para ver donde vive tu dinero.</p>
-                </div>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      </div>
-      <DialogContent className="max-w-2xl ui-shell-card border border-surface-2 shadow-2xl motion-reduce:duration-0">
-        {focusPanel && (
-          <>
+        <DialogContent className="max-w-2xl ui-shell-card border border-surface-2 shadow-2xl motion-reduce:duration-0">
+          {focusPanel && <>
             <DialogHeader>
               <p className="text-xs font-semibold uppercase tracking-[0.22em] text-brand">{focusPanel.eyebrow}</p>
               <DialogTitle className="text-3xl tracking-[-0.04em] sm:text-4xl">{focusPanel.title}</DialogTitle>
@@ -439,14 +277,12 @@ export function DashboardView(props: DashboardViewProps) {
             <div className="grid gap-2 sm:grid-cols-2">
               {focusPanel.rows.length ? focusPanel.rows.map((row, index) => (
                 <div key={`${row.label}-${index}`} className={`rounded-2xl border border-surface-2 p-4 motion-safe:animate-in motion-safe:fade-in-0 motion-safe:slide-in-from-bottom-2 motion-safe:duration-300 ${index === 0 ? "bg-brand-soft" : "bg-surface-1"}`} style={{ animationDelay: `${index * 45}ms`, animationFillMode: "both" }}>
-                  <p className="text-xs ui-muted">{row.label}</p>
-                  <p className="mt-1 break-words text-lg font-semibold tracking-tight text-fg">{row.value}</p>
+                  <p className="text-xs ui-muted">{row.label}</p><p className="mt-1 break-words text-lg font-semibold tracking-tight text-fg">{row.value}</p>
                 </div>
               )) : <p className="rounded-2xl border border-dashed border-surface-2 p-5 text-sm ui-muted">No hay datos para mostrar todavía.</p>}
             </div>
-          </>
-        )}
-      </DialogContent>
+          </>}
+        </DialogContent>
       </Dialog>
     </div>
   );
