@@ -72,6 +72,7 @@ export function DashboardView(props: DashboardViewProps) {
     onReviewExpenses,
     onReviewPayments,
     recentTransactions,
+    latestTransaction,
     topAccounts,
   } = props;
   const [focusedPanel, setFocusedPanel] = React.useState<null | "month" | "flow" | "budgets" | "payments" | "transactions" | "accounts">(null);
@@ -151,6 +152,9 @@ export function DashboardView(props: DashboardViewProps) {
         { label: "Resultado del mes", value: monthCoach.amount },
         { label: "Estado", value: monthCoach.badge },
         { label: "Contexto", value: monthCoach.caption },
+        { label: "Presupuestos activos", value: String(dashboardBudgets.length) },
+        { label: "Próximo pago", value: nextCommitment?.name || "Sin pagos cercanos" },
+        { label: "Último movimiento", value: latestTransaction?.description || (latestTransaction ? "Movimiento reciente" : "Sin movimientos aún") },
       ],
     },
     flow: {
