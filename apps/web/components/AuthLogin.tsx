@@ -24,7 +24,7 @@ import { ThemeSelector } from "@/components/ThemeSelector";
 
 type AuthMode = "login" | "register";
 
-const INTERNAL_TABS = new Set(["dashboard", "accounts", "transactions", "reports", "investments", "planning", "copilot"]);
+const INTERNAL_TABS = new Set(["dashboard", "accounts", "transactions", "reports", "investments", "planning", "copilot", "settings"]);
 
 function normalizeReturnTo(rawValue: string | null | undefined) {
   const fallback = "/?tab=dashboard";
