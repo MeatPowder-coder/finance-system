@@ -3678,6 +3678,29 @@ main[data-finance-tab="dashboard"] .finance-dashboard-heading .text-zinc-400 { c
 .finance-primary-tab-index { align-self:flex-start; padding-top:1px; font:600 .55rem ui-monospace,SFMono-Regular,Consolas,monospace; opacity:.66; }
 .finance-primary-tab-label { overflow:hidden; font:700 .56rem/1.1 ui-monospace,SFMono-Regular,Consolas,monospace; letter-spacing:.02em; text-overflow:ellipsis; text-transform:uppercase; white-space:nowrap; }
 .finance-primary-tab-caption { overflow:hidden; margin-top:3px; font-size:.52rem; line-height:1.15; opacity:.67; text-overflow:ellipsis; white-space:nowrap; }
+.finance-primary-tab-index { font-size:.62rem; }
+.finance-primary-tab-label { font-size:.68rem; letter-spacing:.035em; }
+.finance-primary-tab-caption { font-size:.6rem; }
+.finance-header-palette { font-size:.66rem; }
+.finance-header-palette .theme-selector-trigger { min-height:40px; padding-inline:11px; font-size:.68rem; }
+.finance-bento-tile-head > p,.finance-bento-tile-head > div > p { font-size:.68rem; }
+.finance-bento-budget-main strong { font-size:.84rem; }
+.finance-bento-budget-main em { font-size:.64rem; }
+.finance-bento-budget-main small { font-size:.65rem; }
+.finance-bento-pager > span,.finance-bento-see-all { font-size:.64rem !important; }
+.finance-bento-timeline time { font-size:.64rem; }
+.finance-bento-timeline article > strong { font-size:.92rem; }
+.finance-bento-timeline article > b { font-size:.7rem; }
+.finance-bento-account-list article > div { font-size:.75rem; }
+.finance-bento-account-list article > div strong { font-size:.74rem; }
+.finance-bento-payment-list article > span strong { font-size:.82rem; }
+.finance-bento-payment-list article > b { font-size:.74rem; }
+.finance-bento-expanded-eyebrow { font-size:.68rem; }
+.finance-bento-expanded-summary { font-size:1rem; }
+.finance-bento-expanded-toolbar button { font-size:.68rem; }
+.finance-bento-expanded-rows article span { font-size:.7rem; }
+.finance-bento-expanded-rows article small { font-size:.64rem; }
+.finance-bento-open-detail { font-size:.64rem !important; }
 @media(max-width:620px) {
   .finance-primary-tab-button { min-height:46px; padding:7px 8px !important; }
   .finance-primary-tab-caption { display:none; }
