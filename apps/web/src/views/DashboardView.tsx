@@ -110,8 +110,7 @@ export function DashboardView(props: DashboardViewProps) {
         // Keep the transition anchored to the original tile, then let it become
         // a near full-canvas reading surface so it feels like a scene change.
         const maxWidth = Math.min(1180, liveCanvas.clientWidth - (liveCanvas.clientWidth < 620 ? 16 : 36));
-        const availableHeight = Math.max(300, Math.min(liveCanvas.clientHeight - 24, window.innerHeight - 48));
-        const targetHeight = Math.min(Math.max(360, tile.scrollHeight), availableHeight);
+        const targetHeight = Math.max(300, Math.min(620, liveCanvas.clientHeight - 24, window.innerHeight - 48));
         setFocusBox({
           left: Math.max(8, (liveCanvas.clientWidth - maxWidth) / 2),
           top: Math.max(8, (liveCanvas.clientHeight - targetHeight) / 2),
