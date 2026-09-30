@@ -130,7 +130,7 @@ export function ThemeSelector({ collapsed, panel = false, onThemeChange, onBackg
     }
 
     if (nextTheme === "dark") {
-      root.classList.add("dark");
+      root.classList.add("dark", "theme-dark");
       return;
     }
 

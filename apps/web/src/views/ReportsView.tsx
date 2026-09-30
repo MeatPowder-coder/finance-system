@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { PageHeader, EmptyState } from "@/components/finance";
+import { DataView, PageHeader, EmptyState, type DataViewColumn } from "@/components/finance";
 import type { CashflowReportItem, CategoryBreakdownItem } from "@/lib/types";
 import { formatMoney, downloadCsv } from "@/lib/format";
 
@@ -31,10 +31,23 @@ export function ReportsView({
   cashflowReport,
   categoryBreakdown,
 }: ReportsViewProps) {
+  const [presentation, setPresentation] = React.useState<"visual" | "table">("visual");
   const maxCategoryTotal = React.useMemo(
     () => Math.max(...categoryBreakdown.map((row) => Math.abs(Number(row.totalAmount || 0))), 1),
     [categoryBreakdown]
   );
+  const cashflowColumns: DataViewColumn<CashflowReportItem>[] = [
+    { key: "period", header: "Periodo", cardTitle: true, render: (row) => <strong>{row.period}</strong> },
+    { key: "inflow", header: "Ingresos", align: "right", render: (row) => <span className="text-positive">{formatMoney(row.inflow, "COP")}</span> },
+    { key: "outflow", header: "Egresos", align: "right", render: (row) => <span className="text-danger">{formatMoney(row.outflow, "COP")}</span> },
+    { key: "net", header: "Neto", align: "right", render: (row) => <strong className={row.net >= 0 ? "text-positive" : "text-warning"}>{formatMoney(row.net, "COP")}</strong> },
+  ];
+  const categoryColumns: DataViewColumn<CategoryBreakdownItem>[] = [
+    { key: "categoryName", header: "Categoría", cardTitle: true, render: (row) => <strong>{row.categoryName}</strong> },
+    { key: "txCount", header: "Movimientos", align: "right", render: (row) => String(row.txCount) },
+    { key: "share", header: "Peso", render: (row) => <div className="h-2 min-w-20 overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full bg-brand" style={{ width: `${Math.min(100, Math.abs(Number(row.totalAmount) || 0) / maxCategoryTotal * 100)}%` }} /></div> },
+    { key: "totalAmount", header: "Total", align: "right", render: (row) => <strong>{formatMoney(row.totalAmount, "COP")}</strong> },
+  ];
 
   return (
     <div className="section-enter space-y-6 pb-10">
@@ -53,6 +66,10 @@ export function ReportsView({
           <Button onClick={() => onRefresh()} disabled={reportsLoading} className="bg-brand text-surface hover:bg-brand/90">{reportsLoading ? "Cargando..." : "Actualizar reporte"}</Button>
           <Button variant="outline" className="border-surface-2 bg-surface-1 text-fg-secondary" onClick={() => downloadCsv(`cashflow_${reportRange.from}_${reportRange.to}.csv`, [["Periodo", "Ingresos", "Egresos", "Neto"], ...cashflowReport.map((row) => [row.period, String(row.inflow), String(row.outflow), String(row.net)])])}><Download className="h-4 w-4" /> Flujo CSV</Button>
           <Button variant="outline" className="border-surface-2 bg-surface-1 text-fg-secondary" onClick={() => downloadCsv(`category_breakdown_${reportRange.from}_${reportRange.to}.csv`, [["Categoría", "Total", "Transacciones"], ...categoryBreakdown.map((row) => [row.categoryName, String(row.totalAmount), String(row.txCount)])])}><Download className="h-4 w-4" /> Categorías CSV</Button>
+          <span className="flex items-center gap-1 rounded-xl border border-surface-2 p-1" aria-label="Formato de reportes">
+            <Button type="button" variant={presentation === "visual" ? "default" : "ghost"} size="sm" onClick={() => setPresentation("visual")} aria-pressed={presentation === "visual"}>Gráficas</Button>
+            <Button type="button" variant={presentation === "table" ? "default" : "ghost"} size="sm" onClick={() => setPresentation("table")} aria-pressed={presentation === "table"}>Tabla</Button>
+          </span>
         </div>
       </section>
 
@@ -65,13 +82,13 @@ export function ReportsView({
       <section className="grid gap-4 xl:grid-cols-[1.3fr_0.7fr]">
         <Card className="ds-soft-card overflow-hidden"><CardContent className="p-0">
           <div className="flex items-end justify-between gap-4 border-b border-surface-2 px-5 py-5 md:px-7"><div><p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand">Ritmo mensual</p><h2 className="mt-1 text-xl font-semibold tracking-tight text-fg md:text-2xl">Flujo de caja</h2></div><span className="text-xs text-fg-subtle">Ingresos y egresos</span></div>
-          {cashflowReport.length === 0 ? <div className="p-5"><EmptyState icon={<CalendarDays className="h-7 w-7"/>} title="Sin datos en este rango">Ajusta el rango y pulsa Actualizar para generar el reporte.</EmptyState></div> : <div className="divide-y divide-surface-2/70">
+          {cashflowReport.length === 0 ? <div className="p-5"><EmptyState icon={<CalendarDays className="h-7 w-7"/>} title="Sin datos en este rango">Ajusta el rango y pulsa Actualizar para generar el reporte.</EmptyState></div> : presentation === "table" ? <div className="p-4 md:p-6"><DataView columns={cashflowColumns} rows={cashflowReport} rowKey={(row) => row.period} /></div> : <div className="divide-y divide-surface-2/70">
             {cashflowReport.map((row) => { const total = Math.max(Number(row.inflow) || 0, Number(row.outflow) || 0, 1); return <article key={row.period} className="grid gap-3 px-5 py-4 transition-colors hover:bg-surface-1/60 md:grid-cols-[100px_1fr_1fr_160px] md:items-center md:gap-5 md:px-7"><div className="font-semibold text-fg">{row.period}</div><div><div className="mb-1 flex justify-between text-xs"><span className="text-fg-subtle">Entró</span><span className="font-medium text-positive">{formatMoney(row.inflow, "COP")}</span></div><div className="h-2 overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full bg-positive" style={{width:`${Math.min(100, (row.inflow / total) * 100)}%`}}/></div></div><div><div className="mb-1 flex justify-between text-xs"><span className="text-fg-subtle">Salió</span><span className="font-medium text-danger">{formatMoney(row.outflow, "COP")}</span></div><div className="h-2 overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full bg-danger" style={{width:`${Math.min(100, (row.outflow / total) * 100)}%`}}/></div></div><div className={`text-lg font-semibold md:text-right ${row.net >= 0 ? "text-positive" : "text-warning"}`}>{formatMoney(row.net, "COP")}<span className="mt-0.5 block text-[10px] font-medium uppercase tracking-wider text-fg-subtle">Neto</span></div></article>; })}
           </div>}
         </CardContent></Card>
 
         <Card className="ds-soft-card overflow-hidden"><CardContent className="p-0"><div className="border-b border-surface-2 px-5 py-5"><p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand">En qué se fue</p><h2 className="mt-1 text-xl font-semibold tracking-tight text-fg md:text-2xl">Categorías</h2></div>
-          {categoryBreakdown.length === 0 ? <div className="p-5"><EmptyState icon={<BarChart3 className="h-7 w-7"/>} title="Sin desglose disponible">No hay movimientos categorizados en este rango.</EmptyState></div> : <div className="space-y-4 p-5 md:p-6">{categoryBreakdown.map((row,index) => { const share=Math.min(100,(Math.abs(Number(row.totalAmount)||0)/maxCategoryTotal)*100); const colors=["bg-brand","bg-danger","bg-positive","bg-warning","bg-brand/50"]; return <article key={`${row.categoryName}-${row.categoryId||"none"}`}><div className="flex items-end justify-between gap-2"><div className="min-w-0"><p className="truncate font-semibold text-fg">{row.categoryName}</p><p className="text-xs text-fg-subtle">{row.txCount} movimientos · {share.toFixed(0)}%</p></div><p className="shrink-0 text-sm font-semibold text-fg">{formatMoney(row.totalAmount,"COP")}</p></div><div className="mt-2 h-2.5 overflow-hidden rounded-full bg-surface-2"><div className={`h-full rounded-full transition-all duration-700 ${colors[index%colors.length]}`} style={{width:`${share}%`}}/></div></article>; })}</div>}
+          {categoryBreakdown.length === 0 ? <div className="p-5"><EmptyState icon={<BarChart3 className="h-7 w-7"/>} title="Sin desglose disponible">No hay movimientos categorizados en este rango.</EmptyState></div> : presentation === "table" ? <div className="p-4 md:p-6"><DataView columns={categoryColumns} rows={categoryBreakdown} rowKey={(row) => `${row.categoryName}-${row.categoryId || "none"}`} /></div> : <div className="space-y-4 p-5 md:p-6">{categoryBreakdown.map((row,index) => { const share=Math.min(100,(Math.abs(Number(row.totalAmount)||0)/maxCategoryTotal)*100); const colors=["bg-brand","bg-danger","bg-positive","bg-warning","bg-brand/50"]; return <article key={`${row.categoryName}-${row.categoryId||"none"}`}><div className="flex items-end justify-between gap-2"><div className="min-w-0"><p className="truncate font-semibold text-fg">{row.categoryName}</p><p className="text-xs text-fg-subtle">{row.txCount} movimientos · {share.toFixed(0)}%</p></div><p className="shrink-0 text-sm font-semibold text-fg">{formatMoney(row.totalAmount,"COP")}</p></div><div className="mt-2 h-2.5 overflow-hidden rounded-full bg-surface-2"><div className={`h-full rounded-full transition-all duration-700 ${colors[index%colors.length]}`} style={{width:`${share}%`}}/></div></article>; })}</div>}
         </CardContent></Card>
       </section>
     </div>
