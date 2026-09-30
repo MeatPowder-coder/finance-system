@@ -6,7 +6,7 @@ export async function requestFinanceApi(input: RequestInfo | URL, init?: Request
   try {
     return await fetch(input, init);
   } catch (error) {
-    if (error instanceof TypeError) {
+    if (error instanceof TypeError || (error instanceof Error && /failed to fetch|fetch failed|networkerror|network request failed/i.test(error.message))) {
       throw new Error("No se pudo conectar con Finance System. Revisa tu conexión e inténtalo de nuevo.");
     }
     throw error;

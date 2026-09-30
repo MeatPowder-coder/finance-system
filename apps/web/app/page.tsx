@@ -974,7 +974,7 @@ function HomeContent() {
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="finance-header-palette"><span>Paleta</span><ThemeSelector collapsed /></div>
+              <div className="finance-header-palette"><ThemeSelector collapsed showCurrentTheme /></div>
                 {tab !== "dashboard" && <Select value={planningMonth} onValueChange={setPlanningMonth}>
                   <SelectTrigger className="ui-control h-11 w-[170px] rounded-2xl px-4">
                     <div className="flex items-center gap-2">

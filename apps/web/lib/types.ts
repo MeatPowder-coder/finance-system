@@ -330,6 +330,7 @@ export const MOBILE_TABS: TabKey[] = [
   "reports",
   "investments",
   "planning",
+  "copilot",
   "settings",
 ];
 

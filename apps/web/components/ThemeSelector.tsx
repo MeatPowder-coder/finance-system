@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 
 interface ThemeSelectorProps {
   collapsed?: boolean;
+  showCurrentTheme?: boolean;
   panel?: boolean;
   onThemeChange?: (theme: string) => void;
   onBackgroundChange?: (mode: BackgroundMode) => void;
@@ -111,7 +112,7 @@ const THEME_OPTIONS: ThemeOption[] = [
 
 const THEME_CLASS_NAMES = THEME_OPTIONS.map((option) => "theme-" + option.value);
 
-export function ThemeSelector({ collapsed, panel = false, onThemeChange, onBackgroundChange }: ThemeSelectorProps) {
+export function ThemeSelector({ collapsed, showCurrentTheme = false, panel = false, onThemeChange, onBackgroundChange }: ThemeSelectorProps) {
   const [theme, setTheme] = useState<ThemeId>("dark");
   const [backgroundMode, setBackgroundMode] = useState<BackgroundMode>("auto");
 
@@ -244,21 +245,24 @@ export function ThemeSelector({ collapsed, panel = false, onThemeChange, onBackg
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          size={collapsed ? "icon" : "default"}
-          className={cn("h-9", collapsed ? "w-9" : "w-full justify-start px-2")}
+          size={collapsed && !showCurrentTheme ? "icon" : "default"}
+          className={cn("h-9 gap-2", collapsed && !showCurrentTheme ? "w-9" : showCurrentTheme ? "w-auto px-2" : "w-full justify-start px-2")}
+          aria-label={`Paleta activa: ${currentTheme.label}. Cambiar paleta de colores.`}
         >
-          <Palette className={cn("h-4 w-4", collapsed ? "" : "mr-2 text-zinc-500")} />
-          {!collapsed && (
+          <Palette className="h-4 w-4 shrink-0 text-current opacity-75" />
+          {(!collapsed || showCurrentTheme) && (
             <span className="flex min-w-0 items-center gap-2 text-zinc-500">
-              <span>Tema</span>
-              <span className="truncate text-zinc-400">- {currentTheme.label}</span>
+              {showCurrentTheme ? <span className="truncate text-current">Paleta · {currentTheme.label}</span> : <>
+                <span>Tema</span>
+                <span className="truncate text-zinc-400">- {currentTheme.label}</span>
+              </>}
             </span>
           )}
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        align={collapsed ? "center" : "start"}
-        side={collapsed ? "right" : "top"}
+        align={collapsed && !showCurrentTheme ? "center" : "start"}
+        side={collapsed && !showCurrentTheme ? "right" : "top"}
         className="theme-menu w-80 max-h-[min(72vh,44rem)] overflow-y-auto finance-scrollbar p-2"
       >
         <DropdownMenuLabel className="px-2 pb-2 text-xs uppercase tracking-[0.24em] text-zinc-500">
@@ -271,7 +275,6 @@ export function ThemeSelector({ collapsed, panel = false, onThemeChange, onBackg
           return (
             <DropdownMenuItem
               key={option.value}
-              onPointerDown={() => handleThemeChange(option.value)}
               onClick={() => handleThemeChange(option.value)}
               className="my-0.5 flex items-start gap-3 rounded-lg px-2 py-2.5"
             >
