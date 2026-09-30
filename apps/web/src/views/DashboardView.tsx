@@ -106,15 +106,23 @@ export function DashboardView(props: DashboardViewProps) {
         // Expand inside the dashboard canvas, matching the prototype's shared-element motion.
         const liveCanvas = canvasRef.current;
         if (!liveCanvas) return;
-        // The demo makes the selected Bento panel occupy most of its canvas.
-        // Keep the transition anchored to the original tile, then let it become
-        // a near full-canvas reading surface so it feels like a scene change.
-        const maxWidth = Math.min(1180, liveCanvas.clientWidth - (liveCanvas.clientWidth < 620 ? 16 : 36));
-        const targetHeight = Math.max(300, Math.min(620, liveCanvas.clientHeight - 24, window.innerHeight - 48));
+        // Keep the card anchored to its own center and grow it into a roomy
+        // reading surface while leaving the surrounding Bento layout visible.
+        const maxWidth = Math.max(0, liveCanvas.clientWidth - 24);
+        const targetWidth = Math.min(
+          maxWidth,
+          liveCanvas.clientWidth < 620 ? maxWidth : Math.max(520, Math.min(960, liveCanvas.clientWidth * 0.8))
+        );
+        const targetHeight = Math.min(
+          Math.max(0, liveCanvas.clientHeight - 20),
+          Math.max(300, Math.min(580, liveCanvas.clientHeight * 0.82, window.innerHeight * 0.8))
+        );
+        const leftFromOrigin = origin.left + origin.width / 2 - targetWidth / 2;
+        const topFromOrigin = origin.top + origin.height / 2 - targetHeight / 2;
         setFocusBox({
-          left: Math.max(8, (liveCanvas.clientWidth - maxWidth) / 2),
-          top: Math.max(8, (liveCanvas.clientHeight - targetHeight) / 2),
-          width: maxWidth,
+          left: Math.max(8, Math.min(leftFromOrigin, liveCanvas.clientWidth - targetWidth - 8)),
+          top: Math.max(8, Math.min(topFromOrigin, liveCanvas.clientHeight - targetHeight - 8)),
+          width: targetWidth,
           height: targetHeight,
         });
       }));

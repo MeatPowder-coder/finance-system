@@ -111,6 +111,7 @@ const THEME_OPTIONS: ThemeOption[] = [
 ];
 
 const THEME_CLASS_NAMES = THEME_OPTIONS.map((option) => "theme-" + option.value);
+const THEME_CHANGE_EVENT = "finance-theme-change";
 
 export function ThemeSelector({ collapsed, showCurrentTheme = false, panel = false, onThemeChange, onBackgroundChange }: ThemeSelectorProps) {
   const [theme, setTheme] = useState<ThemeId>("dark");
@@ -161,6 +162,21 @@ export function ThemeSelector({ collapsed, showCurrentTheme = false, panel = fal
     const nextBackground: BackgroundMode = savedBackground === "plain" || savedBackground === "grid" || savedBackground === "aurora" ? savedBackground : "auto";
     setBackgroundMode(nextBackground);
     window.dispatchEvent(new CustomEvent("finance-background-mode", { detail: nextBackground }));
+
+    const syncTheme = (event: Event) => {
+      const nextTheme = event instanceof StorageEvent
+        ? event.newValue
+        : (event as CustomEvent<string>).detail;
+      if (!THEME_OPTIONS.some((option) => option.value === nextTheme)) return;
+      setTheme(nextTheme as ThemeId);
+      applyTheme(nextTheme as ThemeId);
+    };
+    window.addEventListener(THEME_CHANGE_EVENT, syncTheme);
+    window.addEventListener("storage", syncTheme);
+    return () => {
+      window.removeEventListener(THEME_CHANGE_EVENT, syncTheme);
+      window.removeEventListener("storage", syncTheme);
+    };
   }, []);
 
   const handleThemeChange = (newTheme: string) => {
@@ -170,6 +186,7 @@ export function ThemeSelector({ collapsed, showCurrentTheme = false, panel = fal
     setTheme(nextTheme);
     localStorage.setItem("theme", nextTheme);
     applyTheme(nextTheme);
+    window.dispatchEvent(new CustomEvent(THEME_CHANGE_EVENT, { detail: nextTheme }));
     onThemeChange?.(nextTheme);
   };
 
@@ -333,6 +350,7 @@ export function ThemeSelector({ collapsed, showCurrentTheme = false, panel = fal
     <div className="theme-selector-control">
       {selectorMenu}
       <div className="theme-swatch-strip" role="group" aria-label="Elegir paleta de colores">
+        <span className="theme-swatch-label">Paletas</span>
         {THEME_OPTIONS.map((option) => (
           <button
             key={option.value}
