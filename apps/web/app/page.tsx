@@ -145,34 +145,60 @@ const TAB_META: Record<
 };
 
 async function apiGet<T>(path: string) {
-  const res = await requestFinanceApi(`${API_BASE}${path}`, { headers: buildFinanceHeaders(), cache: "no-store" });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
-  return json.data as T;
+  try {
+    const res = await requestFinanceApi(`${API_BASE}${path}`, { headers: buildFinanceHeaders(), cache: "no-store" });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+    return json.data as T;
+  } catch (error) {
+    throw withApiEndpoint(path, error);
+  }
 }
 
 async function apiPost<T>(path: string, body: unknown) {
-  const res = await requestFinanceApi(`${API_BASE}${path}`, {
-    method: "POST",
-    headers: buildFinanceHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify(body),
-    cache: "no-store",
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
-  return json.data as T;
+  try {
+    const res = await requestFinanceApi(`${API_BASE}${path}`, {
+      method: "POST",
+      headers: buildFinanceHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+    return json.data as T;
+  } catch (error) {
+    throw withApiEndpoint(path, error);
+  }
 }
 
 async function apiPatch<T>(path: string, body: unknown) {
-  const res = await requestFinanceApi(`${API_BASE}${path}`, {
-    method: "PATCH",
-    headers: buildFinanceHeaders({ "Content-Type": "application/json" }),
-    body: JSON.stringify(body),
-    cache: "no-store",
-  });
-  const json = await res.json().catch(() => ({}));
-  if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
-  return json.data as T;
+  try {
+    const res = await requestFinanceApi(`${API_BASE}${path}`, {
+      method: "PATCH",
+      headers: buildFinanceHeaders({ "Content-Type": "application/json" }),
+      body: JSON.stringify(body),
+      cache: "no-store",
+    });
+    const json = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
+    return json.data as T;
+  } catch (error) {
+    throw withApiEndpoint(path, error);
+  }
+}
+
+function withApiEndpoint(path: string, error: unknown) {
+  const detail = error instanceof Error ? error.message : "Error desconocido";
+  return new Error(detail.startsWith(`${path} — `) ? detail : `${path} — ${detail}`);
+}
+
+function formatApiError(error: unknown, fallback: string) {
+  if (!(error instanceof Error)) return fallback;
+  if (/failed to fetch|fetch failed|networkerror|no se pudo conectar con finance system/i.test(error.message)) {
+    const endpoint = error.message.split(" — ")[0];
+    return `No se pudo conectar con la API al solicitar ${endpoint}. Revisa la conexión y vuelve a intentarlo.`;
+  }
+  return error.message || fallback;
 }
 
 function HomeContent() {
@@ -298,22 +324,14 @@ function HomeContent() {
     setLoading(true);
     setError(null);
     try {
-      const load = async <T,>(path: string) => {
-        try {
-          return await apiGet<T>(path);
-        } catch (requestError) {
-          const detail = requestError instanceof Error ? requestError.message : "Error desconocido";
-          throw new Error(`${path} — ${detail}`);
-        }
-      };
       const [summaryData, accountData, txData, invData, categoryData, counterpartyData, tagData] = await Promise.all([
-        load<Summary>("/v1/summary"),
-        load<Account[]>("/v1/accounts"),
-        load<Transaction[]>("/v1/transactions?limit=250"),
-        load<Investment[]>("/v1/investments"),
-        load<Category[]>("/v1/categories"),
-        load<Counterparty[]>("/v1/counterparties"),
-        load<TxTag[]>("/v1/tags"),
+        apiGet<Summary>("/v1/summary"),
+        apiGet<Account[]>("/v1/accounts"),
+        apiGet<Transaction[]>("/v1/transactions?limit=250"),
+        apiGet<Investment[]>("/v1/investments"),
+        apiGet<Category[]>("/v1/categories"),
+        apiGet<Counterparty[]>("/v1/counterparties"),
+        apiGet<TxTag[]>("/v1/tags"),
       ]);
       setSummary(summaryData);
       setAccounts(accountData);
@@ -373,8 +391,7 @@ function HomeContent() {
       setCashflowReport(cashflowData);
       setCategoryBreakdown(breakdownData);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "No se pudieron cargar reportes.";
-      setError(message);
+      setError(formatApiError(err, "No se pudieron cargar reportes."));
     } finally {
       setReportsLoading(false);
     }
@@ -397,8 +414,7 @@ function HomeContent() {
       setProjectionScenarios(scenarioData);
       setMonthlyFinanceSummary(monthlySummaryData);
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "No se pudo cargar planificacion.";
-      setError(message);
+      setError(formatApiError(err, "No se pudo cargar planificación."));
     } finally {
       setPlanningLoading(false);
     }
