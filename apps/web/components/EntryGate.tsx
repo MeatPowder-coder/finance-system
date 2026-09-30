@@ -144,6 +144,9 @@ export default function EntryGate({ children }: EntryGateProps) {
   if (isAuthScreen) return <>{children}</>;
   if (state === "authenticated") return <>{children}</>;
   if (state === "offline") {
+    if (!readFinanceAuthToken()) {
+      return <WelcomeScreen returnTo={returnTo} apiBaseUrl={displayApiBaseUrl(configuredApiBaseUrl)} />;
+    }
     return <ConnectionScreen apiBaseUrl={configuredApiBaseUrl} message={message} retry={() => setRetryKey((value) => value + 1)} />;
   }
   if (state === "unauthenticated") {
