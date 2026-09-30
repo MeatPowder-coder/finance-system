@@ -951,14 +951,14 @@ function HomeContent() {
 
   return (
     <div className={tab === "copilot" ? "h-full min-h-0 overflow-hidden pt-12 md:pt-0" : "min-h-screen bg-transparent overflow-x-hidden pt-12 pb-6 md:pt-0"}>
-      <main className={tab === "copilot" ? "h-full min-h-0 w-full mx-auto px-4 py-4 md:px-6 md:py-6 lg:px-8" : "w-full xl:max-w-[1600px] mx-auto px-4 py-4 md:px-6 md:py-8 lg:px-8"}>
+      <main data-finance-tab={tab} className={tab === "copilot" ? "h-full min-h-0 w-full mx-auto px-4 py-4 md:px-6 md:py-6 lg:px-8" : "w-full xl:max-w-[1600px] mx-auto px-4 py-4 md:px-6 md:py-8 lg:px-8"}>
         {tab !== "copilot" && (
           <>
-        <section className="section-enter ui-shell-card mb-6 rounded-[32px] p-5 md:p-6">
+        <section className={`section-enter ui-shell-card mb-6 rounded-[32px] p-5 md:p-6 ${tab === "dashboard" ? "finance-dashboard-heading" : ""}`}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-1">
-              <h1 className="text-[clamp(2rem,4vw,2.75rem)] font-semibold tracking-tight text-zinc-100">{TAB_META[tab]?.label || "Dashboard"}</h1>
-              <p className="text-sm text-zinc-400">{tab === "dashboard" ? "Bienvenido de nuevo, Juan Camilo." : TAB_META[tab]?.caption}</p>
+              <h1 className="text-[clamp(2rem,4vw,2.75rem)] font-semibold tracking-tight text-zinc-100">{tab === "dashboard" ? "Tu dinero, en movimiento" : TAB_META[tab]?.label || "Dashboard"}</h1>
+              <p className="text-sm text-zinc-400">{tab === "dashboard" ? "Una lectura clara de lo que tienes, lo que entra y lo que viene." : TAB_META[tab]?.caption}</p>
             </div>
 
             <div className="flex items-center gap-2">
@@ -1015,8 +1015,8 @@ function HomeContent() {
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
-            <Card className="ui-kpi rounded-[22px]">
+          {tab !== "dashboard" && <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4 finance-dashboard-metrics">
+            <Card className="ui-kpi finance-dashboard-metric finance-dashboard-metric-balance rounded-[22px]">
               <CardContent className="flex items-start gap-3 p-4">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-cyan-500/15 text-cyan-200">
                   <Wallet className="h-5 w-5" />
@@ -1029,7 +1029,7 @@ function HomeContent() {
               </CardContent>
             </Card>
 
-            <Card className="ui-kpi rounded-[22px]">
+            <Card className="ui-kpi finance-dashboard-metric finance-dashboard-metric-income rounded-[22px]">
               <CardContent className="flex items-start gap-3 p-4">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-200">
                   <ArrowUpRight className="h-5 w-5" />
@@ -1042,7 +1042,7 @@ function HomeContent() {
               </CardContent>
             </Card>
 
-            <Card className="ui-kpi rounded-[22px]">
+            <Card className="ui-kpi finance-dashboard-metric finance-dashboard-metric-expense rounded-[22px]">
               <CardContent className="flex items-start gap-3 p-4">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-rose-500/15 text-rose-200">
                   <ArrowDownLeft className="h-5 w-5" />
@@ -1055,7 +1055,7 @@ function HomeContent() {
               </CardContent>
             </Card>
 
-            <Card className="ui-kpi rounded-[22px]">
+            <Card className="ui-kpi finance-dashboard-metric finance-dashboard-metric-net rounded-[22px]">
               <CardContent className="flex items-start gap-3 p-4">
                 <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full ${positiveMonth ? "bg-cyan-500/15 text-cyan-200" : "bg-amber-500/15 text-amber-200"}`}>
                   <BarChart3 className="h-5 w-5" />
@@ -1067,7 +1067,7 @@ function HomeContent() {
                 </div>
               </CardContent>
             </Card>
-          </div>
+          </div>}
         </section>
 
         <section className="section-enter mb-6 rounded-2xl border border-zinc-800 bg-zinc-950/70 p-2 md:p-3 backdrop-blur-sm md:hidden">
@@ -1456,6 +1456,11 @@ function HomeContent() {
         {tab === "dashboard" && (
           <DashboardView
             monthCoach={monthCoach}
+            monthFlow={{
+              balance: formatMoney(summary?.totalBalance || 0, "COP"),
+              income: formatMoney(summary?.monthInflow || 0, "COP"),
+              expense: formatMoney(summary?.monthOutflow || 0, "COP"),
+            }}
             positiveMonth={positiveMonth}
             dashboardActions={dashboardActions}
             dashboardBudgets={dashboardBudgets}

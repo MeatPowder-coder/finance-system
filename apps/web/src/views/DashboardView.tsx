@@ -43,6 +43,7 @@ export interface DashboardActionDef {
 
 export interface DashboardViewProps {
   monthCoach: MonthCoachState;
+  monthFlow: { balance: string; income: string; expense: string };
   positiveMonth: boolean;
   dashboardActions: DashboardActionDef[];
   dashboardBudgets: Budget[];
@@ -65,6 +66,7 @@ export interface DashboardViewProps {
 export function DashboardView(props: DashboardViewProps) {
   const {
     monthCoach,
+    monthFlow,
     positiveMonth,
     dashboardActions,
     dashboardBudgets,
@@ -161,7 +163,16 @@ export function DashboardView(props: DashboardViewProps) {
     <div className="dashboard-view-compact section-enter space-y-5">
       <Dialog open={focusedPanel !== null} onOpenChange={(open) => { if (!open) setFocusedPanel(null); }}>
       <section className="grid gap-4 xl:grid-cols-[1.4fr_0.8fr]">
-        <Card className={`${heroCardCls} relative min-h-[300px] overflow-hidden p-6 md:p-8`}>
+        <Card className={`${heroCardCls} finance-month-hero relative min-h-[330px] overflow-hidden p-6 md:p-8`}>
+          <svg className="finance-month-orbit" viewBox="0 0 360 280" fill="none" aria-hidden="true">
+            <ellipse cx="214" cy="140" rx="126" ry="134" />
+            <ellipse cx="214" cy="140" rx="96" ry="108" />
+            <ellipse cx="214" cy="140" rx="62" ry="78" />
+            <path d="M40 140H352" />
+            <circle cx="91" cy="140" r="7" />
+            <circle cx="214" cy="140" r="7" />
+            <circle cx="290" cy="140" r="7" />
+          </svg>
           <CardContent className="relative p-0">
             <div className="absolute right-0 top-0">{focusButton("month", "el resumen del mes")}</div>
             <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
@@ -190,6 +201,11 @@ export function DashboardView(props: DashboardViewProps) {
                     {monthCoach.amount}
                   </p>
                   <p className="mt-1 text-sm ui-muted">{monthCoach.caption}</p>
+                </div>
+                <div className="finance-month-readouts" aria-label="Flujo financiero del periodo">
+                  <div><span>En tus cuentas</span><strong>{monthFlow.balance}</strong></div>
+                  <div><span>Entró este mes</span><strong>{monthFlow.income}</strong></div>
+                  <div><span>Salió este mes</span><strong>{monthFlow.expense}</strong></div>
                 </div>
                 <p className="max-w-xl text-sm leading-6 ui-muted">{monthCoach.detail}</p>
               </div>
