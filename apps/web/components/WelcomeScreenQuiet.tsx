@@ -76,13 +76,13 @@ export default function WelcomeScreenQuiet({ returnTo, apiBaseUrl }: WelcomeScre
               <strong>Más claridad.<br />Menos ruido.</strong>
             </div>
             <div className="welcome-editorial-chart" aria-hidden="true">
-              <div className="welcome-editorial-chart-label"><span>FLUJO DEL MES</span><ArrowDownRight className="h-4 w-4" /></div>
+              <div className="welcome-editorial-chart-label"><span>UNA VISTA MÁS CLARA</span><ArrowDownRight className="h-4 w-4" /></div>
               <div className="welcome-editorial-bars">
                 {[42, 59, 48, 76, 63, 91, 70, 100, 79, 88, 68, 96].map((height, index) => (
                   <span key={index} style={{ height: `${height}%` }} />
                 ))}
               </div>
-              <div className="welcome-editorial-chart-foot"><span>INGRESOS</span><span>GASTOS</span><span>PLANES</span></div>
+              <div className="welcome-editorial-chart-foot"><span>MIRAR</span><span>ENTENDER</span><span>PLANEAR</span></div>
             </div>
             <div className="welcome-editorial-art-stamp" aria-hidden="true"><ChartNoAxesCombined className="h-5 w-5" /><span>FINANZAS<br />A TU MANERA</span></div>
           </aside>
