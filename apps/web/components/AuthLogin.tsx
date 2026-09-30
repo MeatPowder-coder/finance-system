@@ -423,12 +423,20 @@ export function AuthCallbackScreen() {
     })
       .then((result) => {
         persistAuthTokens(result.tokens);
-        clearStoredAuthFlow();
-        setStatus("done");
-        setMessage("Sesion iniciada. Abriendo el sistema...");
-        window.setTimeout(() => {
-        window.location.replace(normalizeReturnTo(flow.returnTo));
-      }, 600);
+        setMessage("Google confirmó tu cuenta. Verificando la sesión con FinanceSystem...");
+        return fetch(`${resolveFinanceApiBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4100")}/v1/auth/me`, {
+          cache: "no-store",
+          headers: buildFinanceHeaders(),
+        }).then(async (response) => {
+          if (!response.ok) {
+            throw new Error(`Google autorizó el acceso, pero FinanceSystem no validó la sesión (HTTP ${response.status}).`);
+          }
+
+          clearStoredAuthFlow();
+          setStatus("done");
+          setMessage("Sesión iniciada. Abriendo el sistema...");
+          router.replace(normalizeReturnTo(flow.returnTo));
+        });
       })
       .catch((callbackError: unknown) => {
         console.error(callbackError);
@@ -436,7 +444,7 @@ export function AuthCallbackScreen() {
         setStatus("error");
         setMessage(callbackError instanceof Error ? callbackError.message : "No se pudo completar el login.");
       });
-  }, [searchParams]);
+  }, [router, searchParams]);
 
   return (
     <div className="auth-screen auth-screen-quiet">
