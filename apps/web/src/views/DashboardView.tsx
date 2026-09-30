@@ -129,10 +129,22 @@ export function DashboardView(props: DashboardViewProps) {
   }, [focusedPanel]);
   React.useEffect(() => {
     if (!focusedPanel) return;
-    requestAnimationFrame(() => gridRef.current?.querySelector<HTMLButtonElement>(".finance-bento-tile.is-focused .finance-bento-close")?.focus({ preventScroll: true }));
+    const tiles = Array.from(gridRef.current?.querySelectorAll<HTMLElement>("[data-finance-panel]") ?? []);
+    tiles.forEach((tile) => { tile.inert = tile.dataset.financePanel !== focusedPanel; });
+    requestAnimationFrame(() => {
+      const selectedTile = gridRef.current?.querySelector<HTMLElement>(".finance-bento-tile.is-focused");
+      selectedTile?.scrollIntoView({
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+        block: "center",
+      });
+      gridRef.current?.querySelector<HTMLButtonElement>(".finance-bento-tile.is-focused .finance-bento-close")?.focus({ preventScroll: true });
+    });
     const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") { event.preventDefault(); closeFocus(); } };
     document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    return () => {
+      document.removeEventListener("keydown", onKeyDown);
+      tiles.forEach((tile) => { tile.inert = false; });
+    };
   }, [focusedPanel]);
   const actionByKey = React.useMemo(() => {
     const map: Record<string, DashboardActionDef> = {};

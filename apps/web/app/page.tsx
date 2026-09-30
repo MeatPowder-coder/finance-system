@@ -192,15 +192,6 @@ function withApiEndpoint(path: string, error: unknown) {
   return new Error(detail.startsWith(`${path} — `) ? detail : `${path} — ${detail}`);
 }
 
-function formatApiError(error: unknown, fallback: string) {
-  if (!(error instanceof Error)) return fallback;
-  if (/failed to fetch|fetch failed|networkerror|no se pudo conectar con finance system/i.test(error.message)) {
-    const endpoint = error.message.split(" — ")[0];
-    return `No se pudo conectar con la API al solicitar ${endpoint}. Revisa la conexión y vuelve a intentarlo.`;
-  }
-  return error.message || fallback;
-}
-
 function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -323,37 +314,40 @@ function HomeContent() {
   async function refreshData() {
     setLoading(true);
     setError(null);
-    try {
-      const [summaryData, accountData, txData, invData, categoryData, counterpartyData, tagData] = await Promise.all([
-        apiGet<Summary>("/v1/summary"),
-        apiGet<Account[]>("/v1/accounts"),
-        apiGet<Transaction[]>("/v1/transactions?limit=250"),
-        apiGet<Investment[]>("/v1/investments"),
-        apiGet<Category[]>("/v1/categories"),
-        apiGet<Counterparty[]>("/v1/counterparties"),
-        apiGet<TxTag[]>("/v1/tags"),
-      ]);
-      setSummary(summaryData);
-      setAccounts(accountData);
-      setTransactions(txData);
-      setInvestments(invData);
-      setCategories(categoryData);
-      setCounterparties(counterpartyData);
-      setTags(tagData);
-    } catch (err: unknown) {
-      const rawMessage = err instanceof Error ? err.message : "No se pudo cargar la información.";
+    const results = await Promise.allSettled([
+      apiGet<Summary>("/v1/summary"),
+      apiGet<Account[]>("/v1/accounts"),
+      apiGet<Transaction[]>("/v1/transactions?limit=250"),
+      apiGet<Investment[]>("/v1/investments"),
+      apiGet<Category[]>("/v1/categories"),
+      apiGet<Counterparty[]>("/v1/counterparties"),
+      apiGet<TxTag[]>("/v1/tags"),
+    ]);
+    const rejected = results.flatMap((result) => result.status === "rejected" ? [result.reason] : []);
+    const authFailure = rejected.find((reason) => /autenticaci[oó]n requerida|unauthorized/i.test(reason instanceof Error ? reason.message : String(reason)));
+    if (authFailure) {
+      const rawMessage = authFailure instanceof Error ? authFailure.message : String(authFailure);
       if (/autenticaci[oó]n requerida|unauthorized/i.test(rawMessage)) {
         clearAuthSession();
         router.replace(`/?auth=login&returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`);
-      } else if (/failed to fetch|fetch failed|networkerror|no se pudo conectar con finance system/i.test(rawMessage)) {
-        const endpoint = rawMessage.split(" — ")[0];
-        setError(`No se pudo conectar con la API al cargar ${endpoint}. Revisa la conexión y vuelve a intentarlo. No mostramos saldos de muestra.`);
-      } else {
-        setError(rawMessage);
       }
-    } finally {
       setLoading(false);
+      return;
     }
+
+    if (results[0].status === "fulfilled") setSummary(results[0].value);
+    if (results[1].status === "fulfilled") setAccounts(results[1].value);
+    if (results[2].status === "fulfilled") setTransactions(results[2].value);
+    if (results[3].status === "fulfilled") setInvestments(results[3].value);
+    if (results[4].status === "fulfilled") setCategories(results[4].value);
+    if (results[5].status === "fulfilled") setCounterparties(results[5].value);
+    if (results[6].status === "fulfilled") setTags(results[6].value);
+
+    if (rejected.length) {
+      const endpoints = rejected.map((reason) => reason instanceof Error ? reason.message.split(" — ")[0] : "un servicio de FinanceSystem");
+      setError(`Algunos datos no respondieron (${endpoints.join(", ")}). Conservamos visibles las secciones que sí cargaron; reintenta para actualizar.`);
+    }
+    setLoading(false);
   }
 
   async function refreshSessions() {
@@ -379,45 +373,43 @@ function HomeContent() {
   async function refreshReports() {
     setReportsLoading(true);
     setError(null);
-    try {
-      const qs = new URLSearchParams();
-      if (reportRange.from) qs.set("from", reportRange.from);
-      if (reportRange.to) qs.set("to", reportRange.to);
-      const query = qs.toString();
-      const [cashflowData, breakdownData] = await Promise.all([
-        apiGet<CashflowReportItem[]>(`/v1/reports/cashflow${query ? `?${query}` : ""}`),
-        apiGet<CategoryBreakdownItem[]>(`/v1/reports/category-breakdown${query ? `?${query}` : ""}`),
-      ]);
-      setCashflowReport(cashflowData);
-      setCategoryBreakdown(breakdownData);
-    } catch (err: unknown) {
-      setError(formatApiError(err, "No se pudieron cargar reportes."));
-    } finally {
-      setReportsLoading(false);
-    }
+    const qs = new URLSearchParams();
+    if (reportRange.from) qs.set("from", reportRange.from);
+    if (reportRange.to) qs.set("to", reportRange.to);
+    const query = qs.toString();
+    const [cashflowResult, breakdownResult] = await Promise.allSettled([
+      apiGet<CashflowReportItem[]>(`/v1/reports/cashflow${query ? `?${query}` : ""}`),
+      apiGet<CategoryBreakdownItem[]>(`/v1/reports/category-breakdown${query ? `?${query}` : ""}`),
+    ]);
+    if (cashflowResult.status === "fulfilled") setCashflowReport(cashflowResult.value);
+    if (breakdownResult.status === "fulfilled") setCategoryBreakdown(breakdownResult.value);
+    const failedEndpoints = [cashflowResult, breakdownResult]
+      .flatMap((result) => result.status === "rejected" ? [result.reason] : [])
+      .map((reason) => reason instanceof Error ? reason.message.split(" — ")[0] : "un reporte");
+    if (failedEndpoints.length) setError(`No se pudieron actualizar ${failedEndpoints.join(" y ")}. Los demás datos siguen disponibles.`);
+    setReportsLoading(false);
   }
 
   async function refreshPlanning() {
     setPlanningLoading(true);
     setError(null);
-    try {
-      const [budgetData, deficitData, commitmentData, scenarioData, monthlySummaryData] = await Promise.all([
-        apiGet<Budget[]>(`/v1/budgets?month=${planningMonth}`),
-        apiGet<BudgetDeficitEvent[]>(`/v1/budget-deficits?month=${planningMonth}`),
-        apiGet<Commitment[]>(`/v1/commitments?month=${planningMonth}`),
-        apiGet<ProjectionScenario[]>("/v1/projections/scenarios"),
-        apiGet<MonthlyFinanceSummary>(`/v1/reports/monthly-finance-summary?month=${planningMonth}`),
-      ]);
-      setBudgets(budgetData);
-      setBudgetDeficitEvents(deficitData);
-      setCommitments(commitmentData);
-      setProjectionScenarios(scenarioData);
-      setMonthlyFinanceSummary(monthlySummaryData);
-    } catch (err: unknown) {
-      setError(formatApiError(err, "No se pudo cargar planificación."));
-    } finally {
-      setPlanningLoading(false);
-    }
+    const results = await Promise.allSettled([
+      apiGet<Budget[]>(`/v1/budgets?month=${planningMonth}`),
+      apiGet<BudgetDeficitEvent[]>(`/v1/budget-deficits?month=${planningMonth}`),
+      apiGet<Commitment[]>(`/v1/commitments?month=${planningMonth}`),
+      apiGet<ProjectionScenario[]>("/v1/projections/scenarios"),
+      apiGet<MonthlyFinanceSummary>(`/v1/reports/monthly-finance-summary?month=${planningMonth}`),
+    ]);
+    if (results[0].status === "fulfilled") setBudgets(results[0].value);
+    if (results[1].status === "fulfilled") setBudgetDeficitEvents(results[1].value);
+    if (results[2].status === "fulfilled") setCommitments(results[2].value);
+    if (results[3].status === "fulfilled") setProjectionScenarios(results[3].value);
+    if (results[4].status === "fulfilled") setMonthlyFinanceSummary(results[4].value);
+    const failedEndpoints = results
+      .flatMap((result) => result.status === "rejected" ? [result.reason] : [])
+      .map((reason) => reason instanceof Error ? reason.message.split(" — ")[0] : "un servicio de planificación");
+    if (failedEndpoints.length) setError(`No se pudieron actualizar ${failedEndpoints.join(", ")}. Las demás secciones siguen disponibles.`);
+    setPlanningLoading(false);
   }
 
   function resetBudgetDialogState() {
@@ -985,11 +977,13 @@ function HomeContent() {
   }
 
   return (
-    <div className={tab === "copilot" ? "h-full min-h-0 overflow-hidden pt-12 md:pt-0" : "min-h-screen bg-transparent overflow-x-hidden pt-12 pb-6 md:pt-0"}>
-      <main data-finance-tab={tab} className={tab === "copilot" ? "h-full min-h-0 w-full mx-auto px-4 py-4 md:px-6 md:py-6 lg:px-8" : "w-full xl:max-w-[1600px] mx-auto px-4 py-4 md:px-6 md:py-5 lg:px-8"}>
-        {tab !== "copilot" && (
-          <>
+    <div className={tab === "copilot" ? "flex h-full min-h-0 flex-col overflow-hidden pt-12 md:pt-0" : "min-h-screen bg-transparent overflow-x-hidden pt-12 pb-6 md:pt-0"}>
+      <main data-finance-tab={tab} className={tab === "copilot" ? "flex h-full min-h-0 w-full flex-col mx-auto px-4 py-3 md:px-6 md:py-4 lg:px-8" : "w-full xl:max-w-[1600px] mx-auto px-4 py-4 md:px-6 md:py-5 lg:px-8"}>
         <nav aria-label="Navegación principal" className="finance-primary-tabs section-enter mb-4">
+          <div className="finance-nav-masthead">
+            <div className="finance-nav-masthead-label"><span>Secciones</span><small>08 espacios · tus finanzas en movimiento</small></div>
+            <div className="finance-header-palette"><ThemeSelector collapsed showSwatches /></div>
+          </div>
           <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8">
             {TABS.map((item, index) => {
               const tabConfig = TAB_META[item];
@@ -1016,6 +1010,8 @@ function HomeContent() {
             })}
           </div>
         </nav>
+        {tab !== "copilot" && (
+          <>
         <section className={`section-enter ui-shell-card mb-6 rounded-[32px] p-5 md:p-6 ${tab === "dashboard" ? "finance-dashboard-heading" : ""}`}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-1">
@@ -1025,7 +1021,6 @@ function HomeContent() {
             </div>
 
             <div className="flex items-center gap-2">
-              <div className="finance-header-palette"><ThemeSelector collapsed showCurrentTheme /></div>
                 {tab !== "dashboard" && <Select value={planningMonth} onValueChange={setPlanningMonth}>
                   <SelectTrigger className="ui-control h-11 w-[170px] rounded-2xl px-4">
                     <div className="flex items-center gap-2">
@@ -1653,7 +1648,7 @@ function HomeContent() {
         )}
 
         {tab === "copilot" && (
-          <div className="section-enter ui-shell-card h-full min-h-0 overflow-hidden rounded-[28px]">
+          <div className="section-enter ui-shell-card min-h-0 flex-1 overflow-hidden rounded-[28px]">
             <ChatInterfaceFinance />
           </div>
         )}

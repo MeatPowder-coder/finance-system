@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 interface ThemeSelectorProps {
   collapsed?: boolean;
   showCurrentTheme?: boolean;
+  showSwatches?: boolean;
   panel?: boolean;
   onThemeChange?: (theme: string) => void;
   onBackgroundChange?: (mode: BackgroundMode) => void;
@@ -113,7 +114,7 @@ const THEME_OPTIONS: ThemeOption[] = [
 const THEME_CLASS_NAMES = THEME_OPTIONS.map((option) => "theme-" + option.value);
 const THEME_CHANGE_EVENT = "finance-theme-change";
 
-export function ThemeSelector({ collapsed, showCurrentTheme = false, panel = false, onThemeChange, onBackgroundChange }: ThemeSelectorProps) {
+export function ThemeSelector({ collapsed, showCurrentTheme = false, showSwatches = false, panel = false, onThemeChange, onBackgroundChange }: ThemeSelectorProps) {
   const [theme, setTheme] = useState<ThemeId>("dark");
   const [backgroundMode, setBackgroundMode] = useState<BackgroundMode>("auto");
 
@@ -344,13 +345,13 @@ export function ThemeSelector({ collapsed, showCurrentTheme = false, panel = fal
     </DropdownMenu>
   );
 
-  if (!showCurrentTheme) return selectorMenu;
+  if (!showCurrentTheme && !showSwatches) return selectorMenu;
 
   return (
     <div className="theme-selector-control">
       {selectorMenu}
       <div className="theme-swatch-strip" role="group" aria-label="Elegir paleta de colores">
-        <span className="theme-swatch-label">{THEME_OPTIONS.length} paletas</span>
+        <span className="theme-swatch-label">{THEME_OPTIONS.length} paletas · {currentTheme.label}</span>
         {THEME_OPTIONS.map((option) => (
           <button
             key={option.value}
