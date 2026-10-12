@@ -112,12 +112,16 @@ export function DashboardView(props: DashboardViewProps) {
     previousTileRectsRef.current = rects;
   };
   const openFocus = (panel: NonNullable<typeof focusedPanel>, trigger?: HTMLElement | null) => {
-    if (focusedPanel) return;
-    focusReturnRef.current = trigger?.closest<HTMLElement>("[data-finance-panel]")
-      || trigger
-      || (document.activeElement instanceof HTMLElement ? document.activeElement : null);
-    const scrollContainer = document.querySelector<HTMLElement>(".finance-app-scroll");
-    focusScrollTopRef.current = scrollContainer?.scrollTop ?? null;
+    // Keep the dashboard as a working grid: selecting another card switches
+    // the expanded detail in place instead of locking the page behind it.
+    if (focusedPanel === panel) return;
+    if (!focusedPanel) {
+      focusReturnRef.current = trigger?.closest<HTMLElement>("[data-finance-panel]")
+        || trigger
+        || (document.activeElement instanceof HTMLElement ? document.activeElement : null);
+      const scrollContainer = document.querySelector<HTMLElement>(".finance-app-scroll");
+      focusScrollTopRef.current = scrollContainer?.scrollTop ?? null;
+    }
     rememberTileRects();
     setFocusedPanel(panel);
   };
@@ -161,22 +165,19 @@ export function DashboardView(props: DashboardViewProps) {
   }, [focusedPanel]);
   React.useEffect(() => {
     if (!focusedPanel) return;
-    const tiles = Array.from(gridRef.current?.querySelectorAll<HTMLElement>("[data-finance-panel]") ?? []);
-    const surroundingPanels = Array.from(document.querySelectorAll<HTMLElement>(
-      ".finance-app-scroll main[data-finance-tab=\"dashboard\"] > :not(.finance-bento-dashboard), .finance-app-sidebar, .copilot-rail, .finance-notification, .finance-mobile-header, .finance-bento-rail"
-    ));
-    tiles.forEach((tile) => { tile.inert = tile.dataset.financePanel !== focusedPanel; });
-    surroundingPanels.forEach((panel) => { panel.inert = true; });
-    document.body.classList.add("finance-focus-mode");
     requestAnimationFrame(() => {
       const selectedTile = gridRef.current?.querySelector<HTMLElement>(".finance-bento-tile.is-focused");
       const scrollContainer = document.querySelector<HTMLElement>(".finance-app-scroll");
       if (selectedTile && scrollContainer) {
         const cardRect = selectedTile.getBoundingClientRect();
         const scrollRect = scrollContainer.getBoundingClientRect();
-        const offsetFromCenter = cardRect.top + cardRect.height / 2 - (scrollRect.top + scrollRect.height / 2);
-        if (Math.abs(offsetFromCenter) > 24) {
-          const targetTop = scrollContainer.scrollTop + offsetFromCenter;
+        // Reveal only the clipped edge of a tall expanded card; don't center
+        // it or move the rest of the dashboard out of the user's view.
+        const clippedTop = cardRect.top < scrollRect.top ? cardRect.top - scrollRect.top : 0;
+        const clippedBottom = cardRect.bottom > scrollRect.bottom ? cardRect.bottom - scrollRect.bottom : 0;
+        const scrollDelta = clippedTop || clippedBottom;
+        if (scrollDelta) {
+          const targetTop = scrollContainer.scrollTop + scrollDelta;
           scrollContainer.scrollTo({
             top: Math.max(0, Math.min(targetTop, scrollContainer.scrollHeight - scrollContainer.clientHeight)),
             behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
@@ -186,24 +187,9 @@ export function DashboardView(props: DashboardViewProps) {
       gridRef.current?.querySelector<HTMLButtonElement>(".finance-bento-tile.is-focused .finance-bento-close")?.focus({ preventScroll: true });
     });
     const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") { event.preventDefault(); closeFocus(); } };
-    // The selected tile is expanded in the grid, so there is no modal backdrop
-    // to click. A capture listener lets a click on the dimmed page/grid close it
-    // even when the surrounding UI has pointer-events disabled by its blur state.
-    const onPointerDown = (event: PointerEvent) => {
-      const target = event.target;
-      if (!(target instanceof Node)) return;
-      const selectedTile = gridRef.current?.querySelector<HTMLElement>(`[data-finance-panel="${focusedPanel}"]`);
-      if (selectedTile?.contains(target)) return;
-      closeFocus();
-    };
     document.addEventListener("keydown", onKeyDown);
-    document.addEventListener("pointerdown", onPointerDown, true);
     return () => {
       document.removeEventListener("keydown", onKeyDown);
-      document.removeEventListener("pointerdown", onPointerDown, true);
-      tiles.forEach((tile) => { tile.inert = false; });
-      surroundingPanels.forEach((panel) => { panel.inert = false; });
-      document.body.classList.remove("finance-focus-mode");
     };
   }, [focusedPanel]);
   const actionByKey = React.useMemo(() => {

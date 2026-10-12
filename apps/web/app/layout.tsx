@@ -15,7 +15,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="es" className="light theme-light">
+    <html lang="es" className="dark theme-dark">
       <body className="font-sans">
         <Suspense fallback={<div className="p-4 text-sm text-zinc-500">Cargando interfaz...</div>}>
           <EntryGate>

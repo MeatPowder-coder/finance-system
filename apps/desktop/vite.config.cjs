@@ -6,30 +6,11 @@ const envDir = path.resolve(__dirname, "../..");
 
 module.exports = defineConfig(async ({ mode }) => {
   const env = loadEnv(mode, envDir, "");
-  const desktopEnv = loadEnv(mode, __dirname, "VITE_");
   const apiProxyTarget = env.API_PROXY_TARGET || "http://localhost:4100";
-  const remoteApiProxyTarget = "https://finance-api.agentame.xyz";
   const localPreview = mode === "local-preview";
-  let developmentApiProxyTarget = apiProxyTarget;
-  let localDevelopmentApiAvailable = false;
-
-  if (mode === "development" && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/i.test(apiProxyTarget)) {
-    try {
-      const health = await fetch(`${apiProxyTarget.replace(/\/+$/, "")}/health`, {
-        signal: AbortSignal.timeout(800),
-        cache: "no-store",
-      });
-      localDevelopmentApiAvailable = health.ok;
-      if (!localDevelopmentApiAvailable) developmentApiProxyTarget = remoteApiProxyTarget;
-    } catch {
-      // The local API is optional for frontend development. Fall back to the
-      // browser-accessible Finance service when localhost:4100 is not running.
-      developmentApiProxyTarget = remoteApiProxyTarget;
-    }
-  }
-  const configuredDirectApiUrl = env.FINANCE_LOCAL_PREVIEW_API_URL || env.VITE_API_BASE_URL || desktopEnv.VITE_API_BASE_URL ||
-    (env.NEXT_PUBLIC_API_BASE_URL && !env.NEXT_PUBLIC_API_BASE_URL.startsWith("/") ? env.NEXT_PUBLIC_API_BASE_URL : "");
-  let previewApiProxyTarget = configuredDirectApiUrl || apiProxyTarget;
+  // A local preview stays attached to the local API by default. Reaching a
+  // remote finance account is explicit via FINANCE_LOCAL_PREVIEW_API_URL.
+  let previewApiProxyTarget = env.FINANCE_LOCAL_PREVIEW_API_URL || apiProxyTarget;
 
   if (localPreview && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/i.test(apiProxyTarget)) {
     try {
@@ -39,7 +20,7 @@ module.exports = defineConfig(async ({ mode }) => {
       });
       if (health.ok) previewApiProxyTarget = apiProxyTarget;
     } catch {
-      // Keep the configured direct API fallback when the local API is offline.
+      // Keep the local target so an offline backend is visible as offline.
     }
   }
 
@@ -73,7 +54,7 @@ module.exports = defineConfig(async ({ mode }) => {
       fs: {
         allow: [path.resolve(__dirname, "..")],
       },
-      proxy: makeApiProxy(mode === "development" ? developmentApiProxyTarget : apiProxyTarget),
+      proxy: makeApiProxy(apiProxyTarget),
     },
     preview: {
       proxy: makeApiProxy(localPreview ? previewApiProxyTarget : apiProxyTarget),

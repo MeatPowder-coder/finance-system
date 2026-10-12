@@ -1,28 +1,24 @@
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
 const apiProxyTarget = process.env.API_PROXY_TARGET || "http://localhost:4100";
-const remoteApiProxyTarget = "https://finance-api.agentame.xyz";
+const webAppRoot = path.dirname(fileURLToPath(import.meta.url));
 
 async function resolveDevelopmentApiProxyTarget() {
-  const localTarget = /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/i.test(apiProxyTarget);
-  if (process.env.NODE_ENV !== "development" || !localTarget) return apiProxyTarget;
-
-  // Prefer the local API when it is running. If the developer only has the
-  // web process up, route the local UI to the healthy Finance API instead of
-  // leaving it on a dead localhost:4100 and surfacing "Failed to fetch".
-  try {
-    const health = await fetch(`${apiProxyTarget.replace(/\/+$/, "")}/health`, {
-      signal: AbortSignal.timeout(800),
-      cache: "no-store",
-    });
-    if (health.ok) return apiProxyTarget;
-  } catch {
-    // Continue to the remote API fallback below.
-  }
-
-  return remoteApiProxyTarget;
+  // Keep localhost app development on its configured backend. A remote API
+  // must be selected explicitly with API_PROXY_TARGET; otherwise local data
+  // and OAuth state can silently split across origins.
+  return apiProxyTarget;
 }
 
 /** @type {import("next").NextConfig} */
 const nextConfig = {
+  webpack(config) {
+    // Keep the web package's @/ imports anchored to this app when Next is
+    // invoked through a workspace script from the monorepo root.
+    config.resolve.alias["@"] = webAppRoot;
+    return config;
+  },
   async rewrites() {
     const resolvedApiProxyTarget = await resolveDevelopmentApiProxyTarget();
     return [
