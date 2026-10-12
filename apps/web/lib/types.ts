@@ -336,4 +336,4 @@ export const MOBILE_TABS: TabKey[] = [
 
 export const NONE_VALUE = "__NONE__";
 
-export const DASHBOARD_BUDGET_PAGE_SIZE = 3;
+export const DASHBOARD_BUDGET_PAGE_SIZE = 4;

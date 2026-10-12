@@ -1,17 +1,17 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { usePathname, useSearchParams } from "next/navigation";
-import { CloudOff, Loader2, RefreshCw, ShieldCheck } from "lucide-react";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { CloudOff, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { clearAuthSession } from "@/lib/auth";
+import { clearAuthSession, recoverAuthSession } from "@/lib/auth";
 import {
   buildFinanceHeaders,
+  requestFinanceApi,
   readFinanceAuthToken,
   resolveFinanceApiBaseUrl,
 } from "@/lib/runtime-config";
 import WelcomeScreen from "@/components/WelcomeScreenQuiet";
-import { ThemeSelector } from "@/components/ThemeSelector";
 
 type GateState = "checking" | "offline" | "unauthenticated" | "authenticated";
 
@@ -23,33 +23,33 @@ function displayApiBaseUrl(value: string) {
   return value.startsWith("/") ? `${value} (proxy same-origin)` : value || "Backend no configurado";
 }
 
-function ConnectionScreen({ apiBaseUrl, message, retry }: { apiBaseUrl: string; message: string; retry: () => void }) {
+function ConnectionBanner({ apiBaseUrl, message, retry }: { apiBaseUrl: string; message: string; retry: () => void }) {
   return (
-    <div className="entry-connection-screen">
-      <div className="entry-connection-glow" aria-hidden="true" />
-      <div className="entry-connection-card">
-        <div className="entry-connection-theme"><ThemeSelector collapsed showCurrentTheme /></div>
-        <div className="entry-connection-icon"><CloudOff className="h-6 w-6" /></div>
-        <span className="welcome-eyebrow"><ShieldCheck className="h-3.5 w-3.5" /> FinanceSystem</span>
-        <h1>No pudimos conectar tu espacio.</h1>
-        <p>{message}</p>
-        <div className="entry-connection-detail">
-          <span className="entry-connection-dot entry-connection-dot-offline" />
-          <span>{displayApiBaseUrl(apiBaseUrl)}</span>
-        </div>
-        <Button type="button" onClick={retry} className="entry-connection-button">
-          <RefreshCw className="h-4 w-4" /> Reintentar conexion
-        </Button>
-      </div>
+    <div className="entry-offline-banner" role="status" aria-live="polite">
+      <span className="entry-offline-indicator"><CloudOff className="h-4 w-4" /></span>
+      <span className="entry-offline-copy">
+        <strong>Modo sin conexión</strong>
+        <span>{message} · {displayApiBaseUrl(apiBaseUrl)}</span>
+      </span>
+      <Button type="button" variant="outline" onClick={retry} className="entry-offline-retry">
+        <RefreshCw className="h-4 w-4" /> Reintentar
+      </Button>
     </div>
   );
 }
 
 export default function EntryGate({ children }: EntryGateProps) {
   const pathname = usePathname();
+  const router = useRouter();
   const searchParams = useSearchParams();
   const authMode = searchParams.get("auth");
-  const isAuthScreen = authMode === "login" || authMode === "callback" || pathname.startsWith("/auth/");
+  // Some OAuth configurations return to the origin root even when the app
+  // requested /auth/callback. Keep the callback out of the welcome gate so
+  // its code/state can be exchanged instead of being silently ignored.
+  const hasOAuthCallback = Boolean(
+    searchParams.has("state") && (searchParams.has("code") || searchParams.has("error"))
+  );
+  const isAuthScreen = authMode === "login" || authMode === "callback" || pathname.startsWith("/auth/") || hasOAuthCallback;
   const returnTo = useMemo(() => {
     if (pathname === "/chat") return "/?tab=copilot";
     if (pathname !== "/") return "/?tab=dashboard";
@@ -81,7 +81,7 @@ export default function EntryGate({ children }: EntryGateProps) {
       setMessage("Estamos preparando tu espacio privado.");
 
       try {
-        const healthResponse = await fetch(`${apiBaseUrl}/health`, {
+        const healthResponse = await requestFinanceApi(`${apiBaseUrl}/health`, {
           cache: "no-store",
           signal: controller.signal,
         });
@@ -92,7 +92,7 @@ export default function EntryGate({ children }: EntryGateProps) {
         const healthPayload = await healthResponse.json();
         if (healthPayload?.ok !== true) throw new Error("Finance System API no confirmó disponibilidad.");
 
-        const authConfigResponse = await fetch(`${apiBaseUrl}/v1/auth/config`, {
+        const authConfigResponse = await requestFinanceApi(`${apiBaseUrl}/v1/auth/config`, {
           cache: "no-store",
           signal: controller.signal,
         });
@@ -109,7 +109,7 @@ export default function EntryGate({ children }: EntryGateProps) {
           return;
         }
 
-        const sessionResponse = await fetch(`${apiBaseUrl}/v1/auth/me`, {
+        const sessionResponse = await requestFinanceApi(`${apiBaseUrl}/v1/auth/me`, {
           cache: "no-store",
           headers: buildFinanceHeaders(),
           signal: controller.signal,
@@ -117,8 +117,26 @@ export default function EntryGate({ children }: EntryGateProps) {
 
         if (cancelled) return;
         if (sessionResponse.status === 401) {
+          if (await recoverAuthSession()) {
+            const retryResponse = await requestFinanceApi(`${apiBaseUrl}/v1/auth/me`, {
+              cache: "no-store",
+              headers: buildFinanceHeaders(),
+              signal: controller.signal,
+            });
+            if (cancelled) return;
+            if (retryResponse.ok) {
+              setState("authenticated");
+              return;
+            }
+          }
+          if (cancelled) return;
           clearAuthSession();
-          setState("unauthenticated");
+          const loginUrl = new URLSearchParams({
+            auth: "login",
+            authError: "session-rejected",
+            returnTo,
+          });
+          router.replace(`/?${loginUrl.toString()}`);
           return;
         }
         if (!sessionResponse.ok) throw new Error(`Sesion HTTP ${sessionResponse.status}`);
@@ -139,7 +157,7 @@ export default function EntryGate({ children }: EntryGateProps) {
       controller.abort();
       window.clearTimeout(timeout);
     };
-  }, [apiBaseUrl, isAuthScreen, retryKey]);
+  }, [apiBaseUrl, isAuthScreen, retryKey, returnTo, router]);
 
   if (isAuthScreen) return <>{children}</>;
   if (state === "authenticated") return <>{children}</>;
@@ -147,7 +165,10 @@ export default function EntryGate({ children }: EntryGateProps) {
     if (!readFinanceAuthToken()) {
       return <WelcomeScreen returnTo={returnTo} apiBaseUrl={displayApiBaseUrl(configuredApiBaseUrl)} />;
     }
-    return <ConnectionScreen apiBaseUrl={configuredApiBaseUrl} message={message} retry={() => setRetryKey((value) => value + 1)} />;
+    return <>
+      {children}
+      <ConnectionBanner apiBaseUrl={configuredApiBaseUrl} message={message} retry={() => setRetryKey((value) => value + 1)} />
+    </>;
   }
   if (state === "unauthenticated") {
     return <WelcomeScreen returnTo={returnTo} apiBaseUrl={displayApiBaseUrl(configuredApiBaseUrl)} />;

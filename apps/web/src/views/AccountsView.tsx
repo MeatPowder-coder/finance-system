@@ -29,6 +29,7 @@ export interface AccountsViewProps {
 }
 
 const ACCOUNT_TYPES: AccountType[] = ["CHECKING", "SAVINGS", "CREDIT_CARD", "CASH", "INVESTMENT", "LOAN", "OTHER"];
+const ACCOUNT_CARD_SWATCHES = ["lime", "mint", "orange", "pink"] as const;
 
 export function AccountsView({
   accounts,
@@ -91,15 +92,37 @@ export function AccountsView({
       />
 
       <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-        <Card className="ui-shell-card overflow-hidden border-l-4 border-l-brand"><CardContent className="p-5 md:p-6"><p className="text-xs font-semibold uppercase tracking-[0.17em] ui-muted">Cuentas activas</p><p className="mt-2 text-4xl font-bold tracking-[-0.06em] text-brand">{accountTotals.active}</p><p className="mt-1 text-sm ui-muted">Bolsillos que sostienen tu día a día</p></CardContent></Card>
-        <Card className="ds-soft-card"><CardContent className="p-5 md:p-6"><p className="text-xs font-semibold uppercase tracking-[0.17em] ui-muted">Saldo positivo</p><p className="mt-2 break-words text-3xl font-bold tracking-[-0.05em] text-positive md:text-4xl">{formatMoney(accountTotals.positive, "COP")}</p><p className="mt-1 text-sm ui-muted">Disponible en cuentas con saldo a favor</p></CardContent></Card>
-        <Card className="ds-soft-card"><CardContent className="p-5 md:p-6"><p className="text-xs font-semibold uppercase tracking-[0.17em] ui-muted">Sobregiros</p><p className="mt-2 break-words text-3xl font-bold tracking-[-0.05em] text-danger md:text-4xl">{formatMoney(accountTotals.negative, "COP")}</p><p className="mt-1 text-sm ui-muted">Saldos por atender</p></CardContent></Card>
+        <Card className="relative overflow-hidden rounded-[1.6rem] border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-forest)] text-[var(--ui-editorial-hero-text)] shadow-[5px_6px_0_var(--ui-editorial-ink)]">
+          <CardContent className="relative p-5 md:p-6">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em] opacity-75">01 / ESTRUCTURA</p>
+            <p className="mt-5 text-xs font-semibold uppercase tracking-[0.17em] opacity-80">Cuentas activas</p>
+            <p className="mt-1 text-5xl font-black leading-none tracking-[-0.07em]">{accountTotals.active}</p>
+            <p className="mt-3 max-w-[18rem] text-sm opacity-80">Bolsillos que sostienen tu día a día</p>
+            <Wallet aria-hidden="true" className="absolute bottom-5 right-5 h-12 w-12 opacity-20" />
+          </CardContent>
+        </Card>
+        <Card className="rounded-[1.6rem] border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-lime)] text-[var(--ui-editorial-card-ink,var(--ui-editorial-ink))] shadow-[4px_5px_0_var(--ui-editorial-card-shadow)]">
+          <CardContent className="p-5 md:p-6">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em]">02 / A FAVOR</p>
+            <p className="mt-5 text-xs font-semibold uppercase tracking-[0.17em]">Saldo positivo</p>
+            <p className="mt-1 break-words text-3xl font-black leading-tight tracking-[-0.06em] md:text-4xl">{formatMoney(accountTotals.positive, "COP")}</p>
+            <p className="mt-3 text-sm opacity-75">Disponible en cuentas con saldo a favor</p>
+          </CardContent>
+        </Card>
+        <Card className="rounded-[1.6rem] border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-pink)] text-[var(--ui-editorial-card-ink,var(--ui-editorial-ink))] shadow-[4px_5px_0_var(--ui-editorial-card-shadow)]">
+          <CardContent className="p-5 md:p-6">
+            <p className="text-[10px] font-bold uppercase tracking-[0.2em]">03 / POR ATENDER</p>
+            <p className="mt-5 text-xs font-semibold uppercase tracking-[0.17em]">Sobregiros</p>
+            <p className="mt-1 break-words text-3xl font-black leading-tight tracking-[-0.06em] md:text-4xl">{formatMoney(accountTotals.negative, "COP")}</p>
+            <p className="mt-3 text-sm opacity-75">Saldos por atender</p>
+          </CardContent>
+        </Card>
       </div>
 
-      <Card className="ui-shell-card overflow-hidden">
+      <Card className="ui-shell-card overflow-hidden rounded-[1.6rem] border-2 border-[var(--ui-editorial-ink)] shadow-[5px_6px_0_var(--ui-editorial-ink)]">
         <CardContent className="p-4 md:p-6">
           <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
-            <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">Tu mapa financiero</p><h2 className="mt-1 text-2xl font-semibold tracking-[-0.04em] text-fg">Cuentas y bolsillos</h2><p className="mt-1 text-sm ui-muted">{accounts.length} fuentes de dinero para tener en perspectiva.</p></div>
+            <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand">04 / INVENTARIO FINANCIERO</p><h2 className="mt-1 text-3xl font-black tracking-[-0.055em] text-fg">Cuentas y bolsillos</h2><p className="mt-1 text-sm ui-muted">{accounts.length} fuentes de dinero para tener en perspectiva.</p></div>
             {accounts.length > 0 && <div className="flex rounded-xl border border-surface-2 bg-surface-1 p-1" role="group" aria-label="Vista de cuentas">
               <Button type="button" size="sm" variant={viewMode === "cards" ? "default" : "ghost"} aria-pressed={viewMode === "cards"} onClick={() => setViewMode("cards")} className={viewMode === "cards" ? "bg-brand text-surface hover:bg-brand/90" : "text-fg-secondary"}><Grid2X2 className="mr-1.5 h-4 w-4" />Tarjetas</Button>
               <Button type="button" size="sm" variant={viewMode === "table" ? "default" : "ghost"} aria-pressed={viewMode === "table"} onClick={() => setViewMode("table")} className={viewMode === "table" ? "bg-brand text-surface hover:bg-brand/90" : "text-fg-secondary"}><Table2 className="mr-1.5 h-4 w-4" />Tabla</Button>
@@ -118,10 +141,11 @@ export function AccountsView({
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {accounts.map((account, index) => {
                 const balance = toNumber(account.balance_current);
-                return <article key={account.id} className={`group relative overflow-hidden rounded-[24px] border border-surface-2 p-5 transition duration-300 hover:-translate-y-1 hover:shadow-lg motion-reduce:transform-none ${index % 3 === 1 ? "bg-brand-soft" : "bg-surface-1"}`}>
-                  <div aria-hidden="true" className="pointer-events-none absolute -right-8 -top-9 h-28 w-28 rounded-full border-[20px] border-brand/10 transition-transform duration-500 group-hover:scale-125" />
+                const swatch = ACCOUNT_CARD_SWATCHES[index % ACCOUNT_CARD_SWATCHES.length];
+                return <article key={account.id} style={{ backgroundColor: `color-mix(in srgb, var(--ui-editorial-${swatch}) 34%, var(--ui-panel-strong))`, borderColor: "var(--ui-editorial-ink)", boxShadow: "3px 4px 0 var(--ui-editorial-ink)" }} className="group relative overflow-hidden rounded-[1.4rem] border-2 p-5 transition duration-300 hover:-translate-y-1 hover:shadow-[5px_6px_0_var(--ui-editorial-ink)] motion-reduce:transform-none">
+                  <div aria-hidden="true" style={{ borderColor: `color-mix(in srgb, var(--ui-editorial-${swatch}) 64%, transparent)` }} className="pointer-events-none absolute -right-8 -top-9 h-28 w-28 rounded-full border-[20px] transition-transform duration-500 group-hover:scale-125" />
                   <div className="relative flex items-start justify-between gap-3">
-                    <div className="flex min-w-0 items-center gap-3"><span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand-soft text-brand"><Wallet className="h-5 w-5" /></span><div className="min-w-0"><h3 className="truncate text-lg font-semibold tracking-tight text-fg">{account.name}</h3><p className="mt-0.5 truncate text-xs ui-muted">{getAccountTypeLabel(account.account_type)} · {account.code}</p></div></div>
+                  <div className="flex min-w-0 items-center gap-3"><span className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--ui-editorial-ink)] bg-[color-mix(in_srgb,var(--ui-editorial-lime)_30%,transparent)] text-brand"><Wallet className="h-5 w-5" /></span><div className="min-w-0"><h3 className="truncate text-lg font-semibold tracking-tight text-fg">{account.name}</h3><p className="mt-0.5 truncate text-xs ui-muted">{getAccountTypeLabel(account.account_type)} · {account.code}</p></div></div>
                     <span className={account.is_active ? "rounded-full border border-positive/30 bg-positive-soft px-2.5 py-1 text-[11px] font-semibold text-positive" : "rounded-full border border-surface-2 px-2.5 py-1 text-[11px] font-semibold ui-muted"}>{account.is_active ? "Activa" : "Inactiva"}</span>
                   </div>
                   <p className="relative mt-7 text-[11px] font-semibold uppercase tracking-[0.17em] ui-muted">Saldo actual</p>
@@ -133,11 +157,11 @@ export function AccountsView({
         </CardContent>
       </Card>
 
-      <Card className="ds-soft-card">
+      <Card className="ds-soft-card overflow-hidden rounded-[1.6rem] border-2 border-[var(--ui-editorial-ink)] shadow-[4px_5px_0_var(--ui-editorial-ink)]">
         <CardContent className="p-4 md:p-5">
           <div className="mb-4 flex items-center gap-3">
-            <span className="inline-flex h-11 w-11 items-center justify-center rounded-2xl bg-brand-soft text-brand"><Plus className="h-5 w-5" /></span>
-            <div><h2 className="text-xl font-semibold tracking-[-0.03em] text-fg">Nueva cuenta</h2><p className="text-sm ui-muted">Dale un lugar a otra parte de tu dinero.</p></div>
+            <span className="inline-flex h-12 w-12 items-center justify-center rounded-2xl border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-orange)] text-[var(--ui-editorial-ink)]"><Plus className="h-5 w-5" /></span>
+            <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand">05 / NUEVO BOLSILLO</p><h2 className="text-2xl font-black tracking-[-0.04em] text-fg">Nueva cuenta</h2><p className="text-sm ui-muted">Dale un lugar a otra parte de tu dinero.</p></div>
           </div>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
             <div>

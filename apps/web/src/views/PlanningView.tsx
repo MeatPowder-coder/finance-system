@@ -163,13 +163,13 @@ export function PlanningView(p: PlanningViewProps) {
         icon={<CalendarDays className="h-5 w-5" />}
       />
 
-      <section className="ui-shell-card grid gap-5 p-5 md:p-6">
+      <section className="ui-shell-card grid gap-5 border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-paper)] p-4 shadow-[5px_6px_0_var(--ui-editorial-card-shadow)] md:p-6">
         <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
           <div className="flex flex-col gap-3 lg:flex-row lg:items-center">
-            <div className="min-w-[180px]">
-              <Label className="text-xs text-fg-subtle">Mes</Label>
+            <div className="min-w-[180px] rounded-2xl border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-lime)] p-3 text-[var(--ui-editorial-card-ink)] shadow-[3px_4px_0_var(--ui-editorial-card-shadow)]">
+              <Label className="text-[10px] font-bold uppercase tracking-[0.18em] text-[var(--ui-editorial-card-ink)]">Periodo de lectura</Label>
               <Input
-                className="mt-2 bg-surface-1 border-surface-2"
+                className="mt-2 border-[var(--ui-editorial-ink)] bg-white/75 text-[var(--ui-editorial-card-ink)]"
                 type="month"
                 value={planningMonth}
                 onChange={(e) => setPlanningMonth(e.target.value)}
@@ -178,21 +178,21 @@ export function PlanningView(p: PlanningViewProps) {
             <Button
               onClick={() => refreshPlanning()}
               disabled={planningLoading}
-              className="ui-action-primary mt-2 rounded-full lg:mt-7"
+              className="ui-action-primary mt-2 rounded-xl border-2 border-[var(--ui-editorial-ink)] shadow-[3px_4px_0_var(--ui-editorial-card-shadow)] lg:mt-7"
             >
               {planningLoading ? "Actualizando..." : "Actualizar"}
             </Button>
           </div>
           <div className="grid grid-cols-2 gap-2 xl:grid-cols-4">
-            {planningSummaryCards.map((item) => (
-              <div key={item.label} className="ui-panel-soft min-w-0 rounded-xl px-3 py-3 md:px-4">
-                <p className="truncate text-[10px] font-semibold uppercase tracking-[0.14em] ui-subtle">{item.label}</p>
-                <p className={`mt-1 truncate text-base font-semibold tracking-tight md:text-lg ${item.tone}`}>{item.value}</p>
+            {planningSummaryCards.map((item, index) => (
+              <div key={item.label} className={`min-w-0 border-2 border-[var(--ui-editorial-ink)] p-3 text-[var(--ui-editorial-card-ink)] shadow-[3px_4px_0_var(--ui-editorial-card-shadow)] md:px-4 ${index === 0 ? "bg-[var(--ui-editorial-forest)] text-[var(--ui-editorial-hero-text)]" : index === 1 ? "bg-[var(--ui-editorial-coral)]" : index === 2 ? "bg-[var(--ui-editorial-blue)]" : "bg-[var(--ui-editorial-paper)]"}`}>
+                <p className={`truncate text-[10px] font-bold uppercase tracking-[0.14em] ${index === 0 ? "text-[var(--ui-editorial-hero-text)]/70" : "opacity-70"}`}>{item.label}</p>
+                <p className={`mt-2 truncate text-lg font-bold tracking-tight md:text-xl ${index === 0 ? "text-[var(--ui-editorial-hero-text)]" : "text-[var(--ui-editorial-card-ink)]"}`}>{item.value}</p>
               </div>
             ))}
           </div>
         </div>
-        <div className="mt-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="flex flex-col gap-3 border-t border-[var(--ui-editorial-ink)]/20 pt-4 lg:flex-row lg:items-center lg:justify-between">
           <PlanningSegmentedNav
             sections={planningSections.map((section) => ({ key: section.key, label: section.label, icon: section.icon }))}
             activeKey={planningSection}
@@ -460,15 +460,16 @@ export function PlanningView(p: PlanningViewProps) {
 
       <section className="space-y-5">
         {planningSection === "budgets" && (
-          <Card className="ds-soft-card overflow-hidden">
-            <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <Card className="ds-soft-card overflow-hidden border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-budget)] text-[var(--ui-editorial-card-ink)] shadow-[5px_6px_0_var(--ui-editorial-card-shadow)]">
+            <CardHeader className="flex flex-col gap-4 border-b border-[var(--ui-editorial-ink)]/20 md:flex-row md:items-start md:justify-between">
               <div>
-                <CardTitle className="text-xl tracking-tight text-fg md:text-2xl">Presupuestos</CardTitle>
-                <CardDescription className="text-fg-subtle">
+                <p className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] opacity-60">01 / límites y consumo</p>
+                <CardTitle className="text-2xl font-bold tracking-tight text-[var(--ui-editorial-card-ink)] md:text-3xl">Presupuestos</CardTitle>
+                <CardDescription className="text-[var(--ui-editorial-card-ink)]/70">
                   Lectura primero: consumo, saldo restante y alertas por categoría.
                 </CardDescription>
               </div>
-              <Button onClick={() => openCreateBudgetDialog()} className="bg-brand hover:bg-brand/90 text-surface">
+              <Button onClick={() => openCreateBudgetDialog()} className="border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-forest)] text-[var(--ui-editorial-hero-text)] shadow-[3px_4px_0_var(--ui-editorial-card-shadow)] hover:opacity-90">
                 Nuevo presupuesto
               </Button>
             </CardHeader>
@@ -486,7 +487,7 @@ export function PlanningView(p: PlanningViewProps) {
                 return (
                   <article
                     key={budget.id}
-                    className="planning-budget-row rounded-2xl p-5 md:p-6"
+                    className="planning-budget-row rounded-none border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-paper)] p-5 text-[var(--ui-editorial-card-ink)] shadow-[3px_4px_0_var(--ui-editorial-card-shadow)] md:p-6"
                   >
                     <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                       <div className="space-y-2">
@@ -584,17 +585,18 @@ export function PlanningView(p: PlanningViewProps) {
         )}
 
         {planningSection === "deficits" && (
-          <Card className="ds-soft-card overflow-hidden">
-            <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <Card className="ds-soft-card overflow-hidden border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-movements)] text-[var(--ui-editorial-card-ink)] shadow-[5px_6px_0_var(--ui-editorial-card-shadow)]">
+            <CardHeader className="flex flex-col gap-4 border-b border-[var(--ui-editorial-ink)]/25 md:flex-row md:items-start md:justify-between">
               <div>
-                <CardTitle className="text-xl tracking-tight text-fg md:text-2xl">Déficits</CardTitle>
-                <CardDescription className="text-fg-subtle">
+                <p className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] opacity-65">02 / alertas y causas</p>
+                <CardTitle className="text-2xl font-bold tracking-tight text-[var(--ui-editorial-card-ink)] md:text-3xl">Déficits</CardTitle>
+                <CardDescription className="text-[var(--ui-editorial-card-ink)]/75">
                   Historial del mes, causas recurrentes y exporte rápido para cierre financiero.
                 </CardDescription>
               </div>
               <Button
                 variant="outline"
-                className="border-surface-2 bg-surface-1 text-fg hover:bg-surface-2"
+                className="border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-paper)] text-[var(--ui-editorial-card-ink)] shadow-[3px_4px_0_var(--ui-editorial-card-shadow)] hover:opacity-90"
                 onClick={() =>
                   downloadCsv(`deficits-${planningMonth}.csv`, [
                     ["Presupuesto", "Evento", "Fecha", "Déficit", "Falta de fondeo", "Causa"],
@@ -614,8 +616,8 @@ export function PlanningView(p: PlanningViewProps) {
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-3 lg:grid-cols-[1.15fr_0.85fr]">
-                <div className="rounded-2xl border border-surface-2 bg-surface-1/70 p-4">
-                  <p className="text-sm font-semibold text-fg">Eventos del mes</p>
+                <div className="border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-paper)] p-4">
+                  <p className="text-sm font-bold text-[var(--ui-editorial-card-ink)]">Eventos del mes</p>
                   <div className="mt-4 space-y-3">
                     {budgetDeficitEvents.length === 0 && (
                       <p className="text-sm text-fg-subtle">No hay déficits registrados en este mes.</p>
@@ -648,8 +650,8 @@ export function PlanningView(p: PlanningViewProps) {
                 </div>
 
                 <div className="space-y-3">
-                  <div className="rounded-2xl border border-surface-2 bg-surface-1/70 p-4">
-                    <p className="text-sm font-semibold text-fg">Presupuestos más sensibles</p>
+                  <div className="border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-paper)] p-4">
+                    <p className="text-sm font-bold text-[var(--ui-editorial-card-ink)]">Presupuestos más sensibles</p>
                     <div className="mt-4 space-y-3">
                       {monthlyFinanceSummary?.topProblemBudgets?.length ? (
                         monthlyFinanceSummary.topProblemBudgets.map((item) => (
@@ -667,8 +669,8 @@ export function PlanningView(p: PlanningViewProps) {
                     </div>
                   </div>
 
-                  <div className="rounded-2xl border border-surface-2 bg-surface-1/70 p-4">
-                    <p className="text-sm font-semibold text-fg">Causas más frecuentes</p>
+                  <div className="border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-paper)] p-4">
+                    <p className="text-sm font-bold text-[var(--ui-editorial-card-ink)]">Causas más frecuentes</p>
                     <div className="mt-4 space-y-2">
                       {monthlyFinanceSummary?.frequentCauses?.length ? (
                         monthlyFinanceSummary.frequentCauses.map((cause) => (
@@ -692,22 +694,23 @@ export function PlanningView(p: PlanningViewProps) {
         )}
 
         {planningSection === "commitments" && (
-          <Card className="ds-soft-card overflow-hidden">
-            <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <Card className="ds-soft-card overflow-hidden border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-accounts)] text-[var(--ui-editorial-card-ink)] shadow-[5px_6px_0_var(--ui-editorial-card-shadow)]">
+            <CardHeader className="flex flex-col gap-4 border-b border-[var(--ui-editorial-ink)]/20 md:flex-row md:items-start md:justify-between">
               <div>
-                <CardTitle className="text-xl tracking-tight text-fg md:text-2xl">Compromisos</CardTitle>
-                <CardDescription className="text-fg-subtle">
+                <p className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] opacity-65">03 / pagos recurrentes</p>
+                <CardTitle className="text-2xl font-bold tracking-tight text-[var(--ui-editorial-card-ink)] md:text-3xl">Compromisos</CardTitle>
+                <CardDescription className="text-[var(--ui-editorial-card-ink)]/75">
                   Pagos recurrentes visibles sin mezclar formularios ni resúmenes redundantes.
                 </CardDescription>
               </div>
-              <Button onClick={() => setCommitmentDialogOpen(true)} className="bg-brand hover:bg-brand/90 text-surface">
+              <Button onClick={() => setCommitmentDialogOpen(true)} className="border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-forest)] text-[var(--ui-editorial-hero-text)] shadow-[3px_4px_0_var(--ui-editorial-card-shadow)] hover:opacity-90">
                 Nuevo compromiso
               </Button>
             </CardHeader>
             <CardContent className="space-y-3">
               {commitments.length === 0 && <p className="text-sm text-fg-subtle">No hay compromisos para este mes.</p>}
               {commitments.map((item) => (
-                <article key={item.id} className="rounded-2xl border border-surface-2 bg-surface-1/80 px-5 py-4 transition-colors hover:bg-surface-1">
+                <article key={item.id} className="border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-paper)] px-5 py-4 shadow-[3px_4px_0_var(--ui-editorial-card-shadow)] transition-transform hover:-translate-y-0.5">
                   <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                     <div>
                       <p className="text-base font-semibold tracking-tight text-fg">{item.name}</p>
@@ -739,22 +742,23 @@ export function PlanningView(p: PlanningViewProps) {
         )}
 
         {planningSection === "projections" && (
-          <Card className="ds-soft-card overflow-hidden">
-            <CardHeader className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+          <Card className="ds-soft-card overflow-hidden border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-payments)] text-[var(--ui-editorial-card-ink)] shadow-[5px_6px_0_var(--ui-editorial-card-shadow)]">
+            <CardHeader className="flex flex-col gap-4 border-b border-[var(--ui-editorial-ink)]/20 md:flex-row md:items-start md:justify-between">
               <div>
-                <CardTitle className="text-xl tracking-tight text-fg md:text-2xl">Proyecciones</CardTitle>
-                <CardDescription className="text-fg-subtle">
+                <p className="mb-2 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] opacity-65">04 / escenarios futuros</p>
+                <CardTitle className="text-2xl font-bold tracking-tight text-[var(--ui-editorial-card-ink)] md:text-3xl">Proyecciones</CardTitle>
+                <CardDescription className="text-[var(--ui-editorial-card-ink)]/75">
                   Escenarios guardados con las métricas útiles para evaluar caja futura.
                 </CardDescription>
               </div>
-              <Button onClick={() => setProjectionDialogOpen(true)} className="bg-brand hover:bg-brand/90 text-surface">
+              <Button onClick={() => setProjectionDialogOpen(true)} className="border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-forest)] text-[var(--ui-editorial-hero-text)] shadow-[3px_4px_0_var(--ui-editorial-card-shadow)] hover:opacity-90">
                 Nueva proyección
               </Button>
             </CardHeader>
             <CardContent className="space-y-3">
               {projectionScenarios.length === 0 && <p className="text-sm text-fg-subtle">No hay escenarios ejecutados.</p>}
               {projectionScenarios.map((scenario) => (
-                <article key={scenario.id} className="rounded-2xl border border-surface-2 bg-surface-1/80 p-5 md:p-6">
+                <article key={scenario.id} className="border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-paper)] p-5 text-[var(--ui-editorial-card-ink)] shadow-[3px_4px_0_var(--ui-editorial-card-shadow)] md:p-6">
                   <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
                     <div>
                       <p className="text-base font-semibold tracking-tight text-fg">{scenario.title}</p>

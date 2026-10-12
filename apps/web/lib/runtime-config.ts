@@ -2,12 +2,56 @@ const API_BASE_URL_STORAGE_KEY = "finance-system.apiBaseUrl";
 const AUTH_TOKEN_STORAGE_KEY = "finance-system.authToken";
 const AUTH_REFRESH_TOKEN_STORAGE_KEY = "finance-system.authRefreshToken";
 
+export function financeErrorMessage(error: unknown, fallback = "No se pudo completar la solicitud.") {
+  const message = getErrorMessage(error);
+  if (containsRequestTimeout(error) || isRequestTimeout(message)) {
+    return "La conexión con FinanceSystem tardó más de lo esperado. Revisa la API e inténtalo de nuevo.";
+  }
+  if (containsNetworkFetchFailure(error) || isNetworkFetchFailure(message)) {
+    return "El servicio de datos no respondió. La interfaz sigue disponible; revisa la conexión e inténtalo de nuevo.";
+  }
+  return message.trim() || fallback;
+}
+
+function isRequestTimeout(message: string) {
+  return /timed?\s*out|timeout|time\s*limit|operation was aborted due to timeout|signal is aborted/i.test(message);
+}
+
+function containsRequestTimeout(error: unknown, depth = 0): boolean {
+  if (depth > 3 || !error || typeof error !== "object") return false;
+  const nested = error as { cause?: unknown; message?: unknown; name?: unknown; error?: unknown };
+  if (nested.name === "TimeoutError" || nested.name === "AbortError") return true;
+  if (typeof nested.message === "string" && isRequestTimeout(nested.message)) return true;
+  return containsRequestTimeout(nested.cause, depth + 1) || containsRequestTimeout(nested.error, depth + 1);
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message;
+  if (typeof error === "string") return error;
+  if (error && typeof error === "object" && "message" in error) {
+    const message = (error as { message?: unknown }).message;
+    return typeof message === "string" ? message : "";
+  }
+  return "";
+}
+
+function isNetworkFetchFailure(message: string) {
+  return /failed to fetch|fetch failed|networkerror|network request failed|err_network|load failed|socket hang up|econnrefused/i.test(message);
+}
+
+function containsNetworkFetchFailure(error: unknown, depth = 0): boolean {
+  if (depth > 3 || !error || typeof error !== "object") return false;
+  const nested = error as { cause?: unknown; message?: unknown; error?: unknown };
+  if (typeof nested.message === "string" && isNetworkFetchFailure(nested.message)) return true;
+  return containsNetworkFetchFailure(nested.cause, depth + 1) || containsNetworkFetchFailure(nested.error, depth + 1);
+}
+
 export async function requestFinanceApi(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
   try {
     return await fetch(input, init);
   } catch (error) {
-    if (error instanceof TypeError || (error instanceof Error && /failed to fetch|fetch failed|networkerror|network request failed/i.test(error.message))) {
-      throw new Error("No se pudo conectar con Finance System. Revisa tu conexión e inténtalo de nuevo.");
+    if (error instanceof TypeError || isNetworkFetchFailure(getErrorMessage(error))) {
+      throw new Error(financeErrorMessage(error));
     }
     throw error;
   }
@@ -61,6 +105,13 @@ export function resolveFinanceApiBaseUrl(fallback = "http://localhost:4100") {
   const stored = readLocalStorageValue(API_BASE_URL_STORAGE_KEY);
   const inferredBrowserBaseUrl = inferBrowserApiBaseUrl();
   const fallbackIsExplicitRemote = Boolean(normalizedFallback && !normalizedFallback.startsWith("/") && !isLocalhostUrl(normalizedFallback));
+
+  // Local web/desktop previews have same-origin proxies for /health and /v1.
+  // Prefer those routes over a direct remote call so browser CORS does not
+  // turn a healthy configured API into a misleading "Failed to fetch" error.
+  if (typeof window !== "undefined" && /^(https?):$/.test(window.location.protocol) && isLocalhostUrl(window.location.hostname)) {
+    return "";
+  }
 
   // The current deployment's explicit or host-inferred API is authoritative.
   // This also recovers from an obsolete remote URL left in browser storage.

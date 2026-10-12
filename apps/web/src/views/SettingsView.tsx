@@ -8,7 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ThemeSelector } from "@/components/ThemeSelector";
-import { buildFinanceHeaders, requestFinanceApi, resolveFinanceApiBaseUrl } from "@/lib/runtime-config";
+import { buildFinanceHeaders, financeErrorMessage, requestFinanceApi, resolveFinanceApiBaseUrl } from "@/lib/runtime-config";
 import { cn } from "@/lib/utils";
 
 type Permission = "READ" | "WRITE" | "UPLOAD" | "ANALYZE";
@@ -141,7 +141,7 @@ export function SettingsView() {
       setFriends(friendsData || []);
       setFriendRequests(friendRequestsData || { received: [], sent: [] });
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo cargar la configuracion.");
+      setError(financeErrorMessage(err, "No se pudo cargar la configuracion."));
     } finally {
       setLoading(false);
     }
@@ -186,7 +186,7 @@ export function SettingsView() {
       setUsername(next.username || "");
       setNotice("Perfil actualizado.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo actualizar el perfil.");
+      setError(financeErrorMessage(err, "No se pudo actualizar el perfil."));
     } finally {
       setSaving(false);
     }
@@ -199,7 +199,7 @@ export function SettingsView() {
     try {
       setFriendMatches(await apiRequest<UserSummary[]>(`/v1/friends/lookup?username=${encodeURIComponent(friendUsername.trim())}`));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo buscar ese usuario.");
+      setError(financeErrorMessage(err, "No se pudo buscar ese usuario."));
     } finally {
       setSaving(false);
     }
@@ -221,7 +221,7 @@ export function SettingsView() {
       setNotice(`Solicitud enviada a @${selectedFriend.username}.`);
       await loadAll();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo enviar la solicitud.");
+      setError(financeErrorMessage(err, "No se pudo enviar la solicitud."));
     } finally {
       setSaving(false);
     }
@@ -246,7 +246,7 @@ export function SettingsView() {
       await loadAll();
       setNotice(action === "accept" ? "Amistad aceptada." : action === "reject" ? "Solicitud rechazada." : "Solicitud cancelada.");
     } catch (err) {
-      const message = err instanceof Error ? err.message : "No se pudo actualizar la solicitud.";
+      const message = financeErrorMessage(err, "No se pudo actualizar la solicitud.");
       setFriendRequestError(message);
       setError(message);
     } finally {
@@ -264,7 +264,7 @@ export function SettingsView() {
       await loadAll();
       setNotice("Amistad eliminada y accesos financieros revocados.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo eliminar la amistad.");
+      setError(financeErrorMessage(err, "No se pudo eliminar la amistad."));
     } finally {
       setSaving(false);
     }
@@ -312,7 +312,7 @@ export function SettingsView() {
       setNotice("Invitacion enviada. La otra persona debe aceptarla para activar el acceso.");
       await loadAll();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo enviar la invitacion.");
+      setError(financeErrorMessage(err, "No se pudo enviar la invitacion."));
     } finally {
       setSaving(false);
     }
@@ -325,7 +325,7 @@ export function SettingsView() {
       await loadAll();
       setNotice(action === "accept" ? "Acceso aceptado." : action === "reject" ? "Invitacion rechazada." : "Invitacion revocada.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo actualizar la invitacion.");
+      setError(financeErrorMessage(err, "No se pudo actualizar la invitacion."));
     } finally {
       setSaving(false);
     }
@@ -338,7 +338,7 @@ export function SettingsView() {
       await loadAll();
       setNotice("Acceso revocado.");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo revocar el acceso.");
+      setError(financeErrorMessage(err, "No se pudo revocar el acceso."));
     } finally {
       setSaving(false);
     }
@@ -355,35 +355,35 @@ export function SettingsView() {
 
   return (
     <div className="section-enter space-y-6 pb-12">
-      <div className="ui-shell-card relative flex flex-col gap-4 overflow-hidden bg-brand p-5 text-surface md:flex-row md:items-center md:justify-between md:p-7">
+      <div className="ui-shell-card relative flex flex-col gap-5 overflow-hidden border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-forest)] p-5 text-[var(--ui-editorial-hero-text)] shadow-[6px_7px_0_var(--ui-editorial-card-shadow)] md:flex-row md:items-center md:justify-between md:p-7">
         <div>
-          <div className="flex items-center gap-2 text-surface/80"><Shield className="h-4 w-4" /><span className="text-xs font-semibold uppercase tracking-[0.18em]">Control personal</span></div>
-          <h2 className="mt-2 text-3xl font-semibold tracking-tight text-surface md:text-4xl">Configuración</h2>
-          <p className="mt-1 max-w-2xl text-sm text-surface/75">Perfil, apariencia, conexiones y acceso compartido a tus finanzas.</p>
+          <div className="flex items-center gap-2 text-[var(--ui-editorial-hero-text)]/75"><Shield className="h-4 w-4" /><span className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em]">Tu espacio / control personal</span></div>
+          <h2 className="mt-3 text-4xl font-bold tracking-[-0.06em] text-[var(--ui-editorial-hero-text)] md:text-5xl">Configuración</h2>
+          <p className="mt-2 max-w-2xl text-sm text-[var(--ui-editorial-hero-text)]/75">Perfil, apariencia, conexiones y acceso compartido a tus finanzas.</p>
         </div>
-        <div className="relative flex items-center gap-3"><span className="hidden text-right text-xs text-surface/70 sm:block">Tu espacio<br/>financiero privado</span><Button variant="outline" className="border-surface/30 bg-surface/10 text-surface hover:bg-surface/20" onClick={() => void loadAll()} disabled={loading}><RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} /> Actualizar</Button></div>
-        <span className="pointer-events-none absolute -bottom-14 right-28 h-44 w-44 rounded-full border-[28px] border-surface/10" />
+        <div className="relative flex items-center gap-3"><span className="hidden text-right font-mono text-[10px] uppercase tracking-[0.12em] text-[var(--ui-editorial-hero-text)]/65 sm:block">Espacio privado<br/>Finance System</span><Button variant="outline" className="rounded-none border-[var(--ui-editorial-hero-text)]/40 bg-white/5 text-[var(--ui-editorial-hero-text)] shadow-[3px_4px_0_var(--ui-editorial-card-shadow)] hover:bg-white/15" onClick={() => void loadAll()} disabled={loading}><RefreshCw className={cn("h-4 w-4", loading && "animate-spin")} /> Actualizar</Button></div>
+        <span className="pointer-events-none absolute -bottom-14 right-28 h-44 w-44 border-[22px] border-[var(--ui-editorial-lime)]/15" />
       </div>
 
       {error && <div className="rounded-2xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</div>}
       {notice && <div className="rounded-2xl border border-primary/30 bg-primary/10 px-4 py-3 text-sm text-primary">{notice}</div>}
 
-      <div className="grid gap-4 xl:grid-cols-[0.85fr_1.15fr]">
-        <Card className="ds-soft-card overflow-hidden">
-          <CardHeader><CardTitle>Tu identidad</CardTitle><CardDescription>Este nombre de usuario sirve para recibir invitaciones sin compartir tu correo.</CardDescription></CardHeader>
+      <div className="grid gap-4 xl:grid-cols-12">
+        <Card className="ds-soft-card overflow-hidden border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-accounts)] text-[var(--ui-editorial-card-ink)] shadow-[4px_5px_0_var(--ui-editorial-card-shadow)] xl:col-span-4">
+          <CardHeader className="border-b border-[var(--ui-editorial-ink)]/20"><p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] opacity-60">01 / perfil</p><CardTitle className="text-2xl font-bold tracking-tight text-[var(--ui-editorial-card-ink)]">Tu identidad</CardTitle><CardDescription className="text-[var(--ui-editorial-card-ink)]/70">Este nombre de usuario sirve para recibir invitaciones sin compartir tu correo.</CardDescription></CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5"><Label>Nombre</Label><Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Tu nombre" /></div>
               <div className="space-y-1.5"><Label>Nombre de usuario</Label><Input value={username} onChange={(event) => setUsername(event.target.value.toLowerCase())} placeholder="sebastian-navarro" /></div>
             </div>
-            <div className="flex items-center gap-2 rounded-xl border border-border bg-muted/30 px-3 py-2 text-xs text-muted-foreground"><Mail className="h-3.5 w-3.5" />{profile?.email || "Correo no disponible"}<Badge variant="outline" className="ml-auto">{profile?.auth_provider || "LOCAL"}</Badge></div>
-            <Button onClick={() => void saveProfile()} disabled={saving || !username.trim()} className="rounded-xl">Guardar perfil</Button>
+            <div className="flex items-center gap-2 rounded-none border border-[var(--ui-editorial-ink)]/30 bg-white/45 px-3 py-2 text-xs text-[var(--ui-editorial-card-ink)]"><Mail className="h-3.5 w-3.5" />{profile?.email || "Correo no disponible"}<Badge variant="outline" className="ml-auto border-[var(--ui-editorial-ink)]/30">{profile?.auth_provider || "LOCAL"}</Badge></div>
+            <Button onClick={() => void saveProfile()} disabled={saving || !username.trim()} className="rounded-none border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-forest)] text-[var(--ui-editorial-hero-text)] shadow-[3px_4px_0_var(--ui-editorial-card-shadow)] hover:opacity-90">Guardar perfil</Button>
           </CardContent>
         </Card>
 
-        <Card className="ds-soft-card overflow-hidden">
-          <CardHeader><CardTitle>Apariencia</CardTitle><CardDescription>Los cambios se aplican en web y desktop en este dispositivo.</CardDescription></CardHeader>
-          <CardContent>
+        <Card className="ds-soft-card overflow-hidden border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-paper)] text-[var(--ui-editorial-card-ink)] shadow-[5px_6px_0_var(--ui-editorial-card-shadow)] xl:col-span-8">
+          <CardHeader className="border-b border-[var(--ui-editorial-ink)]/20"><p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] opacity-60">02 / sistema visual</p><div className="flex flex-wrap items-end justify-between gap-3"><div><CardTitle className="text-2xl font-bold tracking-tight text-[var(--ui-editorial-card-ink)] md:text-3xl">Apariencia</CardTitle><CardDescription className="mt-1 text-[var(--ui-editorial-card-ink)]/70">Cambia el lenguaje de color y el ambiente de fondo en este dispositivo.</CardDescription></div><span className="border border-[var(--ui-editorial-ink)]/40 bg-[var(--ui-editorial-lime)] px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--ui-editorial-card-ink)]">11 paletas · 4 fondos</span></div></CardHeader>
+          <CardContent className="pt-5">
             <ThemeSelector
               panel
               onThemeChange={(theme) => { void apiRequest("/v1/settings/preferences", { method: "PATCH", body: JSON.stringify({ theme }) }); }}
@@ -393,8 +393,8 @@ export function SettingsView() {
         </Card>
       </div>
 
-      <Card className="ds-soft-card overflow-hidden">
-        <CardHeader><CardTitle>Conexiones del sistema</CardTitle><CardDescription>Estado de las capacidades que pueden trabajar con tus datos. Las claves nunca se muestran aqui.</CardDescription></CardHeader>
+      <Card className="ds-soft-card overflow-hidden border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-forest)] text-[var(--ui-editorial-hero-text)] shadow-[5px_6px_0_var(--ui-editorial-card-shadow)]">
+        <CardHeader className="border-b border-[var(--ui-editorial-hero-text)]/20"><p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-[var(--ui-editorial-lime)]">03 / estado de plataforma</p><CardTitle className="text-2xl font-bold tracking-tight text-[var(--ui-editorial-hero-text)]">Conexiones del sistema</CardTitle><CardDescription className="text-[var(--ui-editorial-hero-text)]/70">Estado de las capacidades que pueden trabajar con tus datos. Las claves nunca se muestran aqui.</CardDescription></CardHeader>
         <CardContent className="grid gap-3 md:grid-cols-3">
           {[
             { key: "mastra", label: "Mastra", icon: SparkleIcon, description: "Agentes y workflows" },
@@ -404,13 +404,13 @@ export function SettingsView() {
             const status = integrations?.[item.key as keyof Integrations] as { enabled?: boolean; configured?: boolean } | undefined;
             const active = Boolean(status?.enabled || status?.configured);
             const Icon = item.icon;
-            return <div key={item.key} className="rounded-2xl border border-border bg-muted/20 p-4"><div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/10 text-primary"><Icon className="h-4 w-4" /></span><div className="min-w-0"><p className="text-sm font-semibold text-foreground">{item.label}</p><p className="truncate text-xs text-muted-foreground">{item.description}</p></div><span className={cn("ml-auto h-2.5 w-2.5 rounded-full", active ? "bg-emerald-500" : "bg-muted-foreground/40")} /></div><p className="mt-3 text-xs text-muted-foreground">{active ? "Conectado y disponible" : "No configurado"}</p></div>;
+            return <div key={item.key} className="border border-[var(--ui-editorial-hero-text)]/25 bg-white/5 p-4"><div className="flex items-center gap-3"><span className="flex h-9 w-9 items-center justify-center border border-[var(--ui-editorial-hero-text)]/30 bg-[var(--ui-editorial-lime)] text-[var(--ui-editorial-card-ink)]"><Icon className="h-4 w-4" /></span><div className="min-w-0"><p className="text-sm font-bold text-[var(--ui-editorial-hero-text)]">{item.label}</p><p className="truncate text-xs text-[var(--ui-editorial-hero-text)]/65">{item.description}</p></div><span className={cn("ml-auto h-2.5 w-2.5 rounded-full", active ? "bg-emerald-400" : "bg-[var(--ui-editorial-hero-text)]/35")} /></div><p className="mt-3 text-xs text-[var(--ui-editorial-hero-text)]/70">{active ? "Conectado y disponible" : "No configurado"}</p></div>;
           })}
         </CardContent>
       </Card>
 
-      <Card className="ds-soft-card overflow-hidden">
-        <CardHeader><CardTitle>Amigos</CardTitle><CardDescription>Busca por username exacto y crea una amistad antes de compartir cualquier dato financiero.</CardDescription></CardHeader>
+      <Card className="ds-soft-card overflow-hidden border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-blue)] text-[var(--ui-editorial-card-ink)] shadow-[5px_6px_0_var(--ui-editorial-card-shadow)]">
+        <CardHeader className="border-b border-[var(--ui-editorial-ink)]/20"><p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] opacity-60">04 / red de confianza</p><CardTitle className="text-2xl font-bold tracking-tight text-[var(--ui-editorial-card-ink)]">Amigos</CardTitle><CardDescription className="text-[var(--ui-editorial-card-ink)]/70">Busca por username exacto y crea una amistad antes de compartir cualquier dato financiero.</CardDescription></CardHeader>
         <CardContent className="space-y-4">
           <div className="grid gap-3 md:grid-cols-[1fr_auto]">
             <div className="relative">
@@ -431,8 +431,8 @@ export function SettingsView() {
         </CardContent>
       </Card>
 
-      <Card className="ds-soft-card overflow-hidden">
-        <CardHeader><CardTitle>Compartir finanzas</CardTitle><CardDescription>Comparte cuentas o recursos concretos con un amigo activo y permisos explicitos.</CardDescription></CardHeader>
+      <Card className="ds-soft-card overflow-hidden border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-lime)] text-[var(--ui-editorial-card-ink)] shadow-[5px_6px_0_var(--ui-editorial-card-shadow)]">
+        <CardHeader className="border-b border-[var(--ui-editorial-ink)]/20"><p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] opacity-65">05 / permisos granulares</p><CardTitle className="text-2xl font-bold tracking-tight text-[var(--ui-editorial-card-ink)]">Compartir finanzas</CardTitle><CardDescription className="text-[var(--ui-editorial-card-ink)]/75">Comparte cuentas o recursos concretos con un amigo activo y permisos explicitos.</CardDescription></CardHeader>
         <CardContent className="space-y-5">
           <div className="grid gap-3 md:grid-cols-[1fr_auto]">
             <div className="relative"><Label htmlFor="share-username">Amigo destinatario</Label><div className="mt-1.5 flex gap-2"><Input id="share-username" value={inviteUsername} readOnly placeholder="Selecciona un amigo activo abajo" /><select aria-label="Seleccionar amigo" value={selectedFriend?.id || ""} onChange={(event) => { const friend = friends.find((item) => item.id === event.target.value) || null; setSelectedFriend(friend); setInviteUsername(friend?.username || ""); }} className="h-10 max-w-[16rem] rounded-xl border border-border bg-background px-3 text-sm text-foreground"><option value="">Amigos</option>{friends.map((friend) => <option key={friend.id} value={friend.id}>@{friend.username}</option>)}</select></div>{selectedFriend && <div className="mt-2 flex items-center gap-2 rounded-xl border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary"><UserCheck className="h-4 w-4" /> @{selectedFriend.username} seleccionado</div>}</div>
@@ -444,11 +444,11 @@ export function SettingsView() {
       </Card>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <Card className="ds-soft-card overflow-hidden"><CardHeader><CardTitle>Invitaciones recibidas</CardTitle><CardDescription>Acepta solo los accesos que reconozcas.</CardDescription></CardHeader><CardContent className="space-y-3">{received.filter((item) => item.status === "PENDING").map((item) => <div key={item.id} className="rounded-xl border border-surface-2 bg-surface-1/70 p-3"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold text-fg">@{item.owner_username} quiere compartir contigo</p><p className="mt-1 text-xs text-fg-subtle">{item.items.length} recursos seleccionados</p></div><Badge variant="outline">Pendiente</Badge></div><div className="mt-3 flex gap-2"><Button size="sm" onClick={() => void decideInvitation(item.id, "accept")} disabled={saving}>Aceptar</Button><Button size="sm" variant="outline" onClick={() => void decideInvitation(item.id, "reject")} disabled={saving}>Rechazar</Button></div></div>)}{!received.some((item) => item.status === "PENDING") && <EmptyState icon={Lock} text="No tienes invitaciones pendientes." />}</CardContent></Card>
-        <Card className="ds-soft-card overflow-hidden"><CardHeader><CardTitle>Accesos y solicitudes enviadas</CardTitle><CardDescription>Revoca un acceso activo o una invitacion pendiente.</CardDescription></CardHeader><CardContent className="space-y-3">{sent.filter((item) => item.status === "PENDING").map((item) => <div key={item.id} className="flex items-center gap-3 rounded-xl border border-dashed border-surface-2 p-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-fg">@{item.invitee_username} - invitacion pendiente</p><p className="text-xs text-fg-subtle">{item.items.length} recursos seleccionados</p></div><Button size="sm" variant="outline" onClick={() => void decideInvitation(item.id, "revoke")} disabled={saving}><X className="h-3.5 w-3.5" /> Revocar</Button></div>)}{grants.filter((item) => item.status === "ACTIVE" && item.owner_user_id === profile?.id).map((grant) => <div key={grant.id} className="flex items-center gap-3 rounded-xl border border-surface-2 p-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-fg">@{grant.grantee_username} - {grant.resource_type} {grant.resource_id}</p><p className="text-xs text-fg-subtle">{grant.permissions.join(" / ")}</p></div><Button size="sm" variant="outline" onClick={() => void revokeGrant(grant.id)} disabled={saving}><X className="h-3.5 w-3.5" /> Revocar</Button></div>)}{!sent.some((item) => item.status === "PENDING") && !grants.some((item) => item.status === "ACTIVE" && item.owner_user_id === profile?.id) && <EmptyState icon={Shield} text="Todavia no has compartido recursos." />}</CardContent></Card>
+        <Card className="ds-soft-card overflow-hidden border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-payments)] text-[var(--ui-editorial-card-ink)] shadow-[5px_6px_0_var(--ui-editorial-card-shadow)]"><CardHeader className="border-b border-[var(--ui-editorial-ink)]/20"><p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] opacity-60">06 / por revisar</p><CardTitle className="text-xl font-bold text-[var(--ui-editorial-card-ink)]">Invitaciones recibidas</CardTitle><CardDescription className="text-[var(--ui-editorial-card-ink)]/70">Acepta solo los accesos que reconozcas.</CardDescription></CardHeader><CardContent className="space-y-3">{received.filter((item) => item.status === "PENDING").map((item) => <div key={item.id} className="rounded-none border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-paper)] p-3 shadow-[3px_4px_0_var(--ui-editorial-card-shadow)]"><div className="flex items-start justify-between gap-3"><div><p className="text-sm font-semibold text-fg">@{item.owner_username} quiere compartir contigo</p><p className="mt-1 text-xs text-fg-subtle">{item.items.length} recursos seleccionados</p></div><Badge variant="outline">Pendiente</Badge></div><div className="mt-3 flex gap-2"><Button size="sm" onClick={() => void decideInvitation(item.id, "accept")} disabled={saving}>Aceptar</Button><Button size="sm" variant="outline" onClick={() => void decideInvitation(item.id, "reject")} disabled={saving}>Rechazar</Button></div></div>)}{!received.some((item) => item.status === "PENDING") && <EmptyState icon={Lock} text="No tienes invitaciones pendientes." />}</CardContent></Card>
+        <Card className="ds-soft-card overflow-hidden border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-paper)] text-[var(--ui-editorial-card-ink)] shadow-[5px_6px_0_var(--ui-editorial-card-shadow)]"><CardHeader className="border-b border-[var(--ui-editorial-ink)]/20"><p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] opacity-60">07 / control de acceso</p><CardTitle className="text-xl font-bold text-[var(--ui-editorial-card-ink)]">Accesos y solicitudes enviadas</CardTitle><CardDescription className="text-[var(--ui-editorial-card-ink)]/70">Revoca un acceso activo o una invitacion pendiente.</CardDescription></CardHeader><CardContent className="space-y-3">{sent.filter((item) => item.status === "PENDING").map((item) => <div key={item.id} className="flex items-center gap-3 rounded-none border border-dashed border-[var(--ui-editorial-ink)]/40 bg-white/50 p-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-fg">@{item.invitee_username} - invitacion pendiente</p><p className="text-xs text-fg-subtle">{item.items.length} recursos seleccionados</p></div><Button size="sm" variant="outline" onClick={() => void decideInvitation(item.id, "revoke")} disabled={saving}><X className="h-3.5 w-3.5" /> Revocar</Button></div>)}{grants.filter((item) => item.status === "ACTIVE" && item.owner_user_id === profile?.id).map((grant) => <div key={grant.id} className="flex items-center gap-3 rounded-none border border-[var(--ui-editorial-ink)]/30 bg-white/50 p-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-fg">@{grant.grantee_username} - {grant.resource_type} {grant.resource_id}</p><p className="text-xs text-fg-subtle">{grant.permissions.join(" / ")}</p></div><Button size="sm" variant="outline" onClick={() => void revokeGrant(grant.id)} disabled={saving}><X className="h-3.5 w-3.5" /> Revocar</Button></div>)}{!sent.some((item) => item.status === "PENDING") && !grants.some((item) => item.status === "ACTIVE" && item.owner_user_id === profile?.id) && <EmptyState icon={Shield} text="Todavia no has compartido recursos." />}</CardContent></Card>
       </div>
 
-      <Card className="ds-soft-card overflow-hidden"><CardHeader><CardTitle>Accesos que recibes</CardTitle><CardDescription>Recursos de otras personas disponibles para ti.</CardDescription></CardHeader><CardContent className="space-y-3">{grants.filter((item) => item.status === "ACTIVE" && item.grantee_user_id === profile?.id).map((grant) => <div key={grant.id} className="flex items-center gap-3 rounded-xl border border-surface-2 p-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-fg">@{grant.owner_username} - {grant.resource_type} {grant.resource_id}</p><p className="text-xs text-fg-subtle">Permisos: {grant.permissions.join(" / ")}</p></div><Badge variant="outline">Activo</Badge></div>)}{!grants.some((item) => item.status === "ACTIVE" && item.grantee_user_id === profile?.id) && <EmptyState icon={Link2} text="Cuando aceptes una invitacion, sus recursos apareceran aqui." />}</CardContent></Card>
+      <Card className="ds-soft-card overflow-hidden border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-accounts)] text-[var(--ui-editorial-card-ink)] shadow-[5px_6px_0_var(--ui-editorial-card-shadow)]"><CardHeader className="border-b border-[var(--ui-editorial-ink)]/20"><p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] opacity-60">08 / recursos disponibles</p><CardTitle className="text-xl font-bold text-[var(--ui-editorial-card-ink)]">Accesos que recibes</CardTitle><CardDescription className="text-[var(--ui-editorial-card-ink)]/70">Recursos de otras personas disponibles para ti.</CardDescription></CardHeader><CardContent className="space-y-3">{grants.filter((item) => item.status === "ACTIVE" && item.grantee_user_id === profile?.id).map((grant) => <div key={grant.id} className="flex items-center gap-3 rounded-none border border-[var(--ui-editorial-ink)]/30 bg-white/50 p-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-fg">@{grant.owner_username} - {grant.resource_type} {grant.resource_id}</p><p className="text-xs text-fg-subtle">Permisos: {grant.permissions.join(" / ")}</p></div><Badge variant="outline">Activo</Badge></div>)}{!grants.some((item) => item.status === "ACTIVE" && item.grantee_user_id === profile?.id) && <EmptyState icon={Link2} text="Cuando aceptes una invitacion, sus recursos apareceran aqui." />}</CardContent></Card>
     </div>
   );
 }

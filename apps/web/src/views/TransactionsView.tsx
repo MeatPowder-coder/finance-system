@@ -254,11 +254,11 @@ export function TransactionsView(props: TransactionsViewProps) {
       />
 
       {/* Filtros + mini métricas */}
-      <Card className="ui-shell-card overflow-hidden">
+      <Card className="ui-shell-card overflow-hidden rounded-[1.6rem] border-2 border-[var(--ui-editorial-ink)] shadow-[5px_6px_0_var(--ui-editorial-ink)]">
         <CardContent className="p-4 md:p-5">
           <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
-            <div><p className="text-xs font-semibold uppercase tracking-[0.18em] text-brand">Libro de movimientos</p><h2 className="mt-1 text-2xl font-semibold tracking-[-0.04em] text-fg">Todo tiene su lugar</h2><p className="mt-1 text-sm ui-muted">Busca y filtra para encontrar el hilo de tu dinero.</p></div>
-            <div className="flex rounded-xl border border-surface-2 bg-surface-1 p-1" role="group" aria-label="Presentación de movimientos">
+            <div><p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brand">01 / LIBRO DE MOVIMIENTOS</p><h2 className="mt-1 text-3xl font-black tracking-[-0.055em] text-fg">Todo tiene su lugar</h2><p className="mt-1 text-sm ui-muted">Busca y filtra para encontrar el hilo de tu dinero.</p></div>
+            <div className="flex rounded-xl border-2 border-[var(--ui-editorial-ink)] bg-surface-1 p-1 shadow-[2px_2px_0_var(--ui-editorial-ink)]" role="group" aria-label="Presentación de movimientos">
               <Button type="button" size="sm" variant={viewMode === "ledger" ? "default" : "ghost"} aria-pressed={viewMode === "ledger"} onClick={() => setViewMode("ledger")} className={viewMode === "ledger" ? "bg-brand text-surface hover:bg-brand/90" : "text-fg-secondary"}><Rows3 className="mr-1.5 h-4 w-4" />Libro</Button>
               <Button type="button" size="sm" variant={viewMode === "table" ? "default" : "ghost"} aria-pressed={viewMode === "table"} onClick={() => setViewMode("table")} className={viewMode === "table" ? "bg-brand text-surface hover:bg-brand/90" : "text-fg-secondary"}><Table2 className="mr-1.5 h-4 w-4" />Tabla</Button>
             </div>
@@ -267,7 +267,7 @@ export function TransactionsView(props: TransactionsViewProps) {
             <div className="relative md:col-span-3 xl:col-span-2">
               <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-fg-subtle pointer-events-none" />
               <Input
-                className="pl-9 bg-surface-1 border-surface-2"
+                className="pl-9 bg-surface-1 border-2 border-surface-2 focus-visible:border-[var(--ui-editorial-ink)]"
                 placeholder="Buscar por descripción..."
                 value={txSearch}
                 onChange={(e) => setTxSearch(e.target.value)}
@@ -322,19 +322,19 @@ export function TransactionsView(props: TransactionsViewProps) {
               </SelectContent>
             </Select>
           </div>
-          <div className="mt-3 grid grid-cols-2 md:grid-cols-4 gap-3">
-            <KpiCard label="Resultados" value={String(filteredTx.length)} tone="neutral" />
-            <KpiCard label="Ingresos" value={String(txMetrics.inflowCount)} tone="positive" />
-            <KpiCard label="Egresos" value={String(txMetrics.outflowCount)} tone="danger" />
-            <KpiCard label="Pendientes" value={String(txMetrics.pending)} tone="warning" />
+          <div className="mt-3 grid grid-cols-2 gap-3 md:grid-cols-4">
+            <KpiCard label="Resultados" value={String(filteredTx.length)} tone="neutral" className="rounded-[1.2rem] border-2 border-[var(--ui-editorial-ink)] bg-[color-mix(in_srgb,var(--ui-editorial-lime)_28%,var(--ui-panel-strong))] shadow-[3px_4px_0_var(--ui-editorial-card-shadow)]" />
+            <KpiCard label="Ingresos" value={String(txMetrics.inflowCount)} tone="positive" className="rounded-[1.2rem] border-2 border-[var(--ui-editorial-ink)] bg-[color-mix(in_srgb,var(--ui-editorial-mint)_30%,var(--ui-panel-strong))] shadow-[3px_4px_0_var(--ui-editorial-card-shadow)]" />
+            <KpiCard label="Egresos" value={String(txMetrics.outflowCount)} tone="danger" className="rounded-[1.2rem] border-2 border-[var(--ui-editorial-ink)] bg-[color-mix(in_srgb,var(--ui-editorial-orange)_30%,var(--ui-panel-strong))] shadow-[3px_4px_0_var(--ui-editorial-card-shadow)]" />
+            <KpiCard label="Pendientes" value={String(txMetrics.pending)} tone="warning" className="rounded-[1.2rem] border-2 border-[var(--ui-editorial-ink)] bg-[color-mix(in_srgb,var(--ui-editorial-pink)_28%,var(--ui-panel-strong))] shadow-[3px_4px_0_var(--ui-editorial-card-shadow)]" />
           </div>
         </CardContent>
       </Card>
 
       {/* Libro editorial y tabla completa como alternativa */}
-      <Card className="ds-soft-card overflow-hidden">
+      <Card className="ds-soft-card overflow-hidden rounded-[1.6rem] border-2 border-[var(--ui-editorial-ink)] shadow-[5px_6px_0_var(--ui-editorial-ink)]">
         <CardContent className="p-4 md:p-5">
-          <SectionHeader title={viewMode === "ledger" ? "El recorrido de tu dinero" : "Movimientos del mes"} caption={viewMode === "ledger" ? "Cada movimiento conserva el contexto de su día." : "Detalle filtrado, ordenado por fecha."} className="pb-3" />
+          <SectionHeader title={viewMode === "ledger" ? "El recorrido de tu dinero" : "Movimientos del mes"} caption={viewMode === "ledger" ? "Cada movimiento conserva el contexto de su día." : "Detalle filtrado, ordenado por fecha."} className="pb-3 [&_h2]:text-2xl [&_h2]:font-black [&_h2]:tracking-[-0.05em]" />
           {filteredTx.length === 0 ? (
             <EmptyState icon={<Filter className="h-7 w-7" />} title="Sin resultados">
               Ajusta los filtros para ver movimientos.
@@ -346,21 +346,21 @@ export function TransactionsView(props: TransactionsViewProps) {
               {ledgerGroups.map(([day, transactions]) => (
                 <section key={day} aria-label={`Movimientos del ${formatDate(day)}`}>
                   <div className="mb-2 flex items-center gap-3">
-                    <h3 className="shrink-0 text-xs font-semibold uppercase tracking-[0.16em] text-brand">{formatDate(day)}</h3>
-                    <span aria-hidden="true" className="h-px flex-1 bg-surface-2" />
-                    <span className="text-[11px] ui-muted">{transactions.length} {transactions.length === 1 ? "movimiento" : "movimientos"}</span>
+                    <h3 className="shrink-0 rounded-md border border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-lime)] px-2.5 py-1 text-[11px] font-black uppercase tracking-[0.12em] text-[var(--ui-editorial-card-ink,var(--ui-editorial-ink))]">{formatDate(day)}</h3>
+                    <span aria-hidden="true" className="h-px flex-1 bg-[var(--ui-editorial-ink)]/40" />
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.12em] ui-muted">{transactions.length} {transactions.length === 1 ? "movimiento" : "movimientos"}</span>
                   </div>
-                  <div className="overflow-hidden rounded-2xl border border-surface-2 bg-surface-1">
+                  <div className="overflow-hidden rounded-[1.2rem] border-2 border-[var(--ui-editorial-ink)] bg-surface-1 shadow-[3px_4px_0_var(--ui-editorial-ink)]">
                     {transactions.map((transaction, index) => {
                       const inflow = transaction.direction === "INFLOW";
-                      return <article key={transaction.id} className={`grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3 py-3.5 transition-colors hover:bg-brand-soft/50 sm:gap-4 sm:px-4 ${index ? "border-t border-surface-2/80" : ""}`}>
-                        <span className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl ${inflow ? "bg-positive-soft text-positive" : "bg-brand-soft text-brand"}`} aria-hidden="true">{inflow ? <ArrowUpRight className="h-5 w-5" /> : <ArrowDownLeft className="h-5 w-5" />}</span>
+                      return <article key={transaction.id} style={{ borderLeft: `4px solid var(--ui-editorial-${inflow ? "mint" : "orange"})` }} className={`grid grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-3 px-3 py-3.5 transition-colors hover:bg-brand-soft/50 sm:gap-4 sm:px-4 ${index ? "border-t border-surface-2/80" : ""}`}>
+                        <span className={`inline-flex h-11 w-11 items-center justify-center rounded-[1rem] border-2 border-[var(--ui-editorial-ink)] ${inflow ? "bg-[var(--ui-editorial-mint)] text-[var(--ui-editorial-card-ink,var(--ui-editorial-ink))]" : "bg-[var(--ui-editorial-orange)] text-[var(--ui-editorial-card-ink,var(--ui-editorial-ink))]"}`} aria-hidden="true">{inflow ? <ArrowUpRight className="h-5 w-5" /> : <ArrowDownLeft className="h-5 w-5" />}</span>
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><p className="truncate font-semibold text-fg">{transaction.description || "Sin descripción"}</p><span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold ${getStatusTone(transaction.status)}`}>{transaction.status}</span></div>
                           <p className="mt-0.5 truncate text-xs ui-muted">{transaction.account_name}{transaction.category_name ? ` · ${transaction.category_name}` : ""}{transaction.counterparty_name ? ` · ${transaction.counterparty_name}` : ""}</p>
                           {transaction.tags.length > 0 && <p className="mt-1 truncate text-[11px] ui-muted">{transaction.tags.map((tag) => tag.name).join(" · ")}</p>}
                         </div>
-                        <p className={`whitespace-nowrap text-right text-sm font-bold tracking-tight sm:text-base ${inflow ? "text-positive" : "text-fg"}`}>{inflow ? "+" : "−"}{formatMoney(toNumber(transaction.amount), transaction.currency)}</p>
+                        <p className={`whitespace-nowrap text-right text-sm font-black tracking-[-0.04em] sm:text-lg ${inflow ? "text-positive" : "text-fg"}`}>{inflow ? "+" : "−"}{formatMoney(toNumber(transaction.amount), transaction.currency)}</p>
                       </article>;
                     })}
                   </div>
@@ -372,7 +372,7 @@ export function TransactionsView(props: TransactionsViewProps) {
       </Card>
 
       {/* Form nueva transacción */}
-      <Card className="ds-soft-card">
+      <Card className="ds-soft-card rounded-[1.6rem] border-2 border-[var(--ui-editorial-ink)] shadow-[4px_5px_0_var(--ui-editorial-ink)]">
         <CardContent className="p-4 md:p-5">
           <SectionHeader
             title="Nueva transacción"
@@ -689,7 +689,7 @@ export function TransactionsView(props: TransactionsViewProps) {
       </Card>
 
       {/* Catálogos rápidos */}
-      <Card className="ds-soft-card">
+      <Card className="ds-soft-card rounded-[1.6rem] border-2 border-[var(--ui-editorial-ink)] shadow-[4px_5px_0_var(--ui-editorial-ink)]">
         <CardContent className="p-4 md:p-5">
           <SectionHeader
             title="Catálogos rápidos"

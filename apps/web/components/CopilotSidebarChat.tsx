@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { Bot, FileText, Image as ImageIcon, Loader2, Paperclip, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { buildFinanceHeaders, requestFinanceApi, resolveFinanceApiBaseUrl } from "@/lib/runtime-config";
+import { buildFinanceHeaders, financeErrorMessage, requestFinanceApi, resolveFinanceApiBaseUrl } from "@/lib/runtime-config";
 
 type SessionMode = "ACCOUNTANT" | "ANALYST";
 
@@ -102,7 +102,7 @@ export default function CopilotSidebarChat() {
         setActiveSessionId(data[0].id);
       }
     } catch (err: any) {
-      setError(err?.message || "No se pudieron cargar sesiones.");
+      setError(financeErrorMessage(err, "No se pudieron cargar sesiones."));
     } finally {
       setLoading(false);
     }
@@ -115,7 +115,7 @@ export default function CopilotSidebarChat() {
       const data = await apiGet<ChatMessage[]>(`/v1/copilot/sessions/${sessionId}/messages`);
       setMessages(data);
     } catch (err: any) {
-      setError(err?.message || "No se pudieron cargar mensajes.");
+      setError(financeErrorMessage(err, "No se pudieron cargar mensajes."));
     }
   }
 
@@ -129,7 +129,7 @@ export default function CopilotSidebarChat() {
       await loadSessions();
       setActiveSessionId(created.id);
     } catch (err: any) {
-      setError(err?.message || "No se pudo crear sesion.");
+      setError(financeErrorMessage(err, "No se pudo crear sesión."));
     }
   }
 
@@ -168,7 +168,7 @@ export default function CopilotSidebarChat() {
           size: file.size,
         });
       } catch (err: any) {
-        setError(err?.message || `No se pudo adjuntar "${file.name}".`);
+        setError(financeErrorMessage(err, `No se pudo adjuntar "${file.name}".`));
       }
     }
 
@@ -227,7 +227,7 @@ export default function CopilotSidebarChat() {
       setMessages((prev) => [...prev, data.assistantMessage]);
       await loadSessions();
     } catch (err: any) {
-      setError(err?.message || "No se pudo enviar mensaje.");
+      setError(financeErrorMessage(err, "No se pudo enviar mensaje."));
     } finally {
       setBusy(false);
     }
@@ -307,7 +307,7 @@ export default function CopilotSidebarChat() {
       </div>
 
       <div className="copilot-chat-composer shrink-0 p-3">
-        {error && <div className="mb-2 text-[11px] text-amber-300 whitespace-pre-wrap">{error}</div>}
+        {error && <div className="mb-2 text-[11px] text-amber-300 whitespace-pre-wrap">{financeErrorMessage(error)}</div>}
 
         {pendingAttachments.length > 0 && (
           <div className="mb-2 space-y-1.5 max-h-24 overflow-y-auto finance-scrollbar pr-1">

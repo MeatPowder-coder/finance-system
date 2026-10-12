@@ -9,6 +9,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  LogOut,
   LayoutDashboard,
   Menu,
   MessageSquare,
@@ -27,18 +28,19 @@ type FinanceTab = "dashboard" | "accounts" | "transactions" | "reports" | "inves
 
 const financeRoutes: Array<{
   label: string;
+  shortLabel: string;
   href: string;
   tab?: FinanceTab;
   iconComponent: ComponentType<{ className?: string }>;
 }> = [
-  { label: "Dashboard", href: "/?tab=dashboard", tab: "dashboard", iconComponent: LayoutDashboard },
-  { label: "Cuentas", href: "/?tab=accounts", tab: "accounts", iconComponent: Wallet },
-  { label: "Transacciones", href: "/?tab=transactions", tab: "transactions", iconComponent: Receipt },
-  { label: "Reportes", href: "/?tab=reports", tab: "reports", iconComponent: BarChart3 },
-  { label: "Inversiones", href: "/?tab=investments", tab: "investments", iconComponent: PieChart },
-  { label: "Planificacion", href: "/?tab=planning", tab: "planning", iconComponent: CalendarDays },
-  { label: "Copilot", href: "/?tab=copilot", tab: "copilot", iconComponent: MessageSquare },
-  { label: "Configuracion", href: "/?tab=settings", tab: "settings", iconComponent: Settings },
+  { label: "Dashboard", shortLabel: "INICIO", href: "/?tab=dashboard", tab: "dashboard", iconComponent: LayoutDashboard },
+  { label: "Cuentas", shortLabel: "CTA", href: "/?tab=accounts", tab: "accounts", iconComponent: Wallet },
+  { label: "Transacciones", shortLabel: "MOV", href: "/?tab=transactions", tab: "transactions", iconComponent: Receipt },
+  { label: "Reportes", shortLabel: "REP", href: "/?tab=reports", tab: "reports", iconComponent: BarChart3 },
+  { label: "Inversiones", shortLabel: "INV", href: "/?tab=investments", tab: "investments", iconComponent: PieChart },
+  { label: "Planificacion", shortLabel: "PLAN", href: "/?tab=planning", tab: "planning", iconComponent: CalendarDays },
+  { label: "Copilot", shortLabel: "IA", href: "/?tab=copilot", tab: "copilot", iconComponent: MessageSquare },
+  { label: "Configuracion", shortLabel: "AJUST", href: "/?tab=settings", tab: "settings", iconComponent: Settings },
 ];
 
 function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
@@ -79,7 +81,7 @@ function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
               )}
             >
               {route.active && <span className="absolute left-0 top-2 bottom-2 w-[3px] rounded-r-full bg-cyan-400" />}
-              <div className="flex items-center">
+              <div className={cn("finance-nav-route-content flex items-center", collapsed && "flex-col gap-1")}>
                 <route.iconComponent
                   className={cn(
                     "h-5 w-5 shrink-0",
@@ -88,6 +90,7 @@ function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
                   )}
                 />
                 {!collapsed && <span className="truncate">{route.label}</span>}
+                {collapsed && <span className="finance-nav-short-label" aria-hidden="true">{route.shortLabel}</span>}
               </div>
             </Link>
           ))}
@@ -95,9 +98,7 @@ function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
       </div>
       <div className={cn("px-3 py-2 border-t border-[var(--ui-border)] w-full", collapsed ? "flex flex-col items-center" : "")}>
         {!collapsed && (
-          <div className="mb-3">
-            <BackendStatusPill />
-          </div>
+          <div className="mb-3">{collapsed ? <BackendStatusPill compact /> : <BackendStatusPill />}</div>
         )}
         <div className={cn("mb-3", collapsed ? "flex justify-center" : "")}>
           <Button
@@ -108,12 +109,14 @@ function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
               "border-[var(--ui-border-strong)] bg-surface-2 text-fg hover:bg-surface-3 hover:text-fg",
               collapsed ? "h-9 w-9" : "w-full"
             )}
+            aria-label="Cerrar sesión"
+            title={collapsed ? "Cerrar sesión" : undefined}
             onClick={() => {
               clearAuthSession();
               router.replace("/?auth=login");
             }}
           >
-            {!collapsed ? "Cerrar sesion" : "Salir"}
+            {collapsed ? <LogOut className="h-4 w-4" aria-hidden="true" /> : "Cerrar sesión"}
           </Button>
         </div>
         <div className={cn("flex items-center transition-all duration-300", collapsed ? "justify-center" : "px-2")}>

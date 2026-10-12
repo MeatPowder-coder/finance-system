@@ -51,7 +51,7 @@ export default function WelcomeScreenQuiet({ returnTo, apiBaseUrl }: WelcomeScre
             <span className="welcome-connection-dot" />
             <span>Tu espacio financiero</span>
           </div>
-          <div className="welcome-theme-picker" aria-label="Paleta de colores"><span>Temas</span><ThemeSelector collapsed showCurrentTheme /></div>
+          <div className="welcome-theme-picker" aria-label="Paleta de colores"><span>Temas</span><ThemeSelector collapsed showCurrentTheme showSwatches /></div>
         </header>
 
         <section className="welcome-quiet-layout welcome-editorial-layout" aria-labelledby="welcome-title">

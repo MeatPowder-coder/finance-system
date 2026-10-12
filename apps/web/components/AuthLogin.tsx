@@ -17,9 +17,10 @@ import {
   getStoredAuthFlow,
   loginWithEmailPassword,
   persistAuthTokens,
+  recoverAuthSession,
   registerWithEmailPassword,
 } from "@/lib/auth";
-import { buildFinanceHeaders, readFinanceAuthToken, resolveFinanceApiBaseUrl } from "@/lib/runtime-config";
+import { buildFinanceHeaders, financeErrorMessage, readFinanceAuthToken, requestFinanceApi, resolveFinanceApiBaseUrl } from "@/lib/runtime-config";
 import { ThemeSelector } from "@/components/ThemeSelector";
 
 type AuthMode = "login" | "register";
@@ -82,9 +83,15 @@ export function hasWrappedGoogleCallback(rawValue: string | null | undefined) {
 
 export function AuthLoginScreen() {
   const searchParams = useSearchParams();
+  const wrappedCallback = searchParams.get("returnTo");
+  const authRecoveryError = searchParams.get("authError") === "session-rejected"
+    ? "Google completó el acceso, pero la API rechazó la sesión. Intenta iniciar sesión otra vez; si vuelve a pasar, hay que revisar la respuesta de la API."
+    : null;
   const requestedAuthMode: AuthMode = searchParams.get("mode") === "register" ? "register" : "login";
   const [authMode, setAuthMode] = useState<AuthMode>(requestedAuthMode);
   const [configLoading, setConfigLoading] = useState(true);
+  const [configFailed, setConfigFailed] = useState(false);
+  const [configRetryKey, setConfigRetryKey] = useState(0);
   const [busy, setBusy] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -115,13 +122,15 @@ export function AuthLoginScreen() {
         setGoogleEnabled(Boolean(config.googleEnabled));
         setEmailEnabled(Boolean(config.emailPasswordEnabled));
         setGoogleCaption(config.googleEnabled ? "Continuar con Google" : "Google no configurado");
-        setError(config.enabled ? null : "La autenticacion no esta configurada en la API.");
+        setError(authRecoveryError || (config.enabled ? null : "La autenticacion no esta configurada en la API."));
+        setConfigFailed(false);
       } catch (configError) {
         if (cancelled) return;
-        setError(configError instanceof Error ? configError.message : "No se pudo cargar la configuracion de acceso.");
+        setError(financeErrorMessage(configError, "No se pudo cargar la configuracion de acceso."));
         setGoogleEnabled(false);
         setEmailEnabled(false);
         setGoogleCaption("Google no disponible");
+        setConfigFailed(true);
       } finally {
         if (!cancelled) setConfigLoading(false);
       }
@@ -132,7 +141,7 @@ export function AuthLoginScreen() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [configRetryKey, authRecoveryError]);
 
   useEffect(() => {
     const authToken = readFinanceAuthToken();
@@ -143,7 +152,7 @@ export function AuthLoginScreen() {
 
     async function validateCurrentSession() {
       try {
-        const res = await fetch(`${apiBaseUrl}/v1/auth/me`, {
+        const res = await requestFinanceApi(`${apiBaseUrl}/v1/auth/me`, {
           cache: "no-store",
           headers: buildFinanceHeaders(),
         });
@@ -155,7 +164,14 @@ export function AuthLoginScreen() {
         }
 
         if (res.status === 401 || res.status === 403) {
+          if (res.status === 401 && await recoverAuthSession()) {
+            if (cancelled) return;
+            window.location.replace(returnTo);
+            return;
+          }
+          if (cancelled) return;
           clearAuthSession();
+          setError("Google terminó el acceso, pero Finance System rechazó la sesión. Vuelve a iniciar sesión; si se repite, revisa la conexión con la API.");
           return;
         }
 
@@ -182,7 +198,7 @@ export function AuthLoginScreen() {
       window.location.assign(authUrl);
     } catch (loginError) {
       console.error(loginError);
-      setError(loginError instanceof Error ? loginError.message : "No se pudo abrir Google.");
+      setError(financeErrorMessage(loginError, "No se pudo abrir Google."));
       setGoogleBusy(false);
     }
   }
@@ -207,16 +223,23 @@ export function AuthLoginScreen() {
       window.location.replace(returnTo);
     } catch (submitError) {
       console.error(submitError);
-      setError(submitError instanceof Error ? submitError.message : "No se pudo completar el acceso.");
+      setError(financeErrorMessage(submitError, "No se pudo completar el acceso."));
       setBusy(false);
     }
+  }
+
+  // Some static desktop fallbacks return Google to the login URL and wrap the
+  // actual /auth/callback URL in `returnTo`. Keep the OAuth handoff working
+  // even if the host does not resolve the callback route as a separate page.
+  if (hasWrappedGoogleCallback(wrappedCallback)) {
+    return <AuthCallbackScreen />;
   }
 
   return (
     <div className="auth-screen auth-screen-quiet">
       <div className="auth-screen-orb auth-screen-orb-one" aria-hidden="true" />
       <div className="auth-screen-orb auth-screen-orb-two" aria-hidden="true" />
-      <div className="auth-theme-picker"><span>Temas</span><ThemeSelector collapsed showCurrentTheme /></div>
+      <div className="auth-theme-picker"><span>Temas</span><ThemeSelector collapsed showCurrentTheme showSwatches /></div>
       <main className="auth-editorial-layout">
         <aside className="auth-editorial-aside" aria-label="FinanceSystem, finanzas personales con claridad">
           <a href="/" className="auth-editorial-brand" aria-label="Volver al inicio de FinanceSystem">
@@ -374,7 +397,12 @@ export function AuthLoginScreen() {
 
           {error ? (
             <div role="alert" aria-live="polite" className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
-              {error}
+              <p>{error}</p>
+              {configFailed && <Button type="button" variant="outline" className="mt-3" onClick={() => {
+                setError(null);
+                setConfigLoading(true);
+                setConfigRetryKey((value) => value + 1);
+              }}>Reintentar conexión</Button>}
             </div>
           ) : (
             <div aria-live="polite" className="text-center text-xs leading-relaxed text-zinc-500">
@@ -403,11 +431,13 @@ export function AuthCallbackScreen() {
   const processedCallbackRef = useRef<string | null>(null);
   const [status, setStatus] = useState<"idle" | "exchanging" | "error" | "done">("idle");
   const [message, setMessage] = useState("Validando tu sesion...");
+  const [continuationTarget, setContinuationTarget] = useState("/?tab=dashboard");
 
   useEffect(() => {
     if (callbackError) {
       setStatus("error");
-      setMessage(errorDescription ? `${callbackError}: ${errorDescription}` : callbackError);
+      const callbackMessage = errorDescription ? `${callbackError}: ${errorDescription}` : callbackError;
+      setMessage(financeErrorMessage(callbackMessage, "Google no pudo completar el acceso."));
       return;
     }
 
@@ -446,35 +476,75 @@ export function AuthCallbackScreen() {
       codeVerifier: flow.codeVerifier,
       redirectUri: flow.redirectUri,
       state,
-    })
+    }, { signal: AbortSignal.timeout(20000) })
       .then((result) => {
+        const accessToken = result?.tokens?.access_token?.trim();
+        if (!accessToken) {
+          throw new Error("Google autorizó la cuenta, pero Finance System no devolvió el token de sesión. Vuelve a intentar; si se repite, hay que revisar la respuesta de la API.");
+        }
+
         persistAuthTokens(result.tokens);
+        if (!readFinanceAuthToken()) {
+          throw new Error("Google autorizó la cuenta, pero no se pudo guardar la sesión en este navegador. Revisa el almacenamiento del sitio y vuelve a intentar.");
+        }
         setMessage("Google confirmó tu cuenta. Verificando la sesión con FinanceSystem...");
-        clearStoredAuthFlow();
-        setStatus("done");
-        setMessage("Sesión iniciada. Abriendo el sistema...");
-        // The token exchange is the authoritative OAuth response. EntryGate
-        // checks the API session after the app opens; a transient health-check
-        // or CORS failure must not discard the newly issued tokens here.
-        // Reload after OAuth so both the Next app and desktop shell start with
-        // the persisted session and route state.
-        window.location.replace(normalizeReturnTo(flow.returnTo));
+        const apiBaseUrl = resolveFinanceApiBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4100");
+        const verifySession = () => requestFinanceApi(`${apiBaseUrl}/v1/auth/me`, {
+          cache: "no-store",
+          headers: buildFinanceHeaders(),
+          signal: AbortSignal.timeout(12000),
+        });
+
+        void (async () => {
+          let sessionResponse = await verifySession();
+          if (sessionResponse.status === 401 && await recoverAuthSession()) {
+            sessionResponse = await verifySession();
+          }
+
+          if (!sessionResponse.ok) {
+            if (sessionResponse.status === 401 || sessionResponse.status === 403) clearAuthSession();
+            let reason = "";
+            try {
+              const payload = await sessionResponse.clone().json() as { error?: unknown; code?: unknown };
+              const codeLabel = typeof payload.code === "string" ? ` (${payload.code})` : "";
+              reason = `${typeof payload.error === "string" ? payload.error : `HTTP ${sessionResponse.status}`}${codeLabel}`;
+            } catch {
+              reason = `HTTP ${sessionResponse.status}`;
+            }
+            throw new Error(`Google autorizó la cuenta, pero Finance System no validó la sesión: ${reason}.`);
+          }
+
+          clearStoredAuthFlow();
+          const destination = normalizeReturnTo(flow.returnTo);
+          setContinuationTarget(destination);
+          setStatus("done");
+          setMessage("Sesión iniciada y verificada. Abriendo el sistema...");
+          // Confirm the API session before navigating so an accepted Google
+          // code cannot silently bounce the user back to the login screen.
+          window.location.assign(destination);
+        })().catch((verificationError: unknown) => {
+          if (verificationError instanceof Error && /HTTP (401|403)|unauthorized|no autorizado|no validó la sesión/i.test(verificationError.message)) {
+            clearAuthSession();
+          }
+          setStatus("error");
+          setMessage(financeErrorMessage(verificationError, "Google confirmó la cuenta, pero no se pudo validar la sesión en Finance System."));
+        });
       })
       .catch((callbackError: unknown) => {
-        console.error(callbackError);
         if (callbackError instanceof Error && /HTTP (401|403)|unauthorized|no autorizado/i.test(callbackError.message)) {
           clearAuthSession();
         }
         setStatus("error");
-        setMessage(callbackError instanceof Error && /failed to fetch|fetch failed|networkerror|network request failed/i.test(callbackError.message)
-          ? "Google autorizó el acceso, pero FinanceSystem no responde ahora. Tus credenciales se conservan; vuelve a intentar en unos segundos."
-          : callbackError instanceof Error ? callbackError.message : "No se pudo completar el login.");
+        const normalizedError = financeErrorMessage(callbackError, "No se pudo completar el login.");
+        setMessage(/servicio de datos no respondió/i.test(normalizedError)
+          ? "Google autorizó el acceso, pero no se pudo completar la conexión con FinanceSystem. Revisa la API e inténtalo de nuevo."
+          : normalizedError);
       });
   }, [code, state, callbackError, errorDescription]);
 
   return (
     <div className="auth-screen auth-screen-quiet">
-      <div className="auth-theme-picker"><span>Temas</span><ThemeSelector collapsed showCurrentTheme /></div>
+      <div className="auth-theme-picker"><span>Temas</span><ThemeSelector collapsed showCurrentTheme showSwatches /></div>
       <Card className="auth-card auth-editorial-callback w-full max-w-lg">
         <CardHeader className="space-y-4">
           <div className="inline-flex items-center gap-2 self-start rounded-full border border-cyan-500/30 bg-cyan-500/10 px-3 py-1 text-xs font-medium text-cyan-200">
@@ -521,6 +591,15 @@ export function AuthCallbackScreen() {
               }}
             >
               Volver a intentar
+            </Button>
+          )}
+          {status === "done" && (
+            <Button
+              type="button"
+              className="w-full"
+              onClick={() => window.location.assign(continuationTarget)}
+            >
+              Abrir FinanceSystem
             </Button>
           )}
         </CardContent>

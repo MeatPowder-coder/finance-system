@@ -5,7 +5,7 @@ import { Bot, FileText, Image as ImageIcon, Loader2, MessageSquare, Paperclip, P
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { buildFinanceHeaders, requestFinanceApi, resolveFinanceApiBaseUrl } from "@/lib/runtime-config";
+import { buildFinanceHeaders, financeErrorMessage, requestFinanceApi, resolveFinanceApiBaseUrl } from "@/lib/runtime-config";
 
 type SessionMode = "ACCOUNTANT" | "ANALYST";
 
@@ -141,7 +141,7 @@ export default function ChatInterfaceFinance() {
         setActiveSessionId(data[0].id);
       }
     } catch (err: any) {
-      setError(err?.message || "No se pudieron cargar sesiones.");
+      setError(financeErrorMessage(err, "No se pudieron cargar sesiones."));
     } finally {
       setLoadingSessions(false);
     }
@@ -155,7 +155,7 @@ export default function ChatInterfaceFinance() {
         setSelectedModel(cfg.defaultModel);
       }
     } catch (err: any) {
-      setError(err?.message || "No se pudieron cargar modelos.");
+      setError(financeErrorMessage(err, "No se pudieron cargar modelos."));
     }
   }
 
@@ -166,7 +166,7 @@ export default function ChatInterfaceFinance() {
       const data = await apiGet<ChatMessage[]>(`/v1/copilot/sessions/${sessionId}/messages`);
       setMessages(data);
     } catch (err: any) {
-      setError(err?.message || "No se pudieron cargar mensajes.");
+      setError(financeErrorMessage(err, "No se pudieron cargar mensajes."));
     }
   }
 
@@ -180,7 +180,7 @@ export default function ChatInterfaceFinance() {
       await loadSessions();
       setActiveSessionId(created.id);
     } catch (err: any) {
-      setError(err?.message || "No se pudo crear sesiÃ³n.");
+      setError(financeErrorMessage(err, "No se pudo crear sesión."));
     }
   }
 
@@ -256,7 +256,7 @@ export default function ChatInterfaceFinance() {
           size: file.size,
         });
       } catch (err: any) {
-        setError(err?.message || `No se pudo adjuntar "${file.name}".`);
+        setError(financeErrorMessage(err, `No se pudo adjuntar "${file.name}".`));
       }
     }
 
@@ -314,7 +314,7 @@ export default function ChatInterfaceFinance() {
         setError(`Nota de modelo: ${data.modelFallbackReason}`);
       }
     } catch (err: any) {
-      setError(err?.message || "No se pudo enviar mensaje.");
+      setError(financeErrorMessage(err, "No se pudo enviar mensaje."));
     } finally {
       setBusy(false);
     }
@@ -481,7 +481,7 @@ export default function ChatInterfaceFinance() {
         )}
 
         <div className="chat-composer shrink-0 p-4 border-t border-surface-2 bg-surface-1">
-          {error && <div className="mb-2 text-xs text-warning whitespace-pre-wrap rounded-lg border border-warning/40 bg-warning/10 px-2 py-1.5">{error}</div>}
+          {error && <div className="mb-2 text-xs text-warning whitespace-pre-wrap rounded-lg border border-warning/40 bg-warning/10 px-2 py-1.5">{financeErrorMessage(error)}</div>}
 
           {pendingAttachments.length > 0 && (
             <div className="mb-2 flex flex-wrap gap-2">

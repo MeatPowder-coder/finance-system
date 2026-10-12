@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type ComponentType } from "react";
+import { useEffect, useMemo, useState, type ComponentType, type CSSProperties } from "react";
 import { Button } from "@/components/ui/button";
 import { CircleOff, Flame, Grid3X3, Leaf, Moon, Palette, Sparkles, Sun, Waves } from "lucide-react";
 import {
@@ -26,88 +26,118 @@ type BackgroundMode = "auto" | "plain" | "grid" | "aurora";
 type ThemeOption = {
   value: ThemeId;
   label: string;
+  shortLabel: string;
   description: string;
   icon: ComponentType<{ className?: string }>;
   swatch: string;
+  preview: {
+    base: string;
+    hero: string;
+    flow: string;
+    ledger: string;
+    account: string;
+  };
 };
 
 const THEME_OPTIONS: ThemeOption[] = [
   {
     value: "dark",
     label: "Cuaderno nocturno",
+    shortLabel: "Noche",
     description: "Tinta verde, lima y coral · referencia Bento",
     icon: Moon,
     swatch: "from-[#122019] via-[#d8ff63] to-[#df5a43]",
+    preview: { base: "#121713", hero: "#214735", flow: "#d8ff63", ledger: "#df5a43", account: "#afd3dc" },
   },
   {
     value: "light",
     label: "Papel editorial",
+    shortLabel: "Papel",
     description: "Papel cálido, verde botánico, coral y azul",
     icon: Sun,
     swatch: "from-[#f2f0e4] via-[#9dbf67] to-[#e98765]",
+    preview: { base: "#f2f0e4", hero: "#214735", flow: "#d8ff63", ledger: "#df5a43", account: "#bbd4e0" },
   },
   {
     value: "sand",
     label: "Arena",
+    shortLabel: "Arena",
     description: "Claro calido y suave para uso diario",
     icon: Sun,
     swatch: "from-amber-100 via-orange-100 to-rose-200",
+    preview: { base: "#f4ead9", hero: "#3d5044", flow: "#edd674", ledger: "#db7654", account: "#bbd4cc" },
   },
   {
     value: "lavender",
     label: "Lavanda",
+    shortLabel: "Lavanda",
     description: "Claro con acento violeta discreto",
     icon: Sparkles,
     swatch: "from-violet-100 via-indigo-100 to-sky-200",
+    preview: { base: "#f5f1fa", hero: "#36305e", flow: "#d6ec83", ledger: "#dd6477", account: "#b6c9ef" },
   },
   {
     value: "mint",
     label: "Menta",
+    shortLabel: "Menta",
     description: "Claro fresco con acentos verdes",
     icon: Leaf,
     swatch: "from-emerald-100 via-teal-100 to-cyan-200",
+    preview: { base: "#edf6ef", hero: "#244e46", flow: "#d6ee83", ledger: "#d66a5b", account: "#a6d8d2" },
   },
   {
     value: "graphite",
     label: "Grafito",
+    shortLabel: "Grafito",
     description: "Oscuro mate sin fondo animado",
     icon: CircleOff,
     swatch: "from-zinc-200 via-zinc-700 to-zinc-950",
+    preview: { base: "#191b1c", hero: "#1b3030", flow: "#c9e66c", ledger: "#e77861", account: "#acd1da" },
   },
   {
     value: "midnight",
     label: "Medianoche",
+    shortLabel: "Medianoche",
     description: "Azules profundos con brillo sutil",
     icon: Sparkles,
     swatch: "from-sky-300 via-indigo-400 to-violet-600",
+    preview: { base: "#11121f", hero: "#232346", flow: "#b8e7ff", ledger: "#f17d67", account: "#a8c8f3" },
   },
   {
     value: "ocean",
     label: "Oceano",
+    shortLabel: "Océano",
     description: "Cian y azul para un look mas fresco",
     icon: Waves,
     swatch: "from-cyan-300 via-sky-400 to-blue-600",
+    preview: { base: "#09282c", hero: "#154d4e", flow: "#8fe8dc", ledger: "#f07b61", account: "#9fd8ed" },
   },
   {
     value: "forest",
     label: "Bosque",
+    shortLabel: "Bosque",
     description: "Verde elegante con sensacion organica",
     icon: Leaf,
     swatch: "from-emerald-300 via-green-400 to-lime-500",
+    preview: { base: "#12221a", hero: "#244c37", flow: "#d1ee6e", ledger: "#e47b5d", account: "#a9d5c9" },
   },
   {
     value: "ember",
     label: "Ascua",
+    shortLabel: "Ascua",
     description: "Calido, ambar y con mas energia visual",
     icon: Flame,
     swatch: "from-orange-300 via-amber-400 to-rose-500",
+    preview: { base: "#291810", hero: "#5c3020", flow: "#f4d46c", ledger: "#ed7951", account: "#a9d7d4" },
   },
   {
     value: "neon",
     label: "Neon",
+    shortLabel: "Neón",
     description: "El estilo mas intenso y vibrante",
     icon: Palette,
     swatch: "from-fuchsia-300 via-cyan-300 to-violet-500",
+    preview: { base: "#17121e", hero: "#3a1d4a", flow: "#dcff43", ledger: "#ff6177", account: "#83dfe9" },
   },
 ];
 
@@ -208,20 +238,27 @@ export function ThemeSelector({ collapsed, showCurrentTheme = false, showSwatche
                 type="button"
                 onClick={() => handleThemeChange(option.value)}
                 className={cn(
-                  "flex items-center gap-3 rounded-2xl border p-3 text-left transition-all",
+                  "theme-palette-choice flex items-center gap-3 rounded-2xl border p-3 text-left transition-all",
                   active
                     ? "border-primary bg-primary/10 shadow-sm"
                     : "border-border bg-card/60 hover:border-primary/50 hover:bg-accent"
                 )}
+                aria-pressed={active}
+                aria-label={`${option.label}: ${option.description}${active ? ", paleta activa" : ""}`}
               >
-                <span className={cn("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br shadow-sm", option.swatch)}>
-                  <Icon className="h-4 w-4 text-white drop-shadow" />
+                <span className="theme-option-preview" style={{ "--preview-base": option.preview.base, "--preview-hero": option.preview.hero, "--preview-flow": option.preview.flow, "--preview-ledger": option.preview.ledger, "--preview-account": option.preview.account } as CSSProperties} aria-hidden="true">
+                  <i className="theme-option-preview-hero" />
+                  <i className="theme-option-preview-flow" />
+                  <i className="theme-option-preview-ledger" />
+                  <i className="theme-option-preview-account" />
                 </span>
                 <span className="min-w-0">
                   <span className="block text-sm font-medium text-foreground">{option.label}</span>
                   <span className="block truncate text-xs text-muted-foreground">{option.description}</span>
                 </span>
-                <span className={cn("ml-auto text-xs", active ? "text-primary" : "text-muted-foreground")}>{active ? "Activo" : ""}</span>
+                <span className={cn("theme-palette-choice-state ml-auto text-xs", active ? "text-primary" : "text-muted-foreground")}>
+                  {active ? "Activa" : ""}
+                </span>
               </button>
             );
           })}
@@ -288,24 +325,23 @@ export function ThemeSelector({ collapsed, showCurrentTheme = false, showSwatche
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {THEME_OPTIONS.map((option) => {
-          const Icon = option.icon;
-
           return (
             <DropdownMenuItem
               key={option.value}
               onClick={() => handleThemeChange(option.value)}
-              className="my-0.5 flex items-start gap-3 rounded-lg px-2 py-2.5"
+              className="theme-menu-option my-0.5 flex items-center gap-3 rounded-lg px-2 py-2.5"
+              role="menuitemradio"
+              aria-checked={theme === option.value}
+              aria-label={`${option.label}: ${option.description}`}
             >
               <span className="mt-1 flex h-4 w-4 shrink-0 items-center justify-center text-cyan-300">
                 {theme === option.value ? "●" : "○"}
               </span>
-              <span
-                className={cn(
-                  "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br shadow-lg",
-                  option.swatch
-                )}
-              >
-                <Icon className="h-4 w-4 text-white drop-shadow" />
+              <span className="theme-option-preview" style={{ "--preview-base": option.preview.base, "--preview-hero": option.preview.hero, "--preview-flow": option.preview.flow, "--preview-ledger": option.preview.ledger, "--preview-account": option.preview.account } as CSSProperties} aria-hidden="true">
+                <i className="theme-option-preview-hero" />
+                <i className="theme-option-preview-flow" />
+                <i className="theme-option-preview-ledger" />
+                <i className="theme-option-preview-account" />
               </span>
               <span className="flex min-w-0 flex-1 flex-col">
                 <span className="font-medium text-zinc-100">{option.label}</span>
@@ -345,24 +381,39 @@ export function ThemeSelector({ collapsed, showCurrentTheme = false, showSwatche
     </DropdownMenu>
   );
 
-  if (!showCurrentTheme && !showSwatches) return selectorMenu;
+  // Keep the complete palette set visible in the editorial masthead so the
+  // choices are discoverable without opening a secondary menu.
+  if (!showSwatches) return selectorMenu;
 
   return (
-    <div className="theme-selector-control">
-      {selectorMenu}
-      <div className="theme-swatch-strip" role="group" aria-label="Elegir paleta de colores">
-        <span className="theme-swatch-label">{THEME_OPTIONS.length} paletas · {currentTheme.label}</span>
+    <div className="theme-palette-control">
+      <div className="theme-palette-gallery-heading">
+        <span>{THEME_OPTIONS.length} PALETAS</span>
+        <strong>{currentTheme.label}</strong>
+        <small>{currentTheme.description}</small>
+      </div>
+      <div className="theme-palette-gallery" role="group" aria-label={`Elegir paleta de colores. ${THEME_OPTIONS.length} opciones disponibles.`}>
         {THEME_OPTIONS.map((option) => (
           <button
             key={option.value}
             type="button"
-            title={option.label}
-            aria-label={`Usar paleta ${option.label}`}
+            title={`${option.label} — ${option.description}`}
+            aria-label={`Usar paleta ${option.label}. ${option.description}`}
             aria-pressed={theme === option.value}
             onClick={() => handleThemeChange(option.value)}
-            className={cn("theme-swatch bg-gradient-to-br", option.swatch, theme === option.value && "is-active")}
+            className={cn("theme-palette-chip", theme === option.value && "is-active")}
           >
-            <span className="sr-only">{option.label}</span>
+            <span className="theme-palette-chip-preview" style={{ "--palette-base": option.preview.base, "--palette-hero": option.preview.hero, "--palette-flow": option.preview.flow, "--palette-ledger": option.preview.ledger, "--palette-account": option.preview.account } as CSSProperties} aria-hidden="true">
+              <i className="theme-palette-chip-hero" />
+              <i className="theme-palette-chip-flow" />
+              <i className="theme-palette-chip-ledger" />
+              <i className="theme-palette-chip-account" />
+            </span>
+            <span className="theme-palette-chip-copy">
+              <strong className="theme-palette-chip-name">{option.shortLabel}</strong>
+              <small>{option.description}</small>
+            </span>
+            <span className="theme-palette-chip-selected" aria-hidden="true">{theme === option.value ? "ACTIVA" : ""}</span>
           </button>
         ))}
       </div>

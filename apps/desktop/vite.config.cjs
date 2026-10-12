@@ -27,13 +27,28 @@ module.exports = defineConfig(async ({ mode }) => {
       developmentApiProxyTarget = remoteApiProxyTarget;
     }
   }
+  const configuredDirectApiUrl = env.FINANCE_LOCAL_PREVIEW_API_URL || env.VITE_API_BASE_URL || desktopEnv.VITE_API_BASE_URL ||
+    (env.NEXT_PUBLIC_API_BASE_URL && !env.NEXT_PUBLIC_API_BASE_URL.startsWith("/") ? env.NEXT_PUBLIC_API_BASE_URL : "");
+  let previewApiProxyTarget = configuredDirectApiUrl || apiProxyTarget;
+
+  if (localPreview && /^https?:\/\/(localhost|127\.0\.0\.1)(:\d+)?\/?$/i.test(apiProxyTarget)) {
+    try {
+      const health = await fetch(`${apiProxyTarget.replace(/\/+$/, "")}/health`, {
+        signal: AbortSignal.timeout(1200),
+        cache: "no-store",
+      });
+      if (health.ok) previewApiProxyTarget = apiProxyTarget;
+    } catch {
+      // Keep the configured direct API fallback when the local API is offline.
+    }
+  }
+
   const apiBaseUrl = localPreview
-    // The preview is a browser client. Call the configured API directly so
-    // Vite's Node proxy is not a second network dependency (CORS explicitly
-    // allows localhost/127.0.0.1 preview origins on the Finance API).
-    ? (env.FINANCE_LOCAL_PREVIEW_API_URL || env.VITE_API_BASE_URL || desktopEnv.VITE_API_BASE_URL || (env.NEXT_PUBLIC_API_BASE_URL?.startsWith("/") ? "" : env.NEXT_PUBLIC_API_BASE_URL) || apiProxyTarget)
+    // Keep browser requests same-origin. The preview server proxies Finance API
+    // routes, avoiding CORS failures from localhost preview ports.
+    ? "/v1"
     : mode === "development"
-    ? (localDevelopmentApiAvailable ? (env.NEXT_PUBLIC_API_BASE_URL || "/v1") : remoteApiProxyTarget)
+    ? "/v1"
     : (env.VITE_API_BASE_URL || env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4100");
   const makeApiProxy = (target) => ({
     "/v1": { target, changeOrigin: true, secure: true },
@@ -59,6 +74,9 @@ module.exports = defineConfig(async ({ mode }) => {
         allow: [path.resolve(__dirname, "..")],
       },
       proxy: makeApiProxy(mode === "development" ? developmentApiProxyTarget : apiProxyTarget),
+    },
+    preview: {
+      proxy: makeApiProxy(localPreview ? previewApiProxyTarget : apiProxyTarget),
     },
   };
 });

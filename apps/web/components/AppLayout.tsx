@@ -74,7 +74,7 @@ export default function AppLayout({
         !isDesktopEmbed && !isChat
             ? copilotRailOpen
                 ? "md:pr-80"
-                : "md:pr-12"
+                : "md:pr-0"
             : "md:pr-0";
 
     return (
@@ -82,10 +82,10 @@ export default function AppLayout({
             <AnimatedBackground />
             <NotificationBell copilotOpen={copilotRailOpen} />
 
-            {/* Desktop Sidebar - Fixed width, hidden on mobile */}
+            {/* Editorial section rail stays available across every authenticated view. */}
             {!isDesktopEmbed && (
                 <div className="finance-app-sidebar hidden md:flex flex-col fixed inset-y-0 z-50 h-full">
-                    <AppSidebar collapsed={collapsed} onCollapsedChange={setCollapsed} />
+                  <AppSidebar collapsed={collapsed} onCollapsedChange={setCollapsed} />
                 </div>
             )}
 
@@ -136,7 +136,7 @@ export default function AppLayout({
 
                 {/* Mobile Header - Visible only on mobile */}
                 {!isDesktopEmbed && (
-                    <div className="md:hidden flex items-center h-14 px-4 border-b border-[var(--ui-border)] bg-surface-1 text-fg shrink-0 z-40 relative">
+                    <div className="finance-mobile-header md:hidden flex items-center h-14 px-4 border-b border-[var(--ui-border)] bg-surface-1 text-fg shrink-0 z-40 relative">
                         <MobileSidebar />
                         <span className="ml-3 font-semibold text-fg text-lg tracking-tight">FinanceSystem</span>
                     </div>
@@ -147,7 +147,7 @@ export default function AppLayout({
                     - If other: overflow-y-auto
                 */}
                 <main className={cn(
-                    "flex-1 min-h-0 relative",
+                    "finance-app-scroll flex-1 min-h-0 relative",
                     isChat && !isDesktopEmbed ? "overflow-hidden" : "overflow-y-auto"
                 )}>
                     {children}

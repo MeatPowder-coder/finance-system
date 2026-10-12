@@ -137,7 +137,10 @@ export function getStoredAuthFlow() {
 
 async function apiGet<T>(path: string) {
   const apiBaseUrl = resolveFinanceApiBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4100");
-  const res = await requestFinanceApi(`${apiBaseUrl}${path}`, { cache: "no-store" });
+  const res = await requestFinanceApi(`${apiBaseUrl}${path}`, {
+    cache: "no-store",
+    signal: AbortSignal.timeout(10000),
+  });
   const json = await readResponsePayload(res);
   if (!res.ok) {
     const errorMessage = typeof json.error === "string" ? json.error : typeof json.message === "string" ? json.message : typeof json.raw === "string" ? json.raw : `HTTP ${res.status}`;
@@ -146,7 +149,7 @@ async function apiGet<T>(path: string) {
   return json.data as T;
 }
 
-async function apiPost<T>(path: string, body: unknown) {
+async function apiPost<T>(path: string, body: unknown, options?: { signal?: AbortSignal }) {
   const apiBaseUrl = resolveFinanceApiBaseUrl(process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4100");
   const res = await requestFinanceApi(`${apiBaseUrl}${path}`, {
     method: "POST",
@@ -154,6 +157,7 @@ async function apiPost<T>(path: string, body: unknown) {
       "Content-Type": "application/json",
     },
     body: JSON.stringify(body),
+    signal: options?.signal || AbortSignal.timeout(20000),
   });
   const json = await readResponsePayload(res);
   if (!res.ok) {
@@ -203,13 +207,13 @@ export async function createGoogleLoginFlow(options?: { returnTo?: string }) {
   return authUrl.toString();
 }
 
-export async function exchangeGoogleAuthorizationCode(payload: AuthExchangeRequest) {
+export async function exchangeGoogleAuthorizationCode(payload: AuthExchangeRequest, options?: { signal?: AbortSignal }) {
   const result = await apiPost<{ tokens: AuthTokenPayload; profile: AuthProfile }>("/v1/auth/google/exchange", {
     code: payload.code,
     codeVerifier: payload.codeVerifier,
     redirectUri: payload.redirectUri,
     state: payload.state,
-  });
+  }, options);
   return result;
 }
 
@@ -230,6 +234,17 @@ export async function refreshAuthSession() {
   return apiPost<{ tokens: AuthTokenPayload; profile: AuthProfile }>("/v1/auth/refresh", {
     refreshToken,
   });
+}
+
+/** Try rotating a rejected access token before treating the user as signed out. */
+export async function recoverAuthSession() {
+  try {
+    const result = await refreshAuthSession();
+    persistAuthTokens(result.tokens);
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 export async function revokeAuthSession() {

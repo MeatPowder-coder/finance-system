@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useMemo, useSyncExternalStore } from "react";
 
 const NAVIGATION_EVENT = "desktop-next-navigation";
 
@@ -36,17 +36,21 @@ export function usePathname() {
 
 export function useSearchParams() {
   const current = useSyncExternalStore(subscribe, getCurrentLocation, getCurrentLocation);
-  const query = current.includes("?") ? current.slice(current.indexOf("?")) : "";
-  return new URLSearchParams(query);
+  return useMemo(() => {
+    const query = current.includes("?") ? current.slice(current.indexOf("?")) : "";
+    return new URLSearchParams(query);
+  }, [current]);
 }
 
+const router = {
+  push: (url: string, _options?: unknown) => navigate(url, false),
+  replace: (url: string, _options?: unknown) => navigate(url, true),
+  refresh: () => emitNavigation(),
+  back: () => window.history.back(),
+  forward: () => window.history.forward(),
+  prefetch: async () => undefined,
+};
+
 export function useRouter() {
-  return {
-    push: (url: string, _options?: unknown) => navigate(url, false),
-    replace: (url: string, _options?: unknown) => navigate(url, true),
-    refresh: () => emitNavigation(),
-    back: () => window.history.back(),
-    forward: () => window.history.forward(),
-    prefetch: async () => undefined,
-  };
+  return router;
 }

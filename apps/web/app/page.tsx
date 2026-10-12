@@ -34,8 +34,8 @@ import { InvestmentsView } from "@/src/views/InvestmentsView";
 import { PlanningView } from "@/src/views/PlanningView";
 import { DashboardView } from "@/src/views/DashboardView";
 import { SettingsView } from "@/src/views/SettingsView";
-import { buildFinanceHeaders, requestFinanceApi, resolveFinanceApiBaseUrl } from "@/lib/runtime-config";
-import { clearAuthSession } from "@/lib/auth";
+import { buildFinanceHeaders, financeErrorMessage, requestFinanceApi, resolveFinanceApiBaseUrl } from "@/lib/runtime-config";
+import { clearAuthSession, recoverAuthSession } from "@/lib/auth";
 import {
   AlertTriangle,
   ArrowDownLeft,
@@ -188,7 +188,7 @@ async function apiPatch<T>(path: string, body: unknown) {
 }
 
 function withApiEndpoint(path: string, error: unknown) {
-  const detail = error instanceof Error ? error.message : "Error desconocido";
+  const detail = financeErrorMessage(error, "Error desconocido");
   return new Error(detail.startsWith(`${path} — `) ? detail : `${path} — ${detail}`);
 }
 
@@ -311,7 +311,7 @@ function HomeContent() {
     monthlyInvestmentGoal: "0",
   });
 
-  async function refreshData() {
+  async function refreshData(retryAfterSessionRefresh = true) {
     setLoading(true);
     setError(null);
     const results = await Promise.allSettled([
@@ -328,8 +328,11 @@ function HomeContent() {
     if (authFailure) {
       const rawMessage = authFailure instanceof Error ? authFailure.message : String(authFailure);
       if (/autenticaci[oó]n requerida|unauthorized/i.test(rawMessage)) {
+        if (retryAfterSessionRefresh && await recoverAuthSession()) {
+          return refreshData(false);
+        }
         clearAuthSession();
-        router.replace(`/?auth=login&returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`);
+        router.replace(`/?auth=login&authError=session-rejected&returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`);
       }
       setLoading(false);
       return;
@@ -466,11 +469,12 @@ function HomeContent() {
       setBudgetDialogOpen(false);
       await refreshPlanning();
     } catch (err: unknown) {
-      const message = err instanceof Error
-        ? err.message
-        : budgetDialogMode === "edit"
+      const message = financeErrorMessage(
+        err,
+        budgetDialogMode === "edit"
           ? "No se pudo actualizar presupuesto."
-          : "No se pudo crear presupuesto.";
+          : "No se pudo crear presupuesto."
+      );
       setError(message);
     } finally {
       setSaving(false);
@@ -493,7 +497,7 @@ function HomeContent() {
       setCommitmentDialogOpen(false);
       await refreshPlanning();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "No se pudo crear compromiso.";
+      const message = financeErrorMessage(err, "No se pudo crear compromiso.");
       setError(message);
     } finally {
       setSaving(false);
@@ -513,7 +517,7 @@ function HomeContent() {
       setProjectionDialogOpen(false);
       await refreshPlanning();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "No se pudo ejecutar proyeccion.";
+      const message = financeErrorMessage(err, "No se pudo ejecutar proyeccion.");
       setError(message);
     } finally {
       setSaving(false);
@@ -649,8 +653,7 @@ function HomeContent() {
 
   const topAccounts = useMemo(() => {
     return [...accounts]
-      .sort((a, b) => Math.abs(toNumber(b.balance_current)) - Math.abs(toNumber(a.balance_current)))
-      .slice(0, 6);
+      .sort((a, b) => Math.abs(toNumber(b.balance_current)) - Math.abs(toNumber(a.balance_current)));
   }, [accounts]);
 
   const dashboardBudgets = useMemo(() => {
@@ -710,8 +713,7 @@ function HomeContent() {
   const upcomingCommitments = useMemo(() => {
     return [...commitments]
       .filter((item) => item.is_active)
-      .sort((a, b) => new Date(a.next_run_at).getTime() - new Date(b.next_run_at).getTime())
-      .slice(0, 6);
+      .sort((a, b) => new Date(a.next_run_at).getTime() - new Date(b.next_run_at).getTime());
   }, [commitments]);
 
   const maxCategoryTotal = useMemo(() => {
@@ -805,7 +807,7 @@ function HomeContent() {
       await refreshData();
       await refreshPlanning();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "No se pudo crear cuenta.";
+      const message = financeErrorMessage(err, "No se pudo crear cuenta.");
       setError(message);
     } finally {
       setSaving(false);
@@ -825,7 +827,7 @@ function HomeContent() {
       await refreshData();
       return created;
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "No se pudo crear categoria.";
+      const message = financeErrorMessage(err, "No se pudo crear categoria.");
       setError(message);
       return null;
     } finally {
@@ -852,7 +854,7 @@ function HomeContent() {
       setCounterpartyForm({ name: "", type: "OTHER" });
       await refreshData();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "No se pudo crear contraparte.";
+      const message = financeErrorMessage(err, "No se pudo crear contraparte.");
       setError(message);
     } finally {
       setSaving(false);
@@ -870,7 +872,7 @@ function HomeContent() {
       setTagForm({ name: "", color: "" });
       await refreshData();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "No se pudo crear tag.";
+      const message = financeErrorMessage(err, "No se pudo crear tag.");
       setError(message);
     } finally {
       setSaving(false);
@@ -937,7 +939,7 @@ function HomeContent() {
       await refreshData();
       await refreshPlanning();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "No se pudo crear transaccion.";
+      const message = financeErrorMessage(err, "No se pudo crear transacción.");
       setError(message);
     } finally {
       setSaving(false);
@@ -969,7 +971,7 @@ function HomeContent() {
       setCopilotInput("");
       await refreshSessions();
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "No se pudo enviar mensaje.";
+      const message = financeErrorMessage(err, "No se pudo enviar mensaje.");
       setError(message);
     } finally {
       setCopilotBusy(false);
@@ -981,10 +983,13 @@ function HomeContent() {
       <main data-finance-tab={tab} className={tab === "copilot" ? "flex h-full min-h-0 w-full flex-col mx-auto px-4 py-3 md:px-6 md:py-4 lg:px-8" : "w-full xl:max-w-[1600px] mx-auto px-4 py-4 md:px-6 md:py-5 lg:px-8"}>
         <nav aria-label="Navegación principal" className="finance-primary-tabs section-enter mb-4">
           <div className="finance-nav-masthead">
-            <div className="finance-nav-masthead-label"><span>Secciones</span><small>08 espacios · tus finanzas en movimiento</small></div>
-            <div className="finance-header-palette"><ThemeSelector collapsed showSwatches /></div>
+            <div className="finance-editorial-brand">
+              <strong>F/S</strong><span>Cuaderno financiero</span>
+              <small>Bogotá · {new Intl.DateTimeFormat("es-CO", { day: "2-digit", month: "short", year: "numeric", timeZone: "America/Bogota" }).format(new Date())} · Personal / COP</small>
+            </div>
+            <div className="finance-header-palette"><ThemeSelector collapsed showCurrentTheme showSwatches /></div>
           </div>
-          <div className="grid grid-cols-2 md:grid-cols-4 xl:grid-cols-8">
+          <div className="finance-primary-tab-list">
             {TABS.map((item, index) => {
               const tabConfig = TAB_META[item];
               const Icon = tabConfig.icon;
@@ -1000,10 +1005,10 @@ function HomeContent() {
                   <div className="flex items-center gap-2">
                     <span className="finance-primary-tab-index">{String(index + 1).padStart(2, "0")}</span>
                     <Icon className="h-4 w-4 shrink-0" />
-                    <div>
-                      <div className="finance-primary-tab-label">{tabConfig.label}</div>
-                      <div className="finance-primary-tab-caption">{tabConfig.caption}</div>
-                    </div>
+                    <span className="finance-primary-tab-copy">
+                      <span className="finance-primary-tab-label">{tabConfig.label}</span>
+                      <span className="finance-primary-tab-caption">{tabConfig.caption}</span>
+                    </span>
                   </div>
                 </Button>
               );
@@ -1012,12 +1017,11 @@ function HomeContent() {
         </nav>
         {tab !== "copilot" && (
           <>
-        <section className={`section-enter ui-shell-card mb-6 rounded-[32px] p-5 md:p-6 ${tab === "dashboard" ? "finance-dashboard-heading" : ""}`}>
+        <section className={`section-enter ${tab === "dashboard" ? "finance-dashboard-heading" : "ui-shell-card mb-6 rounded-[32px] p-5 md:p-6"}`}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-1">
-              {tab === "dashboard" && <div className="finance-editorial-brand"><strong>F/S</strong><span>Cuaderno financiero</span><small>Bogotá · {new Intl.DateTimeFormat("es-CO", { day: "2-digit", month: "short", year: "numeric", timeZone: "America/Bogota" }).format(new Date())} · Personal / COP</small></div>}
-              <h1 className="text-[clamp(2rem,4vw,2.75rem)] font-semibold tracking-tight text-zinc-100">{tab === "dashboard" ? <>{positiveMonth ? "El mes va " : "El mes pide "}<em>{positiveMonth ? "a favor" : "pausa"}</em></> : TAB_META[tab]?.label || "Dashboard"}</h1>
-              <p className="text-sm text-zinc-400">{tab === "dashboard" ? "Una lectura clara de tu dinero" : TAB_META[tab]?.caption}</p>
+              <h1 className={`${tab === "dashboard" ? "finance-dashboard-page-title" : "text-[clamp(2rem,4vw,2.75rem)] font-semibold tracking-tight text-zinc-100"}`}>{tab === "dashboard" ? <>{positiveMonth ? "El mes va " : "El mes pide "}<em>{positiveMonth ? "a favor" : "pausa"}</em></> : TAB_META[tab]?.label || "Dashboard"}</h1>
+              {tab !== "dashboard" && <p className="text-sm text-zinc-400">{TAB_META[tab]?.caption}</p>}
             </div>
 
             <div className="flex items-center gap-2">
@@ -1132,9 +1136,9 @@ function HomeContent() {
           </>
         )}
 
-        {error && (
+        {error && !(tab === "dashboard" && !summary) && (
           <Card className={`section-enter mb-4 ${tab === "dashboard" ? "finance-dashboard-error" : "border-rose-400/40 bg-rose-500/10"}`} role="alert">
-            <CardContent className={tab === "dashboard" ? "finance-dashboard-error-content" : "py-4 text-rose-100"}>{error}</CardContent>
+            <CardContent className={tab === "dashboard" ? "finance-dashboard-error-content" : "py-4 text-rose-100"}>{financeErrorMessage(error)}</CardContent>
           </Card>
         )}
 
@@ -1521,7 +1525,7 @@ function HomeContent() {
           <section className="finance-dashboard-unavailable" role="status">
             <span>01 / ESPACIO FINANCIERO</span>
             <h2>Conecta tu espacio para ver los datos reales.</h2>
-            <p>{error}</p>
+            <p>{financeErrorMessage(error)}</p>
             <Button type="button" variant="outline" onClick={() => void refreshData()}>
               <RefreshCw className="mr-2 h-4 w-4" /> Reintentar
             </Button>
@@ -1670,6 +1674,7 @@ export default function HomePage() {
   if (
     pathname === "/auth/callback" ||
     authMode === "callback" ||
+    (searchParams.has("state") && (searchParams.has("code") || searchParams.has("error"))) ||
     (authMode === "login" && hasWrappedGoogleCallback(searchParams.get("returnTo")))
   ) {
     return <AuthCallbackScreen />;
