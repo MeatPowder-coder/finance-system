@@ -5770,6 +5770,15 @@ body:has(.finance-bento-preview.has-focus) .welcome-screen-quiet .welcome-footer
 .finance-bento-preview.has-focus { z-index:120 !important; }
 .finance-bento-preview-tile.is-focused .finance-bento-preview-expanded-rows { max-height:none; }
 .welcome-screen-quiet .welcome-quiet-layout:has(.finance-bento-preview.has-focus) { position:relative; z-index:120; }
+/* The public preview sits inside an animated frame. That transform would turn
+   its fixed, expanded Bento tile into a frame-relative panel, which can look
+   like an in-flow modal near the bottom of the page. Remove that containing
+   block while the same tile morphs to the centre of the viewport. */
+.welcome-screen-quiet .welcome-editorial-art:has(.finance-bento-preview-grid.is-focused) {
+  overflow:visible !important;
+  animation:none !important;
+  transform:none !important;
+}
 
 /* Non-dashboard sections use the same editorial frame while their original
    forms, filters, actions and views remain in place. */
