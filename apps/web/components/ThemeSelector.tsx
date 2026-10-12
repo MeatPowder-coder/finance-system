@@ -388,7 +388,7 @@ export function ThemeSelector({ collapsed, showCurrentTheme = false, showSwatche
   return (
     <div className="theme-palette-control">
       <div className="theme-palette-gallery-heading">
-        <span>{THEME_OPTIONS.length} PALETAS</span>
+        <span>{THEME_OPTIONS.length} PALETAS DE COLOR</span>
         <strong>{currentTheme.label}</strong>
         <small>{currentTheme.description}</small>
       </div>

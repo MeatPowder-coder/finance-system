@@ -1516,6 +1516,7 @@ function HomeContent() {
             onReviewAccounts={() => goTab("accounts")}
             recentTransactions={recentTransactions}
             latestTransaction={latestTransaction}
+            accounts={accounts}
             topAccounts={topAccounts}
             onReviewPayments={() => goPlanningSection("commitments")}
           />

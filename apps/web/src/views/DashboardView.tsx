@@ -52,6 +52,7 @@ export interface DashboardViewProps {
   onReviewAccounts: () => void;
   recentTransactions: Transaction[];
   latestTransaction?: Transaction;
+  accounts: Account[];
   topAccounts: Account[];
 }
 
@@ -94,6 +95,7 @@ export function DashboardView(props: DashboardViewProps) {
     onReviewAccounts,
     recentTransactions,
     latestTransaction,
+    accounts,
     topAccounts,
   } = props;
   const [focusedPanel, setFocusedPanel] = React.useState<null | "month" | "flow" | "budgets" | "payments" | "transactions" | "accounts">(null);
@@ -269,10 +271,10 @@ export function DashboardView(props: DashboardViewProps) {
       title: "Tu dinero",
       eyebrow: "Liquidez por cuenta",
       summary: "Saldos actuales en las cuentas que concentran tu liquidez.",
-      rows: topAccounts.map((account) => ({
+      rows: accounts.map((account) => ({
         label: account.name,
         value: formatMoney(toNumber(account.balance_current), account.currency),
-        detail: `${getAccountTypeLabel(account.account_type)} · ${account.code}`,
+        detail: `${getAccountTypeLabel(account.account_type)} · ${account.code} · ${account.currency}`,
       })),
     },
   };

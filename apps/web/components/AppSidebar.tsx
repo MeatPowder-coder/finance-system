@@ -34,13 +34,13 @@ const financeRoutes: Array<{
   iconComponent: ComponentType<{ className?: string }>;
 }> = [
   { label: "Dashboard", shortLabel: "INICIO", href: "/?tab=dashboard", tab: "dashboard", iconComponent: LayoutDashboard },
-  { label: "Cuentas", shortLabel: "CTA", href: "/?tab=accounts", tab: "accounts", iconComponent: Wallet },
-  { label: "Transacciones", shortLabel: "MOV", href: "/?tab=transactions", tab: "transactions", iconComponent: Receipt },
-  { label: "Reportes", shortLabel: "REP", href: "/?tab=reports", tab: "reports", iconComponent: BarChart3 },
-  { label: "Inversiones", shortLabel: "INV", href: "/?tab=investments", tab: "investments", iconComponent: PieChart },
+  { label: "Cuentas", shortLabel: "CUENTAS", href: "/?tab=accounts", tab: "accounts", iconComponent: Wallet },
+  { label: "Transacciones", shortLabel: "MOVS", href: "/?tab=transactions", tab: "transactions", iconComponent: Receipt },
+  { label: "Reportes", shortLabel: "REPORTES", href: "/?tab=reports", tab: "reports", iconComponent: BarChart3 },
+  { label: "Inversiones", shortLabel: "INVER.", href: "/?tab=investments", tab: "investments", iconComponent: PieChart },
   { label: "Planificacion", shortLabel: "PLAN", href: "/?tab=planning", tab: "planning", iconComponent: CalendarDays },
-  { label: "Copilot", shortLabel: "IA", href: "/?tab=copilot", tab: "copilot", iconComponent: MessageSquare },
-  { label: "Configuracion", shortLabel: "AJUST", href: "/?tab=settings", tab: "settings", iconComponent: Settings },
+  { label: "Copilot", shortLabel: "COPILOT", href: "/?tab=copilot", tab: "copilot", iconComponent: MessageSquare },
+  { label: "Configuracion", shortLabel: "AJUSTES", href: "/?tab=settings", tab: "settings", iconComponent: Settings },
 ];
 
 function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
@@ -74,6 +74,7 @@ function SidebarContent({ collapsed = false }: { collapsed?: boolean }) {
               key={route.href}
               href={route.href}
               title={collapsed ? route.label : undefined}
+              aria-label={route.label}
               className={cn(
                 "text-sm group flex p-3 w-full font-medium cursor-pointer rounded-lg transition-all relative",
                 route.active ? "text-fg bg-brand-soft border border-brand/25" : "text-fg-secondary hover:text-fg hover:bg-surface-3",
