@@ -454,7 +454,7 @@ export function AuthCallbackScreen() {
     if (processedCallbackRef.current === callbackKey) return;
     processedCallbackRef.current = callbackKey;
 
-    const flow = getStoredAuthFlow();
+    const flow = getStoredAuthFlow(state);
     if (!flow) {
       setStatus("error");
       setMessage("No encontre la informacion temporal del login. Vuelve a iniciar sesion.");
@@ -464,7 +464,7 @@ export function AuthCallbackScreen() {
     if (flow.state !== state) {
       setStatus("error");
       setMessage("El estado de seguridad no coincide. Vuelve a intentar el login.");
-      clearStoredAuthFlow();
+      clearStoredAuthFlow(state);
       return;
     }
 
@@ -514,7 +514,7 @@ export function AuthCallbackScreen() {
             throw new Error(`Google autorizó la cuenta, pero Finance System no validó la sesión: ${reason}.`);
           }
 
-          clearStoredAuthFlow();
+          clearStoredAuthFlow(state);
           const destination = normalizeReturnTo(flow.returnTo);
           setContinuationTarget(destination);
           setStatus("done");

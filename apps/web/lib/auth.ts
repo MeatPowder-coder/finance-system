@@ -47,6 +47,11 @@ export type AuthProfile = {
 };
 
 const FLOW_STORAGE_KEY = "finance-system.authFlow";
+const FLOW_STORAGE_MAP_KEY = "finance-system.authFlows";
+const FLOW_MAX_AGE_MS = 30 * 60 * 1000;
+const FLOW_MAX_ENTRIES = 8;
+
+type StoredFlowEntry = { flow: AuthFlow; savedAt: number };
 
 function normalizeUrl(value: string) {
   return value.trim().replace(/\/+$/, "");
@@ -82,22 +87,56 @@ async function sha256Base64Url(value: string) {
     .replace(/=+$/g, "");
 }
 
-function readStoredFlow(): AuthFlow | null {
+function isAuthFlow(value: unknown): value is AuthFlow {
+  if (!value || typeof value !== "object") return false;
+  const flow = value as Partial<AuthFlow>;
+  return Boolean(flow.state && flow.codeVerifier && flow.redirectUri && flow.returnTo);
+}
+
+function readStoredFlows(storage: Storage) {
+  const entries = new Map<string, StoredFlowEntry>();
+  try {
+    const rawMap = storage.getItem(FLOW_STORAGE_MAP_KEY);
+    if (rawMap) {
+      const parsed = JSON.parse(rawMap) as Record<string, unknown>;
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        for (const [state, value] of Object.entries(parsed)) {
+          if (!value || typeof value !== "object") continue;
+          const record = value as { flow?: unknown; savedAt?: unknown };
+          const flow = isAuthFlow(record.flow) ? record.flow : isAuthFlow(value) ? value : null;
+          if (!flow || flow.state !== state) continue;
+          const savedAt = typeof record.savedAt === "number" ? record.savedAt : Date.now();
+          if (Date.now() - savedAt > FLOW_MAX_AGE_MS) continue;
+          entries.set(state, { flow, savedAt });
+        }
+      }
+    }
+  } catch {
+    // A damaged map should not prevent reading the legacy single-flow value.
+  }
+
+  try {
+    const rawLegacyFlow = storage.getItem(FLOW_STORAGE_KEY);
+    if (rawLegacyFlow) {
+      const legacyFlow: unknown = JSON.parse(rawLegacyFlow);
+      if (isAuthFlow(legacyFlow) && !entries.has(legacyFlow.state)) {
+        entries.set(legacyFlow.state, { flow: legacyFlow, savedAt: Date.now() });
+      }
+    }
+  } catch {
+    // Ignore malformed legacy state and keep any valid map entries.
+  }
+
+  return entries;
+}
+
+function readStoredFlow(state?: string): AuthFlow | null {
   if (typeof window === "undefined") return null;
   for (const storage of [window.sessionStorage, window.localStorage]) {
     try {
-      const raw = storage.getItem(FLOW_STORAGE_KEY);
-      if (!raw) continue;
-      const parsed = JSON.parse(raw) as Partial<AuthFlow>;
-      if (!parsed.state || !parsed.codeVerifier || !parsed.redirectUri || !parsed.returnTo) {
-        continue;
-      }
-      return {
-        state: parsed.state,
-        codeVerifier: parsed.codeVerifier,
-        redirectUri: parsed.redirectUri,
-        returnTo: parsed.returnTo,
-      };
+      const entries = readStoredFlows(storage);
+      const match = state ? entries.get(state) : [...entries.values()].sort((a, b) => b.savedAt - a.savedAt)[0];
+      if (match) return match.flow;
     } catch {
       // Try the other store; browsers can disable storage independently.
     }
@@ -107,32 +146,65 @@ function readStoredFlow(): AuthFlow | null {
 
 function saveStoredFlow(flow: AuthFlow) {
   if (typeof window === "undefined") return;
-  const serialized = JSON.stringify(flow);
+  const entries = new Map<string, StoredFlowEntry>();
+  for (const storage of [window.localStorage, window.sessionStorage]) {
+    try {
+      for (const [state, entry] of readStoredFlows(storage)) entries.set(state, entry);
+    } catch {
+      // Continue with whichever browser store remains available.
+    }
+  }
+  entries.set(flow.state, { flow, savedAt: Date.now() });
+  const serialized = JSON.stringify(Object.fromEntries(
+    [...entries.entries()]
+      .sort((a, b) => a[1].savedAt - b[1].savedAt)
+      .slice(-FLOW_MAX_ENTRIES)
+  ));
   // Keep the PKCE verifier available if Google returns to a separate tab or
-  // browser context on the same origin. The flow is short-lived and removed
-  // immediately after a successful exchange.
+  // browser context on the same origin. Keep concurrent attempts by state so
+  // an older Google tab cannot overwrite the verifier needed by a newer one.
   for (const storage of [window.sessionStorage, window.localStorage]) {
     try {
-      storage.setItem(FLOW_STORAGE_KEY, serialized);
+      storage.setItem(FLOW_STORAGE_MAP_KEY, serialized);
     } catch {
       // Keep the flow in whichever browser store remains available.
     }
   }
 }
 
-export function clearStoredAuthFlow() {
+export function clearStoredAuthFlow(state?: string) {
   if (typeof window === "undefined") return;
   for (const storage of [window.sessionStorage, window.localStorage]) {
     try {
-      storage.removeItem(FLOW_STORAGE_KEY);
+      if (!state) {
+        storage.removeItem(FLOW_STORAGE_MAP_KEY);
+        storage.removeItem(FLOW_STORAGE_KEY);
+        continue;
+      }
+
+      const entries = readStoredFlows(storage);
+      entries.delete(state);
+      const serialized = JSON.stringify(Object.fromEntries(entries));
+      if (entries.size) storage.setItem(FLOW_STORAGE_MAP_KEY, serialized);
+      else storage.removeItem(FLOW_STORAGE_MAP_KEY);
+
+      const rawLegacyFlow = storage.getItem(FLOW_STORAGE_KEY);
+      if (rawLegacyFlow) {
+        try {
+          const parsed: unknown = JSON.parse(rawLegacyFlow);
+          if (isAuthFlow(parsed) && parsed.state === state) storage.removeItem(FLOW_STORAGE_KEY);
+        } catch {
+          // Leave unrelated malformed state untouched.
+        }
+      }
     } catch {
       // Cleanup should continue even if a browser store is unavailable.
     }
   }
 }
 
-export function getStoredAuthFlow() {
-  return readStoredFlow();
+export function getStoredAuthFlow(state?: string) {
+  return readStoredFlow(state);
 }
 
 async function apiGet<T>(path: string) {
