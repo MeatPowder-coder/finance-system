@@ -477,20 +477,31 @@ export function DashboardView(props: DashboardViewProps) {
 }
 
 function ExpandedDetails({ panel, rows, actions = [], budgets, onBudgetExpense, onBudgetEdit }: { panel: { title: string; eyebrow: string; summary: string; rows: { label: string; value: string; detail?: string }[] }; rows: { label: string; value: string; detail?: string }[]; actions?: { label: string; onClick: () => void }[]; budgets?: Budget[]; onBudgetExpense?: (budget: Budget) => void; onBudgetEdit?: (budgetId: number) => void }) {
+  const hasBudgets = Boolean(budgets?.length);
+  const emptyMessage = panel.title === "Presupuestos en tensión"
+    ? "Aún no tienes presupuestos activos en este periodo."
+    : panel.title === "Próximos pagos"
+      ? "No tienes compromisos próximos registrados."
+      : panel.title === "Movimientos recientes"
+        ? "Todavía no hay movimientos recientes en tus cuentas."
+        : panel.title === "Tu dinero"
+          ? "Agrega una cuenta para ver aquí tus saldos y monedas."
+          : "No hay datos para mostrar todavía.";
+
   return (
     <div className="finance-bento-expanded" role="region" aria-label={`Detalle: ${panel.title}`}>
       <p className="finance-bento-expanded-eyebrow">{panel.eyebrow}</p>
       <h3>{panel.title}</h3>
       <p className="finance-bento-expanded-summary">{panel.summary}</p>
       {actions.length > 0 && <div className="finance-bento-expanded-toolbar">{actions.map((action) => <button type="button" key={action.label} onClick={action.onClick}>{action.label}<span aria-hidden="true">↗</span></button>)}</div>}
-      <div className="finance-bento-expanded-rows">
-        {budgets ? budgets.map((budget, index) => {
+      <div className="finance-bento-expanded-rows" aria-live="polite">
+        {hasBudgets ? budgets!.map((budget, index) => {
           const allocated = Math.max(0, toNumber(budget.allocated_amount));
           const spent = Math.max(0, toNumber(budget.actual_amount));
           const ratio = allocated ? Math.min(100, Math.round((spent / allocated) * 100)) : 0;
           const status = budgetStatusLabel(budget.deficit_summary.status);
           return <article key={budget.id} style={{ animationDelay: `${170 + index * 65}ms` }}><span>{budget.name} · {status}</span><strong>{formatMoney(Math.max(0, allocated - spent), budget.currency)} libre</strong><small>{formatMoney(spent, budget.currency)} de {formatMoney(allocated, budget.currency)} · {ratio}% usado</small><small>{budgetCategorySummary(budget)} · {budget.deficit_summary.incidentCount} alertas</small><div className="finance-bento-expanded-meter" aria-label={`${ratio}% del presupuesto usado`}><i style={{ width: `${ratio}%` }} /></div><div className="finance-bento-expanded-actions"><button type="button" onClick={() => onBudgetExpense?.(budget)}>Registrar gasto</button><button type="button" onClick={() => onBudgetEdit?.(budget.id)}>Editar</button></div></article>;
-        }) : rows.length ? rows.map((row, index) => <article key={`${row.label}-${index}`} style={{ animationDelay: `${170 + index * 65}ms` }}><span>{row.label}</span><strong>{row.value}</strong>{row.detail && <small>{row.detail}</small>}</article>) : <p>No hay datos para mostrar todavía.</p>}
+        }) : rows.length ? rows.map((row, index) => <article key={`${row.label}-${index}`} style={{ animationDelay: `${170 + index * 65}ms` }}><span>{row.label}</span><strong>{row.value}</strong>{row.detail && <small>{row.detail}</small>}</article>) : <article className="finance-bento-expanded-empty"><span>Sin registros todavía</span><strong>{emptyMessage}</strong><small>Usa una acción de arriba para añadir información a esta sección.</small></article>}
       </div>
     </div>
   );

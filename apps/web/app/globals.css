@@ -4340,6 +4340,19 @@ main:has(.finance-bento-dashboard.has-focus) > .finance-dashboard-heading {
 .finance-bento-tile.is-focused .finance-bento-expanded-rows article span { font-size:.7rem; }
 .finance-bento-tile.is-focused .finance-bento-expanded-rows article strong { font-size:clamp(1.1rem,1.8vw,1.6rem); }
 .finance-bento-tile.is-focused .finance-bento-expanded-rows article small { font-size:.72rem; line-height:1.4; }
+.finance-bento-expanded-empty {
+  grid-column:1 / -1;
+  display:grid;
+  min-height:150px;
+  align-content:center;
+  justify-items:start;
+  gap:9px;
+  border-style:dashed !important;
+  background:color-mix(in srgb,var(--ui-editorial-paper) 78%,transparent) !important;
+}
+.finance-bento-expanded-empty > span { color:var(--ui-editorial-coral); }
+.finance-bento-expanded-empty > strong { max-width:48ch; }
+.finance-bento-expanded-empty > small { max-width:64ch; }
 
 .finance-dashboard-error { position:relative; border-width:1.5px; }
 .finance-dashboard-error-content { font:600 .69rem/1.5 ui-monospace,SFMono-Regular,Consolas,monospace; }
@@ -4763,9 +4776,11 @@ body.finance-focus-mode .finance-mobile-header {
 .finance-nav-masthead .theme-palette-chip-name { display:block; overflow:hidden; font-size:.57rem; line-height:1.1; text-overflow:ellipsis; }
 .finance-nav-masthead .theme-palette-chip-copy small,.finance-nav-masthead .theme-palette-chip-selected { display:none; }
 .finance-nav-masthead .theme-palette-chip.is-active { outline:2px solid var(--ui-editorial-coral); outline-offset:1px; background:var(--ui-editorial-flow); color:var(--ui-editorial-card-ink); }
-/* Eight existing destinations stay in the vertical rail; the horizontal
-   version is reserved for mobile, where the rail becomes a sheet. */
-.finance-primary-tabs > .finance-primary-tab-list { display:none !important; }
+/* Keep all eight sections visible in the editorial workspace on desktop too. */
+.finance-primary-tabs > .finance-primary-tab-list {
+  display:grid !important;
+  grid-template-columns:repeat(8,minmax(0,1fr));
+}
 .finance-app-sidebar { left:0; }
 .finance-nav-rail { border:0; border-radius:0; background:var(--ui-editorial-forest) !important; color:var(--ui-editorial-hero-text); box-shadow:4px 0 0 var(--ui-editorial-card-shadow); }
 .finance-nav-rail a { min-height:54px; border-radius:0 !important; }
@@ -5045,55 +5060,6 @@ body.finance-focus-mode .finance-notification,body.finance-focus-mode .finance-m
 @media(max-width:480px) {
   .finance-primary-tabs > .finance-primary-tab-list { grid-template-columns:repeat(2,minmax(0,1fr)); }
   .finance-nav-masthead .theme-palette-gallery { grid-template-columns:repeat(2,minmax(0,1fr)); }
-}
-
-/* Focused Bento panels enlarge in the shared grid instead of taking over the
-   page. Keep surrounding content visible and interactive while it softens. */
-.finance-bento-grid.is-focused > .finance-bento-tile:not(.is-focused) {
-  filter:blur(1.25px);
-  opacity:.72;
-  transform:none;
-  pointer-events:auto;
-  user-select:auto;
-}
-.finance-bento-grid.is-focused > .finance-bento-tile.is-focused {
-  grid-column:span 8 !important;
-  grid-row:auto !important;
-  min-height:340px;
-  height:auto;
-  margin:0;
-  overflow:visible;
-  padding:clamp(22px,2.6vw,34px) !important;
-  box-shadow:6px 7px 0 var(--ui-editorial-card-shadow),0 12px 28px rgba(0,0,0,.14);
-}
-.finance-bento-grid.is-focused > .finance-bento-hero.is-focused,
-.finance-bento-grid.is-focused > .finance-bento-budgets.is-focused,
-.finance-bento-grid.is-focused > .finance-bento-movements.is-focused { grid-column:span 8 !important; }
-.finance-bento-grid.is-focused > .finance-bento-flow.is-focused,
-.finance-bento-grid.is-focused > .finance-bento-accounts.is-focused,
-.finance-bento-grid.is-focused > .finance-bento-payments.is-focused { grid-column:span 8 !important; }
-body.finance-focus-mode .finance-app-scroll main[data-finance-tab="dashboard"] > :not(.finance-bento-dashboard),
-body.finance-focus-mode .finance-app-sidebar,
-body.finance-focus-mode .copilot-rail,
-body.finance-focus-mode .finance-notification,
-body.finance-focus-mode .finance-mobile-header {
-  filter:none;
-  opacity:1;
-  pointer-events:auto;
-  user-select:auto;
-}
-@media(max-width:760px) {
-  .finance-bento-grid.is-focused > .finance-bento-tile.is-focused,
-  .finance-bento-grid.is-focused > .finance-bento-hero.is-focused,
-  .finance-bento-grid.is-focused > .finance-bento-budgets.is-focused,
-  .finance-bento-grid.is-focused > .finance-bento-movements.is-focused,
-  .finance-bento-grid.is-focused > .finance-bento-flow.is-focused,
-  .finance-bento-grid.is-focused > .finance-bento-accounts.is-focused,
-  .finance-bento-grid.is-focused > .finance-bento-payments.is-focused { grid-column:1 / -1 !important; min-height:0; }
-  .finance-bento-grid.is-focused > .finance-bento-tile:not(.is-focused) { filter:blur(.75px); opacity:.76; }
-}
-@media(prefers-reduced-motion:reduce) {
-  .finance-bento-grid.is-focused > .finance-bento-tile:not(.is-focused) { transition:none !important; }
 }
 
 /* Match the ink-and-forest dashboard reference: color belongs in the data
