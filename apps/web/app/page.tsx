@@ -987,7 +987,7 @@ function HomeContent() {
               <strong>F/S</strong><span>Cuaderno financiero</span>
               <small>Bogotá · {new Intl.DateTimeFormat("es-CO", { day: "2-digit", month: "short", year: "numeric", timeZone: "America/Bogota" }).format(new Date())} · Personal / COP</small>
             </div>
-            <div className="finance-header-palette"><ThemeSelector collapsed showCurrentTheme showSwatches /></div>
+            <div className="finance-header-palette"><ThemeSelector collapsed showCurrentTheme /></div>
           </div>
           <div className="finance-primary-tab-list">
             {TABS.map((item, index) => {
@@ -1017,14 +1017,14 @@ function HomeContent() {
         </nav>
         {tab !== "copilot" && (
           <>
-        <section className={`section-enter ${tab === "dashboard" ? "finance-dashboard-heading" : "ui-shell-card mb-6 rounded-[32px] p-5 md:p-6"}`}>
+        <section className={`section-enter ${tab === "dashboard" ? "finance-dashboard-heading" : "finance-section-masthead mb-5"}`}>
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div className="space-y-1">
               <h1 className={`${tab === "dashboard" ? "finance-dashboard-page-title" : "text-[clamp(2rem,4vw,2.75rem)] font-semibold tracking-tight text-zinc-100"}`}>{tab === "dashboard" ? <>{positiveMonth ? "El mes va " : "El mes pide "}<em>{positiveMonth ? "a favor" : "pausa"}</em></> : TAB_META[tab]?.label || "Dashboard"}</h1>
               {tab !== "dashboard" && <p className="text-sm text-zinc-400">{TAB_META[tab]?.caption}</p>}
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="finance-section-masthead-controls flex items-center gap-2">
                 {tab !== "dashboard" && <Select value={planningMonth} onValueChange={setPlanningMonth}>
                   <SelectTrigger className="ui-control h-11 w-[170px] rounded-2xl px-4">
                     <div className="flex items-center gap-2">
@@ -1078,7 +1078,7 @@ function HomeContent() {
             </div>
           </div>
 
-          {tab !== "dashboard" && <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4 finance-dashboard-metrics">
+          {tab !== "dashboard" && <div className="finance-dashboard-metrics finance-editorial-metrics mt-5 grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-4">
             <Card className="ui-kpi finance-dashboard-metric finance-dashboard-metric-balance rounded-[22px]">
               <CardContent className="flex items-start gap-3 p-4">
                 <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-cyan-500/15 text-cyan-200">

@@ -14,7 +14,11 @@ export function BackendStatusPill({ compact = false }: { compact?: boolean }) {
   useEffect(() => {
     const rawBaseUrl = (process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4100").trim();
     const resolvedBaseUrl = resolveFinanceApiBaseUrl(rawBaseUrl);
-    setBaseUrl(rawBaseUrl.startsWith("/") ? `${rawBaseUrl} (same-origin proxy)` : resolvedBaseUrl);
+    setBaseUrl(
+      rawBaseUrl.startsWith("/")
+        ? `${rawBaseUrl} (proxy same-origin)`
+        : resolvedBaseUrl || "Proxy same-origin de Finance System"
+    );
 
     let cancelled = false;
 
@@ -32,9 +36,14 @@ export function BackendStatusPill({ compact = false }: { compact?: boolean }) {
     }
 
     void checkHealth();
+    const refreshWhenOnline = () => { void checkHealth(); };
+    const healthInterval = window.setInterval(refreshWhenOnline, 15000);
+    window.addEventListener("online", refreshWhenOnline);
 
     return () => {
       cancelled = true;
+      window.clearInterval(healthInterval);
+      window.removeEventListener("online", refreshWhenOnline);
     };
   }, []);
 

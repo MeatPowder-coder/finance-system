@@ -1,7 +1,8 @@
 "use client";
 
-import { ArrowDownRight, ArrowRight, ChartNoAxesCombined, LockKeyhole, WalletCards } from "lucide-react";
+import { ArrowRight, LockKeyhole, WalletCards } from "lucide-react";
 import { ThemeSelector } from "@/components/ThemeSelector";
+import { EditorialFinancePreview } from "@/components/EditorialFinancePreview";
 
 type WelcomeScreenProps = {
   returnTo: string;
@@ -51,7 +52,7 @@ export default function WelcomeScreenQuiet({ returnTo, apiBaseUrl }: WelcomeScre
             <span className="welcome-connection-dot" />
             <span>Tu espacio financiero</span>
           </div>
-          <div className="welcome-theme-picker" aria-label="Paleta de colores"><span>Temas</span><ThemeSelector collapsed showCurrentTheme showSwatches /></div>
+          <div className="welcome-theme-picker" aria-label="Paleta de colores"><ThemeSelector collapsed showCurrentTheme /></div>
         </header>
 
         <section className="welcome-quiet-layout welcome-editorial-layout" aria-labelledby="welcome-title">
@@ -66,26 +67,11 @@ export default function WelcomeScreenQuiet({ returnTo, apiBaseUrl }: WelcomeScre
             <div className="quiet-panel-note"><span /> {COPY.note}</div>
           </div>
 
-          <aside className="welcome-editorial-art" aria-label="Vista previa de tus finanzas">
-            <div className="welcome-editorial-art-top">
-              <span>VISTA GENERAL</span>
-              <span className="welcome-editorial-lock"><LockKeyhole className="h-3.5 w-3.5" /> PRIVADO</span>
-            </div>
-            <div className="welcome-editorial-balance">
-              <span>Tu panorama, en un solo lugar</span>
-              <strong>Más claridad.<br />Menos ruido.</strong>
-            </div>
-            <div className="welcome-editorial-chart" aria-hidden="true">
-              <div className="welcome-editorial-chart-label"><span>UNA VISTA MÁS CLARA</span><ArrowDownRight className="h-4 w-4" /></div>
-              <div className="welcome-editorial-bars">
-                {[42, 59, 48, 76, 63, 91, 70, 100, 79, 88, 68, 96].map((height, index) => (
-                  <span key={index} style={{ height: `${height}%` }} />
-                ))}
-              </div>
-              <div className="welcome-editorial-chart-foot"><span>MIRAR</span><span>ENTENDER</span><span>PLANEAR</span></div>
-            </div>
-            <div className="welcome-editorial-art-stamp" aria-hidden="true"><ChartNoAxesCombined className="h-5 w-5" /><span>FINANZAS<br />A TU MANERA</span></div>
-          </aside>
+          <div className="welcome-palette-strip" aria-label="Paletas de colores disponibles">
+            <ThemeSelector collapsed showSwatches />
+          </div>
+
+          <EditorialFinancePreview className="welcome-editorial-art" returnTo={returnTo} />
 
           <div className="welcome-editorial-stats" aria-label="Lo que puedes hacer">
             <div className="welcome-editorial-stat"><span>01</span><strong>Ver con claridad</strong><small>Ingresos, gastos y cuentas, reunidos.</small></div>

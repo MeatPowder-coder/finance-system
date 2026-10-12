@@ -21,6 +21,7 @@ type Profile = {
   username: string;
   name: string | null;
   auth_provider: string;
+  username_editable?: boolean;
 };
 
 type Integrations = {
@@ -36,6 +37,7 @@ type Catalog = {
   projections: Array<{ id: string; title: string; scenario_type: string; created_at: string }>;
   deficits: Array<{ id: string | number; budget_name: string; period_month: string; event_type: string; deficit_amount: string | number; cause_code: string }>;
   reports: Array<{ id: string; title: string; slug: string | null; status: string; created_at: string }>;
+  sharingEnabled?: boolean;
 };
 
 type ShareItem = { resourceType: ResourceType; resourceId: string; permissions: Permission[] };
@@ -179,7 +181,7 @@ export function SettingsView() {
     try {
       const next = await apiRequest<Profile>("/v1/settings/profile", {
         method: "PATCH",
-        body: JSON.stringify({ name, username }),
+        body: JSON.stringify(profile?.username_editable ? { name, username } : { name }),
       });
       setProfile(next);
       setName(next.name || "");
@@ -374,10 +376,10 @@ export function SettingsView() {
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-1.5"><Label>Nombre</Label><Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Tu nombre" /></div>
-              <div className="space-y-1.5"><Label>Nombre de usuario</Label><Input value={username} onChange={(event) => setUsername(event.target.value.toLowerCase())} placeholder="sebastian-navarro" /></div>
+              <div className="space-y-1.5"><Label>Nombre de usuario</Label><Input value={username} onChange={(event) => setUsername(event.target.value.toLowerCase())} placeholder="sebastian-navarro" disabled={profile?.username_editable === false} />{profile?.username_editable === false && <p className="text-xs opacity-70">La edición de usuario requiere completar la migración de identidad.</p>}</div>
             </div>
             <div className="flex items-center gap-2 rounded-none border border-[var(--ui-editorial-ink)]/30 bg-white/45 px-3 py-2 text-xs text-[var(--ui-editorial-card-ink)]"><Mail className="h-3.5 w-3.5" />{profile?.email || "Correo no disponible"}<Badge variant="outline" className="ml-auto border-[var(--ui-editorial-ink)]/30">{profile?.auth_provider || "LOCAL"}</Badge></div>
-            <Button onClick={() => void saveProfile()} disabled={saving || !username.trim()} className="rounded-none border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-forest)] text-[var(--ui-editorial-hero-text)] shadow-[3px_4px_0_var(--ui-editorial-card-shadow)] hover:opacity-90">Guardar perfil</Button>
+            <Button onClick={() => void saveProfile()} disabled={saving || (profile?.username_editable !== false && !username.trim())} className="rounded-none border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-forest)] text-[var(--ui-editorial-hero-text)] shadow-[3px_4px_0_var(--ui-editorial-card-shadow)] hover:opacity-90">Guardar perfil</Button>
           </CardContent>
         </Card>
 
@@ -409,6 +411,7 @@ export function SettingsView() {
         </CardContent>
       </Card>
 
+      {catalog?.sharingEnabled === false ? <Card className="ds-soft-card border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-blue)] p-5 text-[var(--ui-editorial-card-ink)] shadow-[4px_5px_0_var(--ui-editorial-card-shadow)]"><p className="font-mono text-[10px] font-bold uppercase tracking-[0.16em] opacity-70">Compartir finanzas</p><p className="mt-2 text-sm">La red de amigos y los permisos compartidos requieren completar las migraciones de identidad y acceso. Tu perfil y tus preferencias siguen disponibles.</p></Card> : <>
       <Card className="ds-soft-card overflow-hidden border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-blue)] text-[var(--ui-editorial-card-ink)] shadow-[5px_6px_0_var(--ui-editorial-card-shadow)]">
         <CardHeader className="border-b border-[var(--ui-editorial-ink)]/20"><p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] opacity-60">04 / red de confianza</p><CardTitle className="text-2xl font-bold tracking-tight text-[var(--ui-editorial-card-ink)]">Amigos</CardTitle><CardDescription className="text-[var(--ui-editorial-card-ink)]/70">Busca por username exacto y crea una amistad antes de compartir cualquier dato financiero.</CardDescription></CardHeader>
         <CardContent className="space-y-4">
@@ -449,6 +452,7 @@ export function SettingsView() {
       </div>
 
       <Card className="ds-soft-card overflow-hidden border-2 border-[var(--ui-editorial-ink)] bg-[var(--ui-editorial-accounts)] text-[var(--ui-editorial-card-ink)] shadow-[5px_6px_0_var(--ui-editorial-card-shadow)]"><CardHeader className="border-b border-[var(--ui-editorial-ink)]/20"><p className="font-mono text-[10px] font-semibold uppercase tracking-[0.18em] opacity-60">08 / recursos disponibles</p><CardTitle className="text-xl font-bold text-[var(--ui-editorial-card-ink)]">Accesos que recibes</CardTitle><CardDescription className="text-[var(--ui-editorial-card-ink)]/70">Recursos de otras personas disponibles para ti.</CardDescription></CardHeader><CardContent className="space-y-3">{grants.filter((item) => item.status === "ACTIVE" && item.grantee_user_id === profile?.id).map((grant) => <div key={grant.id} className="flex items-center gap-3 rounded-none border border-[var(--ui-editorial-ink)]/30 bg-white/50 p-3"><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium text-fg">@{grant.owner_username} - {grant.resource_type} {grant.resource_id}</p><p className="text-xs text-fg-subtle">Permisos: {grant.permissions.join(" / ")}</p></div><Badge variant="outline">Activo</Badge></div>)}{!grants.some((item) => item.status === "ACTIVE" && item.grantee_user_id === profile?.id) && <EmptyState icon={Link2} text="Cuando aceptes una invitacion, sus recursos apareceran aqui." />}</CardContent></Card>
+      </>}
     </div>
   );
 }

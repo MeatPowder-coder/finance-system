@@ -307,7 +307,7 @@ export function ThemeSelector({ collapsed, showCurrentTheme = false, showSwatche
           <Palette className="h-4 w-4 shrink-0 text-current opacity-75" />
           {(!collapsed || showCurrentTheme) && (
             <span className="flex min-w-0 items-center gap-2 text-zinc-500">
-              {showCurrentTheme ? <span className="truncate text-current">Paleta · {currentTheme.label}</span> : <>
+              {showCurrentTheme ? <span className="truncate text-current">{THEME_OPTIONS.length} paletas · {currentTheme.shortLabel}</span> : <>
                 <span>Tema</span>
                 <span className="truncate text-zinc-400">- {currentTheme.label}</span>
               </>}

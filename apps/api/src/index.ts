@@ -2108,9 +2108,12 @@ app.post("/v1/auth/logout", async (req, reply) => {
 app.get("/v1/settings/profile", async (req, reply) => {
   const userId = await getRequestOwnerUserId(req);
   const result = await query(
-    `SELECT id, email, username, name, picture, auth_provider, email_verified, created_at, updated_at
-       FROM auth_users
-      WHERE id = $1
+    `SELECT id, email,
+            COALESCE(NULLIF(to_jsonb(u)->>'username', ''), LOWER(SPLIT_PART(u.email, '@', 1))) AS username,
+            name, picture, auth_provider, email_verified, created_at, updated_at,
+            (to_jsonb(u) ? 'username') AS username_editable
+       FROM auth_users u
+      WHERE u.id = $1
       LIMIT 1`,
     [userId]
   );
@@ -2125,6 +2128,19 @@ app.patch("/v1/settings/profile", async (req, reply) => {
   const payload = parsed.data;
   if (!Object.keys(payload).length) return reply.code(400).send({ error: "Empty payload" });
 
+  if (await isLegacyJournalSchema()) {
+    if (payload.username) return reply.code(409).send({ error: "Los nombres de usuario requieren completar la migración de identidad.", code: "USERNAME_SCHEMA_REQUIRED" });
+    const legacyResult = await query(
+      `UPDATE auth_users u SET name = COALESCE($2, u.name), updated_at = NOW()
+        WHERE u.id = $1
+        RETURNING u.id, u.email, COALESCE(NULLIF(to_jsonb(u)->>'username', ''), LOWER(SPLIT_PART(u.email, '@', 1))) AS username,
+                  u.name, u.picture, u.auth_provider, u.email_verified, u.created_at, u.updated_at,
+                  FALSE AS username_editable`,
+      [userId, payload.name || null]
+    );
+    return { data: legacyResult.rows[0] };
+  }
+
   if (payload.username) {
     const existing = await query<{ id: string }>(
       `SELECT id FROM auth_users WHERE LOWER(username) = LOWER($1) AND id <> $2 LIMIT 1`,
@@ -2134,12 +2150,13 @@ app.patch("/v1/settings/profile", async (req, reply) => {
   }
 
   const result = await query(
-    `UPDATE auth_users
-        SET name = COALESCE($2, name),
-            username = COALESCE($3, username),
+    `UPDATE auth_users u
+        SET name = COALESCE($2, u.name),
+            username = COALESCE($3, u.username),
             updated_at = NOW()
-      WHERE id = $1
-      RETURNING id, email, username, name, picture, auth_provider, email_verified, created_at, updated_at`,
+      WHERE u.id = $1
+      RETURNING u.id, u.email, u.username, u.name, u.picture, u.auth_provider, u.email_verified, u.created_at, u.updated_at,
+                TRUE AS username_editable`,
     [userId, payload.name || null, payload.username || null]
   );
   return { data: result.rows[0] };
@@ -2147,6 +2164,7 @@ app.patch("/v1/settings/profile", async (req, reply) => {
 
 app.get("/v1/settings/preferences", async (req) => {
   const userId = await getRequestOwnerUserId(req);
+  if (await isLegacyJournalSchema()) return { data: {} };
   const result = await query<{ preferences: Record<string, unknown> }>(`SELECT preferences FROM auth_users WHERE id = $1`, [userId]);
   return { data: result.rows[0]?.preferences || {} };
 });
@@ -2154,6 +2172,7 @@ app.get("/v1/settings/preferences", async (req) => {
 app.patch("/v1/settings/preferences", async (req, reply) => {
   const parsed = settingsPreferencesSchema.safeParse((req as any).body || {});
   if (!parsed.success) return reply.code(400).send({ error: "Invalid payload", details: parsed.error.flatten() });
+  if (await isLegacyJournalSchema()) return { data: parsed.data };
   const userId = await getRequestOwnerUserId(req);
   const result = await query<{ preferences: Record<string, unknown> }>(
     `UPDATE auth_users
@@ -2251,6 +2270,7 @@ app.get("/v1/settings/integrations", async (_req) => {
 });
 
 app.get("/v1/friends", async (req) => {
+  if (await isLegacyJournalSchema()) return { data: [] };
   const userId = await getRequestOwnerUserId(req);
   const result = await query(`
     SELECT f.id, f.created_at, f.updated_at,
@@ -2268,6 +2288,7 @@ app.get("/v1/friends", async (req) => {
 });
 
 app.get("/v1/friends/requests", async (req) => {
+  if (await isLegacyJournalSchema()) return { data: { received: [], sent: [] } };
   const userId = await getRequestOwnerUserId(req);
   const [received, sent] = await Promise.all([
     query(`
@@ -2289,6 +2310,7 @@ app.get("/v1/friends/requests", async (req) => {
 });
 
 app.get("/v1/friends/lookup", async (req) => {
+  if (await isLegacyJournalSchema()) return { data: [] };
   const userId = await getRequestOwnerUserId(req);
   const username = String((req as any).query?.username || "").trim();
   if (!username) return { data: [] };
@@ -2313,6 +2335,7 @@ app.get("/v1/friends/lookup", async (req) => {
 });
 
 app.post("/v1/friends/requests", async (req, reply) => {
+  if (await isLegacyJournalSchema()) return reply.code(503).send({ error: "Las amistades requieren completar las migraciones de identidad y permisos.", code: "FRIEND_SCHEMA_REQUIRED" });
   const parsed = friendRequestSchema.safeParse((req as any).body || {});
   if (!parsed.success) return reply.code(400).send({ error: "Username invalido.", details: parsed.error.flatten() });
 
@@ -2382,6 +2405,7 @@ app.post("/v1/friends/requests", async (req, reply) => {
 });
 
 app.post("/v1/friends/requests/:id/accept", async (req, reply) => {
+  if (await isLegacyJournalSchema()) return reply.code(503).send({ error: "Las amistades requieren completar las migraciones de identidad y permisos.", code: "FRIEND_SCHEMA_REQUIRED" });
   const requestId = String((req.params as any)?.id || "");
   const userId = await getRequestOwnerUserId(req);
   const request = await query<{ requester_user_id: string; addressee_user_id: string; status: string }>(
@@ -2433,6 +2457,7 @@ app.post("/v1/friends/requests/:id/accept", async (req, reply) => {
 });
 
 app.post("/v1/friends/requests/:id/reject", async (req, reply) => {
+  if (await isLegacyJournalSchema()) return reply.code(503).send({ error: "Las amistades requieren completar las migraciones de identidad y permisos.", code: "FRIEND_SCHEMA_REQUIRED" });
   const requestId = String((req.params as any)?.id || "");
   const userId = await getRequestOwnerUserId(req);
   const result = await query(
@@ -2447,6 +2472,7 @@ app.post("/v1/friends/requests/:id/reject", async (req, reply) => {
 });
 
 app.post("/v1/friends/requests/:id/cancel", async (req, reply) => {
+  if (await isLegacyJournalSchema()) return reply.code(503).send({ error: "Las amistades requieren completar las migraciones de identidad y permisos.", code: "FRIEND_SCHEMA_REQUIRED" });
   const requestId = String((req.params as any)?.id || "");
   const userId = await getRequestOwnerUserId(req);
   const result = await query(
@@ -2461,6 +2487,7 @@ app.post("/v1/friends/requests/:id/cancel", async (req, reply) => {
 });
 
 app.delete("/v1/friends/:id", async (req, reply) => {
+  if (await isLegacyJournalSchema()) return reply.code(503).send({ error: "Las amistades requieren completar las migraciones de identidad y permisos.", code: "FRIEND_SCHEMA_REQUIRED" });
   const friendshipId = String((req.params as any)?.id || "");
   const userId = await getRequestOwnerUserId(req);
 
@@ -2515,6 +2542,7 @@ app.delete("/v1/friends/:id", async (req, reply) => {
 });
 
 app.get("/v1/shares/users", async (req) => {
+  if (await isLegacyJournalSchema()) return { data: [] };
   const userId = await getRequestOwnerUserId(req);
   const username = String((req as any).query?.q || "").trim();
   if (!username) return { data: [] };
@@ -2531,6 +2559,7 @@ app.get("/v1/shares/users", async (req) => {
 });
 
 app.get("/v1/shares/catalog", async (req) => {
+  if (await isLegacyJournalSchema()) return { data: { accounts: [], budgets: [], commitments: [], projections: [], deficits: [], reports: [], sharingEnabled: false } };
   const userId = await getRequestOwnerUserId(req);
   const [accounts, budgets, commitments, projections, deficits, reports] = await Promise.all([
     query(`SELECT id, name, currency, balance_current FROM accounts WHERE owner_user_id = $1 ORDER BY name ASC`, [userId]),
@@ -2559,6 +2588,7 @@ app.get("/v1/shares/catalog", async (req) => {
 });
 
 app.get("/v1/shares", async (req) => {
+  if (await isLegacyJournalSchema()) return { data: { sent: [], received: [], grants: [] } };
   const userId = await getRequestOwnerUserId(req);
   const [sent, received, grants] = await Promise.all([
     query(`
@@ -2596,6 +2626,7 @@ app.get("/v1/shares", async (req) => {
 });
 
 app.post("/v1/shares/invitations", async (req, reply) => {
+  if (await isLegacyJournalSchema()) return reply.code(503).send({ error: "Compartir finanzas requiere completar las migraciones de identidad y acceso.", code: "SHARING_SCHEMA_REQUIRED" });
   const parsed = shareInvitationSchema.safeParse((req as any).body || {});
   if (!parsed.success) return reply.code(400).send({ error: "Invalid payload", details: parsed.error.flatten() });
   const ownerUserId = await getRequestOwnerUserId(req);
@@ -2665,6 +2696,7 @@ app.post("/v1/shares/invitations", async (req, reply) => {
 });
 
 app.post("/v1/shares/invitations/:id/accept", async (req, reply) => {
+  if (await isLegacyJournalSchema()) return reply.code(503).send({ error: "Compartir finanzas requiere completar las migraciones de identidad y acceso.", code: "SHARING_SCHEMA_REQUIRED" });
   const invitationId = String((req.params as any)?.id || "");
   const userId = await getRequestOwnerUserId(req);
   const invitation = await query<{ id: string; owner_user_id: string; friendship_id: string | null; status: string; expires_at: string }>(
@@ -2735,6 +2767,7 @@ app.post("/v1/shares/invitations/:id/accept", async (req, reply) => {
 });
 
 app.post("/v1/shares/invitations/:id/reject", async (req, reply) => {
+  if (await isLegacyJournalSchema()) return reply.code(503).send({ error: "Compartir finanzas requiere completar las migraciones de identidad y acceso.", code: "SHARING_SCHEMA_REQUIRED" });
   const invitationId = String((req.params as any)?.id || "");
   const userId = await getRequestOwnerUserId(req);
   const result = await query(
@@ -2748,6 +2781,7 @@ app.post("/v1/shares/invitations/:id/reject", async (req, reply) => {
 });
 
 app.post("/v1/shares/invitations/:id/revoke", async (req, reply) => {
+  if (await isLegacyJournalSchema()) return reply.code(503).send({ error: "Compartir finanzas requiere completar las migraciones de identidad y acceso.", code: "SHARING_SCHEMA_REQUIRED" });
   const invitationId = String((req.params as any)?.id || "");
   const userId = await getRequestOwnerUserId(req);
   const result = await query(
@@ -2767,6 +2801,7 @@ app.post("/v1/shares/invitations/:id/revoke", async (req, reply) => {
 });
 
 app.patch("/v1/shares/grants/:id", async (req, reply) => {
+  if (await isLegacyJournalSchema()) return reply.code(503).send({ error: "Compartir finanzas requiere completar las migraciones de identidad y acceso.", code: "SHARING_SCHEMA_REQUIRED" });
   const parsed = shareGrantUpdateSchema.safeParse((req as any).body || {});
   if (!parsed.success) return reply.code(400).send({ error: "Invalid payload", details: parsed.error.flatten() });
   const userId = await getRequestOwnerUserId(req);
@@ -2782,6 +2817,7 @@ app.patch("/v1/shares/grants/:id", async (req, reply) => {
 });
 
 app.delete("/v1/shares/grants/:id", async (req, reply) => {
+  if (await isLegacyJournalSchema()) return reply.code(503).send({ error: "Compartir finanzas requiere completar las migraciones de identidad y acceso.", code: "SHARING_SCHEMA_REQUIRED" });
   const userId = await getRequestOwnerUserId(req);
   const grantId = String((req.params as any)?.id || "");
   const result = await query(

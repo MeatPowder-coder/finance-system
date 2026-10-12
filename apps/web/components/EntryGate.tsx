@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { CloudOff, Loader2, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { clearAuthSession, recoverAuthSession } from "@/lib/auth";
 import {
   buildFinanceHeaders,
+  financeErrorMessage,
   requestFinanceApi,
   readFinanceAuthToken,
   resolveFinanceApiBaseUrl,
@@ -20,7 +21,8 @@ type EntryGateProps = {
 };
 
 function displayApiBaseUrl(value: string) {
-  return value.startsWith("/") ? `${value} (proxy same-origin)` : value || "Backend no configurado";
+  if (!value) return "Proxy same-origin de Finance System (/health y /v1)";
+  return value.startsWith("/") ? `${value} (proxy same-origin)` : value;
 }
 
 function ConnectionBanner({ apiBaseUrl, message, retry }: { apiBaseUrl: string; message: string; retry: () => void }) {
@@ -63,6 +65,7 @@ export default function EntryGate({ children }: EntryGateProps) {
   const [state, setState] = useState<GateState>("checking");
   const [message, setMessage] = useState("Estamos preparando tu espacio privado.");
   const [retryKey, setRetryKey] = useState(0);
+  const offlineRef = useRef(false);
   const configuredApiBaseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:4100";
   const apiBaseUrl = useMemo(
     () => resolveFinanceApiBaseUrl(configuredApiBaseUrl),
@@ -78,6 +81,7 @@ export default function EntryGate({ children }: EntryGateProps) {
 
     async function checkEntry() {
       setState("checking");
+      offlineRef.current = false;
       setMessage("Estamos preparando tu espacio privado.");
 
       try {
@@ -143,12 +147,26 @@ export default function EntryGate({ children }: EntryGateProps) {
         setState("authenticated");
       } catch (entryError) {
         if (cancelled) return;
+        offlineRef.current = true;
         setState("offline");
-        setMessage(entryError instanceof Error && entryError.name === "AbortError"
-          ? "La conexion esta tardando mas de lo esperado. Revisa que la API este encendida."
-          : "El backend no responde o aun no esta listo. Puedes reintentar cuando este disponible.");
+        const detail = entryError instanceof Error && entryError.name === "AbortError"
+          ? "La comprobación superó 7 segundos. Revisa que la API y su proxy estén encendidos."
+          : financeErrorMessage(entryError, "No se pudo comprobar el estado de la API.");
+        setMessage(`Falló la comprobación de /health · ${detail}`);
       }
     }
+
+    const retryIfOffline = () => {
+      if (cancelled || !offlineRef.current || document.visibilityState !== "visible") return;
+      setRetryKey((value) => value + 1);
+    };
+
+    // A local API can restart independently from this page. Retry in the
+    // background and on network recovery/focus so the offline banner clears
+    // without requiring a full page reload.
+    window.addEventListener("online", retryIfOffline);
+    window.addEventListener("focus", retryIfOffline);
+    const retryInterval = window.setInterval(retryIfOffline, 15000);
 
     void checkEntry();
 
@@ -156,6 +174,9 @@ export default function EntryGate({ children }: EntryGateProps) {
       cancelled = true;
       controller.abort();
       window.clearTimeout(timeout);
+      window.clearInterval(retryInterval);
+      window.removeEventListener("online", retryIfOffline);
+      window.removeEventListener("focus", retryIfOffline);
     };
   }, [apiBaseUrl, isAuthScreen, retryKey, returnTo, router]);
 
@@ -163,15 +184,18 @@ export default function EntryGate({ children }: EntryGateProps) {
   if (state === "authenticated") return <>{children}</>;
   if (state === "offline") {
     if (!readFinanceAuthToken()) {
-      return <WelcomeScreen returnTo={returnTo} apiBaseUrl={displayApiBaseUrl(configuredApiBaseUrl)} />;
+      return <>
+        <WelcomeScreen returnTo={returnTo} apiBaseUrl={displayApiBaseUrl(apiBaseUrl)} />
+        <ConnectionBanner apiBaseUrl={apiBaseUrl} message={message} retry={() => setRetryKey((value) => value + 1)} />
+      </>;
     }
     return <>
       {children}
-      <ConnectionBanner apiBaseUrl={configuredApiBaseUrl} message={message} retry={() => setRetryKey((value) => value + 1)} />
+      <ConnectionBanner apiBaseUrl={apiBaseUrl} message={message} retry={() => setRetryKey((value) => value + 1)} />
     </>;
   }
   if (state === "unauthenticated") {
-    return <WelcomeScreen returnTo={returnTo} apiBaseUrl={displayApiBaseUrl(configuredApiBaseUrl)} />;
+    return <WelcomeScreen returnTo={returnTo} apiBaseUrl={displayApiBaseUrl(apiBaseUrl)} />;
   }
 
   return (

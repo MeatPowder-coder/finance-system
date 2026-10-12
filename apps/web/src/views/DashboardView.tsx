@@ -158,32 +158,14 @@ export function DashboardView(props: DashboardViewProps) {
       const scaleY = current.height ? previous.height / current.height : 1;
       if (Math.abs(dx) < 1 && Math.abs(dy) < 1 && Math.abs(scaleX - 1) < .01 && Math.abs(scaleY - 1) < .01) return;
       tile.animate([
-        { transform: `translate(${dx}px, ${dy}px) scale(${scaleX}, ${scaleY})`, transformOrigin: "top left" },
-        { transform: "translate(0, 0) scale(1, 1)", transformOrigin: "top left" },
+        { transform: `translate(${dx}px, ${dy}px) scale(${scaleX}, ${scaleY})`, transformOrigin: "center center" },
+        { transform: "translate(0, 0) scale(1, 1)", transformOrigin: "center center" },
       ], { duration: 480, easing: "cubic-bezier(.2,.8,.2,1)" });
     });
   }, [focusedPanel]);
   React.useEffect(() => {
     if (!focusedPanel) return;
     requestAnimationFrame(() => {
-      const selectedTile = gridRef.current?.querySelector<HTMLElement>(".finance-bento-tile.is-focused");
-      const scrollContainer = document.querySelector<HTMLElement>(".finance-app-scroll");
-      if (selectedTile && scrollContainer) {
-        const cardRect = selectedTile.getBoundingClientRect();
-        const scrollRect = scrollContainer.getBoundingClientRect();
-        // Reveal only the clipped edge of a tall expanded card; don't center
-        // it or move the rest of the dashboard out of the user's view.
-        const clippedTop = cardRect.top < scrollRect.top ? cardRect.top - scrollRect.top : 0;
-        const clippedBottom = cardRect.bottom > scrollRect.bottom ? cardRect.bottom - scrollRect.bottom : 0;
-        const scrollDelta = clippedTop || clippedBottom;
-        if (scrollDelta) {
-          const targetTop = scrollContainer.scrollTop + scrollDelta;
-          scrollContainer.scrollTo({
-            top: Math.max(0, Math.min(targetTop, scrollContainer.scrollHeight - scrollContainer.clientHeight)),
-            behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-          });
-        }
-      }
       gridRef.current?.querySelector<HTMLButtonElement>(".finance-bento-tile.is-focused .finance-bento-close")?.focus({ preventScroll: true });
     });
     const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") { event.preventDefault(); closeFocus(); } };
@@ -315,7 +297,7 @@ export function DashboardView(props: DashboardViewProps) {
     </button>
   );
   const focusControl = (panel: NonNullable<typeof focusedPanel>, label: string) => focusedPanel === panel
-    ? <button type="button" className="finance-bento-close" aria-label="Cerrar detalle ampliado" onClick={(event) => { event.stopPropagation(); closeFocus(); }}>×</button>
+    ? <button type="button" className="finance-bento-close" aria-label="Contraer panel" onClick={(event) => { event.stopPropagation(); closeFocus(); }}>Contraer</button>
     : focusButton(panel, label);
 
   const visibleBudgets = dashboardBudgetWindow;
@@ -489,7 +471,7 @@ function ExpandedDetails({ panel, rows, actions = [], budgets, onBudgetExpense, 
           : "No hay datos para mostrar todavía.";
 
   return (
-    <div className="finance-bento-expanded" role="region" aria-label={`Detalle: ${panel.title}`}>
+    <div className="finance-bento-expanded" role="region" aria-label={`Detalle: ${panel.title}`} data-expanded-panel={panel.title}>
       <p className="finance-bento-expanded-eyebrow">{panel.eyebrow}</p>
       <h3>{panel.title}</h3>
       <p className="finance-bento-expanded-summary">{panel.summary}</p>

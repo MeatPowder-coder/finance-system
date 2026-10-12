@@ -65,6 +65,38 @@ const GOOGLE_USERINFO_URL = "https://openidconnect.googleapis.com/v1/userinfo";
 const AUTH_FLOW_STORAGE_KEY = "finance-system.authFlow";
 const AUTH_REFRESH_TOKEN_HASH_ALGORITHM = "sha256";
 export const INTERNAL_REQUEST_HEADER = "x-finance-internal-request";
+let authUsernameColumnPromise: Promise<boolean> | null = null;
+let financeOwnerColumnPromise: Promise<boolean> | null = null;
+
+async function hasAuthUsernameColumn() {
+  authUsernameColumnPromise ??= query<{ exists: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1
+         FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'auth_users'
+          AND column_name = 'username'
+     ) AS exists`
+  ).then((result) => Boolean(result.rows[0]?.exists));
+  return authUsernameColumnPromise;
+}
+
+async function hasFinanceOwnershipColumn() {
+  financeOwnerColumnPromise ??= query<{ exists: boolean }>(
+    `SELECT EXISTS (
+       SELECT 1
+         FROM information_schema.columns
+        WHERE table_schema = current_schema()
+          AND table_name = 'accounts'
+          AND column_name = 'owner_user_id'
+     ) AS exists`
+  ).then((result) => Boolean(result.rows[0]?.exists));
+  return financeOwnerColumnPromise;
+}
+
+function authUsernameExpression(alias: string) {
+  return `COALESCE(NULLIF(to_jsonb(${alias})->>'username', ''), LOWER(SPLIT_PART(${alias}.email, '@', 1)))`;
+}
 
 function normalizeText(value: string | null | undefined) {
   return String(value || "").trim();
@@ -88,6 +120,9 @@ function normalizeUsername(value: string | null | undefined) {
 
 async function createAvailableUsername(email: string, preferred?: string | null) {
   const base = normalizeUsername(preferred) || normalizeUsername(email.split("@")[0]) || "usuario";
+  // Migration 011 adds username. With the authorized 009-only schema, keep
+  // the profile-compatible value derived from email without querying a missing column.
+  if (!(await hasAuthUsernameColumn())) return base;
   let candidate = base;
   let suffix = 1;
   while (true) {
@@ -254,10 +289,11 @@ async function createAuthSession(user: AuthUserRow) {
 }
 
 async function getUserByEmail(email: string) {
+  const username = authUsernameExpression("u");
   const res = await query<AuthUserRow>(
-    `SELECT id, email, username, name, picture, auth_provider, google_sub, password_hash, email_verified, is_active, roles
-       FROM auth_users
-      WHERE email = $1
+    `SELECT u.id, u.email, ${username} AS username, u.name, u.picture, u.auth_provider, u.google_sub, u.password_hash, u.email_verified, u.is_active, u.roles
+       FROM auth_users u
+      WHERE u.email = $1
       LIMIT 1`,
     [normalizeEmail(email)]
   );
@@ -265,10 +301,11 @@ async function getUserByEmail(email: string) {
 }
 
 async function getUserByGoogleSub(googleSub: string) {
+  const username = authUsernameExpression("u");
   const res = await query<AuthUserRow>(
-    `SELECT id, email, username, name, picture, auth_provider, google_sub, password_hash, email_verified, is_active, roles
-       FROM auth_users
-      WHERE google_sub = $1
+    `SELECT u.id, u.email, ${username} AS username, u.name, u.picture, u.auth_provider, u.google_sub, u.password_hash, u.email_verified, u.is_active, u.roles
+       FROM auth_users u
+      WHERE u.google_sub = $1
       LIMIT 1`,
     [normalizeText(googleSub)]
   );
@@ -285,6 +322,7 @@ async function saveGoogleUser(profile: { sub: string; email: string; name: strin
   const existingBySub = await getUserByGoogleSub(normalizedSub);
   const existingByEmail = existingBySub || (await getUserByEmail(normalizedEmail));
   if (existingByEmail) {
+    const username = authUsernameExpression("auth_users");
     const updated = await query<AuthUserRow>(
       `UPDATE auth_users
           SET email = $2,
@@ -296,15 +334,24 @@ async function saveGoogleUser(profile: { sub: string; email: string; name: strin
               is_active = TRUE,
               updated_at = NOW()
         WHERE id = $5
-        RETURNING id, email, username, name, picture, auth_provider, google_sub, password_hash, email_verified, is_active, roles`,
+        RETURNING id, email, ${username} AS username, name, picture, auth_provider, google_sub, password_hash, email_verified, is_active, roles`,
       [normalizedSub, normalizedEmail, normalizeName(profile.name), normalizeText(profile.picture) || null, existingByEmail.id]
     );
     return updated.rows[0];
   }
 
+  if (!(await hasFinanceOwnershipColumn())) {
+    const count = await query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM auth_users`);
+    if (Number(count.rows[0]?.count || 0) > 0) {
+      throw new Error("Este entorno todavía usa datos financieros compartidos. La cuenta adicional requiere activar el esquema multiusuario antes de iniciar sesión.");
+    }
+  }
+
   const username = await createAvailableUsername(normalizedEmail, profile.name);
+  const usernameColumnExists = await hasAuthUsernameColumn();
   const inserted = await query<AuthUserRow>(
-    `INSERT INTO auth_users (
+    usernameColumnExists
+      ? `INSERT INTO auth_users (
        email,
        username,
        name,
@@ -317,8 +364,15 @@ async function saveGoogleUser(profile: { sub: string; email: string; name: strin
        updated_at
      )
      VALUES ($1, $2, $3, $4, 'GOOGLE', $5, $6, TRUE, NOW(), NOW())
-     RETURNING id, email, username, name, picture, auth_provider, google_sub, password_hash, email_verified, is_active, roles`,
-    [normalizedEmail, username, normalizeName(profile.name), normalizeText(profile.picture) || null, normalizedSub, Boolean(profile.email_verified)]
+       RETURNING id, email, ${authUsernameExpression("auth_users")} AS username, name, picture, auth_provider, google_sub, password_hash, email_verified, is_active, roles`
+      : `INSERT INTO auth_users (
+       email, name, picture, auth_provider, google_sub, email_verified, is_active, created_at, updated_at
+     )
+     VALUES ($1, $2, $3, 'GOOGLE', $4, $5, TRUE, NOW(), NOW())
+       RETURNING id, email, ${authUsernameExpression("auth_users")} AS username, name, picture, auth_provider, google_sub, password_hash, email_verified, is_active, roles`,
+    usernameColumnExists
+      ? [normalizedEmail, username, normalizeName(profile.name), normalizeText(profile.picture) || null, normalizedSub, Boolean(profile.email_verified)]
+      : [normalizedEmail, normalizeName(profile.name), normalizeText(profile.picture) || null, normalizedSub, Boolean(profile.email_verified)]
   );
   return inserted.rows[0];
 }
@@ -333,6 +387,7 @@ async function saveEmailPasswordUser(payload: { email: string; name?: string | n
   }
 
   if (existing) {
+    const username = authUsernameExpression("auth_users");
     const updated = await query<AuthUserRow>(
       `UPDATE auth_users
           SET name = COALESCE($2, name),
@@ -342,14 +397,23 @@ async function saveEmailPasswordUser(payload: { email: string; name?: string | n
               is_active = TRUE,
               updated_at = NOW()
         WHERE id = $1
-        RETURNING id, email, username, name, picture, auth_provider, google_sub, password_hash, email_verified, is_active, roles`,
+        RETURNING id, email, ${username} AS username, name, picture, auth_provider, google_sub, password_hash, email_verified, is_active, roles`,
       [existing.id, normalizeName(payload.name), passwordHash]
     );
     return updated.rows[0];
   }
 
+  const usernameColumnExists = await hasAuthUsernameColumn();
+  if (!(await hasFinanceOwnershipColumn())) {
+    const count = await query<{ count: string }>(`SELECT COUNT(*)::text AS count FROM auth_users`);
+    if (Number(count.rows[0]?.count || 0) > 0) {
+      throw new Error("Este entorno todavía usa datos financieros compartidos. La cuenta adicional requiere activar el esquema multiusuario antes de iniciar sesión.");
+    }
+  }
+  const username = await createAvailableUsername(normalizedEmail, payload.name);
   const inserted = await query<AuthUserRow>(
-      `INSERT INTO auth_users (
+    usernameColumnExists
+      ? `INSERT INTO auth_users (
        email,
        username,
        name,
@@ -361,8 +425,15 @@ async function saveEmailPasswordUser(payload: { email: string; name?: string | n
        updated_at
      )
      VALUES ($1, $2, $3, $4, 'LOCAL', TRUE, TRUE, NOW(), NOW())
-     RETURNING id, email, username, name, picture, auth_provider, google_sub, password_hash, email_verified, is_active, roles`,
-    [normalizedEmail, await createAvailableUsername(normalizedEmail, payload.name), normalizeName(payload.name), passwordHash]
+       RETURNING id, email, ${authUsernameExpression("auth_users")} AS username, name, picture, auth_provider, google_sub, password_hash, email_verified, is_active, roles`
+      : `INSERT INTO auth_users (
+        email, name, password_hash, auth_provider, email_verified, is_active, created_at, updated_at
+      )
+      VALUES ($1, $2, $3, 'LOCAL', TRUE, TRUE, NOW(), NOW())
+      RETURNING id, email, ${authUsernameExpression("auth_users")} AS username, name, picture, auth_provider, google_sub, password_hash, email_verified, is_active, roles`,
+    usernameColumnExists
+      ? [normalizedEmail, username, normalizeName(payload.name), passwordHash]
+      : [normalizedEmail, normalizeName(payload.name), passwordHash]
   );
   return inserted.rows[0];
 }
@@ -444,7 +515,7 @@ export async function resolveFinanceSession(req: FastifyRequest): Promise<AuthSe
          s.revoked_at,
          u.id AS user_id,
          u.email,
-         u.username,
+         ${authUsernameExpression("u")} AS username,
          u.name,
          u.picture,
          u.auth_provider,
@@ -601,7 +672,7 @@ export async function refreshAuthTokens(refreshToken: string) {
        s.revoked_at,
        u.id AS user_id,
        u.email,
-       u.username,
+       ${authUsernameExpression("u")} AS username,
        u.name,
        u.picture,
        u.auth_provider,
