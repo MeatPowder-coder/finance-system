@@ -80,7 +80,7 @@ const BACKGROUNDS: Record<ThemeName, {
 };
 
 export function AnimatedBackground() {
-  const [theme, setTheme] = useState<ThemeName>("dark");
+  const [theme, setTheme] = useState<ThemeName>("light");
   const [backgroundMode, setBackgroundMode] = useState<BackgroundMode>("auto");
   const [mounted, setMounted] = useState(false);
 
@@ -97,7 +97,7 @@ export function AnimatedBackground() {
         root.classList.contains("theme-" + name)
       );
 
-      setTheme(activeTheme ? (activeTheme as ThemeName) : "dark");
+      setTheme(activeTheme ? (activeTheme as ThemeName) : "light");
     };
 
     checkTheme();
