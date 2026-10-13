@@ -166,7 +166,12 @@ export function DashboardView(props: DashboardViewProps) {
   React.useEffect(() => {
     if (!focusedPanel) return;
     requestAnimationFrame(() => {
-      gridRef.current?.querySelector<HTMLButtonElement>(".finance-bento-tile.is-focused .finance-bento-close")?.focus({ preventScroll: true });
+      const tile = gridRef.current?.querySelector<HTMLElement>(".finance-bento-tile.is-focused");
+      tile?.scrollIntoView({
+        block: "center",
+        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+      });
+      tile?.querySelector<HTMLButtonElement>(".finance-bento-close")?.focus({ preventScroll: true });
     });
     const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") { event.preventDefault(); closeFocus(); } };
     document.addEventListener("keydown", onKeyDown);

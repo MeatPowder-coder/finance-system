@@ -77,26 +77,30 @@ export function EditorialFinancePreview({ className = "", returnTo = "/" }: Edit
   useLayoutEffect(() => {
     const before = previousRectsRef.current;
     previousRectsRef.current = new Map();
-    if (!before.size || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-    gridRef.current?.querySelectorAll<HTMLElement>("[data-preview-panel]").forEach((tile) => {
-      const id = tile.dataset.previewPanel as PreviewPanel | undefined;
-      const oldRect = id ? before.get(id) : undefined;
-      if (!oldRect) return;
-      const nextRect = tile.getBoundingClientRect();
-      const dx = oldRect.left - nextRect.left;
-      const dy = oldRect.top - nextRect.top;
-      const sx = nextRect.width ? oldRect.width / nextRect.width : 1;
-      const sy = nextRect.height ? oldRect.height / nextRect.height : 1;
-      if (Math.abs(dx) < 1 && Math.abs(dy) < 1 && Math.abs(sx - 1) < .01 && Math.abs(sy - 1) < .01) return;
-      tile.animate([
-        { transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`, transformOrigin: "top left" },
-        { transform: "translate(0, 0) scale(1, 1)", transformOrigin: "top left" },
-      ], { duration: 560, easing: "cubic-bezier(.16,1,.3,1)" });
-    });
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (before.size && !reduceMotion) {
+      gridRef.current?.querySelectorAll<HTMLElement>("[data-preview-panel]").forEach((tile) => {
+        const id = tile.dataset.previewPanel as PreviewPanel | undefined;
+        const oldRect = id ? before.get(id) : undefined;
+        if (!oldRect) return;
+        const nextRect = tile.getBoundingClientRect();
+        const dx = oldRect.left - nextRect.left;
+        const dy = oldRect.top - nextRect.top;
+        const sx = nextRect.width ? oldRect.width / nextRect.width : 1;
+        const sy = nextRect.height ? oldRect.height / nextRect.height : 1;
+        if (Math.abs(dx) < 1 && Math.abs(dy) < 1 && Math.abs(sx - 1) < .01 && Math.abs(sy - 1) < .01) return;
+        tile.animate([
+          { transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})`, transformOrigin: "top left" },
+          { transform: "translate(0, 0) scale(1, 1)", transformOrigin: "top left" },
+        ], { duration: 560, easing: "cubic-bezier(.16,1,.3,1)" });
+      });
+    }
     if (focusedPanel) {
-      gridRef.current
-        ?.querySelector<HTMLButtonElement>("[data-preview-panel].is-focused .finance-bento-preview-expanded-head > button")
-        ?.focus({ preventScroll: true });
+      const tile = gridRef.current?.querySelector<HTMLElement>("[data-preview-panel].is-focused");
+      requestAnimationFrame(() => {
+        tile?.scrollIntoView({ block: "center", behavior: "auto" });
+        tile?.querySelector<HTMLButtonElement>(".finance-bento-preview-expanded-head > button")?.focus({ preventScroll: true });
+      });
     }
   }, [focusedPanel]);
 
