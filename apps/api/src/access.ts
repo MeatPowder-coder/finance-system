@@ -30,6 +30,35 @@ function cleanIds(rows: Array<{ id: string | number }>) {
   return [...new Set(rows.map((row) => String(row.id)))];
 }
 
+const ownerColumnCache = new Map<string, Promise<boolean>>();
+async function hasOwnerColumn(table: string) {
+  let pending = ownerColumnCache.get(table);
+  if (!pending) {
+    pending = query<{ exists: boolean }>(
+      `SELECT EXISTS (
+         SELECT 1
+           FROM information_schema.columns
+          WHERE table_schema = current_schema()
+            AND table_name = $1
+            AND column_name = 'owner_user_id'
+       ) AS exists`,
+      [table]
+    ).then((result) => Boolean(result.rows[0]?.exists));
+    ownerColumnCache.set(table, pending);
+  }
+  return pending;
+}
+
+async function assertSingleUserWorkspace(userId: string) {
+  if (!userId) throw new Error("Autenticacion requerida.");
+  const users = await query<{ id: string }>(
+    `SELECT id FROM auth_users ORDER BY created_at ASC, id ASC LIMIT 2`
+  );
+  if (users.rows.length !== 1 || users.rows[0].id !== userId) {
+    throw new Error("El esquema legacy solo permite una cuenta autenticada hasta activar la propiedad multiusuario.");
+  }
+}
+
 async function grantIds(userId: string, resourceType: ShareResourceType, permission: SharePermission) {
   const result = await query<{ resource_id: string }>(
     `SELECT resource_id
@@ -44,6 +73,11 @@ async function grantIds(userId: string, resourceType: ShareResourceType, permiss
 }
 
 export async function getAccessibleAccountIds(userId: string, permission: SharePermission = "READ") {
+  if (!(await hasOwnerColumn("accounts"))) {
+    await assertSingleUserWorkspace(userId);
+    const sharedWorkspace = await query<{ id: number }>(`SELECT id FROM accounts ORDER BY id ASC`);
+    return cleanIds(sharedWorkspace.rows);
+  }
   const [owned, shared] = await Promise.all([
     query<{ id: number }>(`SELECT id FROM accounts WHERE owner_user_id = $1`, [userId]),
     grantIds(userId, "ACCOUNT", permission),
@@ -52,6 +86,11 @@ export async function getAccessibleAccountIds(userId: string, permission: ShareP
 }
 
 export async function getAccessibleTransactionIds(userId: string, permission: SharePermission = "READ") {
+  if (!(await hasOwnerColumn("transactions"))) {
+    await assertSingleUserWorkspace(userId);
+    const sharedWorkspace = await query<{ id: number }>(`SELECT id FROM transactions ORDER BY id ASC`);
+    return cleanIds(sharedWorkspace.rows);
+  }
   const [owned, accountIds] = await Promise.all([
     query<{ id: number }>(`SELECT id FROM transactions WHERE owner_user_id = $1`, [userId]),
     getAccessibleAccountIds(userId, permission),
@@ -75,6 +114,11 @@ export async function getAccessibleIds(userId: string, resourceType: Exclude<Sha
     REPORT: "generated_views",
   };
   const table = ownedTable[resourceType];
+  if (table && !(await hasOwnerColumn(table))) {
+    await assertSingleUserWorkspace(userId);
+    const sharedWorkspace = await query<{ id: string | number }>(`SELECT id FROM ${table} ORDER BY id ASC`);
+    return cleanIds(sharedWorkspace.rows);
+  }
   const [owned, shared] = await Promise.all([
     table ? query<{ id: string | number }>(`SELECT id FROM ${table} WHERE owner_user_id = $1`, [userId]) : { rows: [] },
     grantIds(userId, resourceType, permission),
@@ -108,9 +152,11 @@ export async function isResourceOwner(userId: string, resourceType: ShareResourc
     DEFICIT: "budget_deficit_events",
     REPORT: "generated_views",
   };
+  const table = tables[resourceType];
+  const ownerColumnExists = await hasOwnerColumn(table);
   const result = await query(
-    `SELECT 1 FROM ${tables[resourceType]} WHERE id = $1 AND owner_user_id = $2 LIMIT 1`,
-    [resourceId, userId]
+    `SELECT 1 FROM ${table} WHERE id = $1${ownerColumnExists ? " AND owner_user_id = $2" : ""} LIMIT 1`,
+    ownerColumnExists ? [resourceId, userId] : [resourceId]
   );
   return Boolean(result.rowCount);
 }

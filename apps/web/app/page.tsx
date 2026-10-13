@@ -192,6 +192,14 @@ function withApiEndpoint(path: string, error: unknown) {
   return new Error(detail.startsWith(`${path} — `) ? detail : `${path} — ${detail}`);
 }
 
+function describeEndpointFailure(error: unknown) {
+  const raw = error instanceof Error ? error.message : String(error || "");
+  const separator = raw.indexOf(" — ");
+  const endpoint = separator > 0 ? raw.slice(0, separator) : "API";
+  const detail = separator > 0 ? raw.slice(separator + 3) : raw;
+  return `${endpoint}: ${financeErrorMessage(detail, "servicio no disponible")}`;
+}
+
 function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -347,8 +355,9 @@ function HomeContent() {
     if (results[6].status === "fulfilled") setTags(results[6].value);
 
     if (rejected.length) {
-      const endpoints = rejected.map((reason) => reason instanceof Error ? reason.message.split(" — ")[0] : "un servicio de FinanceSystem");
-      setError(`Algunos datos no respondieron (${endpoints.join(", ")}). Conservamos visibles las secciones que sí cargaron; reintenta para actualizar.`);
+      const failures = rejected.slice(0, 3).map(describeEndpointFailure);
+      const remaining = rejected.length - failures.length;
+      setError(`No se pudieron cargar ${failures.join(" · ")}${remaining > 0 ? ` · y ${remaining} servicio(s) más` : ""}. Los datos disponibles siguen visibles.`);
     }
     setLoading(false);
   }
@@ -387,9 +396,8 @@ function HomeContent() {
     if (cashflowResult.status === "fulfilled") setCashflowReport(cashflowResult.value);
     if (breakdownResult.status === "fulfilled") setCategoryBreakdown(breakdownResult.value);
     const failedEndpoints = [cashflowResult, breakdownResult]
-      .flatMap((result) => result.status === "rejected" ? [result.reason] : [])
-      .map((reason) => reason instanceof Error ? reason.message.split(" — ")[0] : "un reporte");
-    if (failedEndpoints.length) setError(`No se pudieron actualizar ${failedEndpoints.join(" y ")}. Los demás datos siguen disponibles.`);
+      .flatMap((result) => result.status === "rejected" ? [describeEndpointFailure(result.reason)] : []);
+    if (failedEndpoints.length) setError(`No se pudieron actualizar ${failedEndpoints.join(" · ")}. Los demás datos siguen disponibles.`);
     setReportsLoading(false);
   }
 
@@ -409,8 +417,7 @@ function HomeContent() {
     if (results[3].status === "fulfilled") setProjectionScenarios(results[3].value);
     if (results[4].status === "fulfilled") setMonthlyFinanceSummary(results[4].value);
     const failedEndpoints = results
-      .flatMap((result) => result.status === "rejected" ? [result.reason] : [])
-      .map((reason) => reason instanceof Error ? reason.message.split(" — ")[0] : "un servicio de planificación");
+      .flatMap((result) => result.status === "rejected" ? [describeEndpointFailure(result.reason)] : []);
     if (failedEndpoints.length) setError(`No se pudieron actualizar ${failedEndpoints.join(", ")}. Las demás secciones siguen disponibles.`);
     setPlanningLoading(false);
   }
@@ -987,7 +994,7 @@ function HomeContent() {
               <strong>F/S</strong><span>Cuaderno financiero</span>
               <small>Bogotá · {new Intl.DateTimeFormat("es-CO", { day: "2-digit", month: "short", year: "numeric", timeZone: "America/Bogota" }).format(new Date())} · Personal / COP</small>
             </div>
-            <div className="finance-header-palette"><ThemeSelector collapsed showCurrentTheme /></div>
+            <div className="finance-header-palette"><ThemeSelector showCurrentTheme showSwatches /></div>
           </div>
           <div className="finance-primary-tab-list">
             {TABS.map((item, index) => {
@@ -1138,7 +1145,16 @@ function HomeContent() {
 
         {error && !(tab === "dashboard" && !summary) && (
           <Card className={`section-enter mb-4 ${tab === "dashboard" ? "finance-dashboard-error" : "border-rose-400/40 bg-rose-500/10"}`} role="alert">
-            <CardContent className={tab === "dashboard" ? "finance-dashboard-error-content" : "py-4 text-rose-100"}>{financeErrorMessage(error)}</CardContent>
+            <CardContent className={`${tab === "dashboard" ? "finance-dashboard-error-content" : "py-4 text-rose-100"} flex flex-wrap items-center justify-between gap-3`}>
+              <span>{financeErrorMessage(error)}</span>
+              <Button type="button" variant="outline" size="sm" onClick={() => {
+                if (tab === "reports") void refreshReports();
+                else if (tab === "planning") void refreshPlanning();
+                else void refreshData();
+              }}>
+                <RefreshCw className="mr-2 h-4 w-4" /> Reintentar
+              </Button>
+            </CardContent>
           </Card>
         )}
 

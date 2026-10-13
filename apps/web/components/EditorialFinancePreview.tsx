@@ -98,7 +98,13 @@ export function EditorialFinancePreview({ className = "", returnTo = "/" }: Edit
     if (focusedPanel) {
       const tile = gridRef.current?.querySelector<HTMLElement>("[data-preview-panel].is-focused");
       requestAnimationFrame(() => {
-        tile?.scrollIntoView({ block: "center", behavior: "auto" });
+        // Keep the selected tile in its natural Bento position. Reveal it only
+        // when the expanded content would otherwise be outside the viewport.
+        tile?.scrollIntoView({
+          block: "nearest",
+          inline: "nearest",
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
+        });
         tile?.querySelector<HTMLButtonElement>(".finance-bento-preview-expanded-head > button")?.focus({ preventScroll: true });
       });
     }

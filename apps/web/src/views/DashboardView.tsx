@@ -167,10 +167,13 @@ export function DashboardView(props: DashboardViewProps) {
     if (!focusedPanel) return;
     requestAnimationFrame(() => {
       const tile = gridRef.current?.querySelector<HTMLElement>(".finance-bento-tile.is-focused");
-      tile?.scrollIntoView({
-        block: "center",
-        behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
-      });
+      if (tile) {
+        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        // Let the selected Bento tile grow where it lives. Only scroll the
+        // smallest amount needed to keep it visible; centering it in the
+        // viewport made the interaction read like a modal takeover.
+        tile.scrollIntoView({ block: "nearest", inline: "nearest", behavior: reducedMotion ? "auto" : "smooth" });
+      }
       tile?.querySelector<HTMLButtonElement>(".finance-bento-close")?.focus({ preventScroll: true });
     });
     const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") { event.preventDefault(); closeFocus(); } };
@@ -364,7 +367,7 @@ export function DashboardView(props: DashboardViewProps) {
               {focusControl("flow", "el flujo del mes")}
             </header>
             {visualPanel === "flow" && focusPanel && <ExpandedDetails panel={focusPanel} rows={focusPanel.rows} actions={focusActions.flow} />}
-            {focusedPanel !== "flow" && <div className="finance-bento-flow-layout">
+            <div className="finance-bento-flow-layout">
               <div className="finance-bento-donut" style={{ background: `conic-gradient(var(--ui-editorial-coral) 0 ${spendingRatio}%, var(--ui-editorial-lime) ${spendingRatio}% 100%)` }} aria-label={`${Math.round(spendingRatio)} por ciento del ingreso gastado; ${100 - Math.round(spendingRatio)} por ciento disponible`}>
                 <div><strong>{Math.round(spendingRatio)}%</strong><span>gastado</span></div>
               </div>
@@ -373,12 +376,12 @@ export function DashboardView(props: DashboardViewProps) {
                 <p><span>Entró</span><strong>{monthFlow.income}</strong></p>
                 <p><span>Salió</span><strong>{monthFlow.expense}</strong></p>
               </div>
-            </div>}
-            {focusedPanel !== "flow" && <button className="finance-bento-next-payment" type="button" onClick={(event) => openFocus("payments", event.currentTarget)}>
+            </div>
+            <button className="finance-bento-next-payment" type="button" onClick={(event) => openFocus("payments", event.currentTarget)}>
               <Clock3 aria-hidden="true" />
               <span>{nextCommitment ? `Siguiente · ${nextCommitment.name}` : "Calendario despejado"}</span>
               <strong>{nextCommitment ? formatMoney(Number(nextCommitment.payload.amount || 0), nextCommitment.payload.currency || "COP") : "Ver pagos"}</strong>
-            </button>}
+            </button>
           </section>
 
           <section data-finance-panel="budgets" className={`finance-bento-tile finance-bento-budgets${focusedPanel === "budgets" ? " is-focused" : ""}`} aria-label="Presupuestos; ampliar para ver el detalle" aria-expanded={focusedPanel === "budgets"} aria-labelledby="finance-bento-budgets-title" aria-roledescription="Panel ampliable" tabIndex={0} role="group" onClick={openTileOnClick("budgets")} onKeyDown={openTileOnKey("budgets")}>
@@ -392,7 +395,7 @@ export function DashboardView(props: DashboardViewProps) {
               </div>
             </header>
             {focusedPanel === "budgets" && focusPanel && <ExpandedDetails panel={focusPanel} rows={focusPanel.rows} actions={focusActions.budgets} budgets={dashboardBudgets} onBudgetExpense={startBudgetExpense} onBudgetEdit={openEditBudgetDialog} />}
-            {focusedPanel !== "budgets" && (visibleBudgets.length ? <div className="finance-bento-budget-list">
+            {visibleBudgets.length ? <div className="finance-bento-budget-list">
               {visibleBudgets.map((budget) => {
                 const allocated = Math.max(0, toNumber(budget.allocated_amount));
                 const spent = Math.max(0, toNumber(budget.actual_amount));
@@ -407,7 +410,7 @@ export function DashboardView(props: DashboardViewProps) {
                   <button type="button" className="finance-bento-edit" onClick={() => openEditBudgetDialog(budget.id)} aria-label={`Editar presupuesto ${budget.name}`}>↗</button>
                 </article>;
               })}
-            </div> : <div className="finance-bento-empty"><Wallet aria-hidden="true" /><span>Aún no tienes sobres activos este mes.</span><button type="button" onClick={() => actionByKey.budget?.onClick()}>Crear presupuesto</button></div>)}
+            </div> : <div className="finance-bento-empty"><Wallet aria-hidden="true" /><span>Aún no tienes sobres activos este mes.</span><button type="button" onClick={() => actionByKey.budget?.onClick()}>Crear presupuesto</button></div>}
           </section>
 
           <section data-finance-panel="transactions" className={`finance-bento-tile finance-bento-movements${focusedPanel === "transactions" ? " is-focused" : ""}`} aria-label="Movimientos recientes; ampliar para ver el detalle" aria-expanded={focusedPanel === "transactions"} aria-labelledby="finance-bento-movements-title" aria-roledescription="Panel ampliable" tabIndex={0} role="group" onClick={openTileOnClick("transactions")} onKeyDown={openTileOnKey("transactions")}>
@@ -416,7 +419,7 @@ export function DashboardView(props: DashboardViewProps) {
               <div className="finance-bento-pager"><span>{recentTransactions.length} movimientos</span><button className="finance-bento-see-all" type="button" onClick={onReviewExpenses}>Ver actividad</button>{focusControl("transactions", "los movimientos recientes")}</div>
             </header>
             {focusedPanel === "transactions" && focusPanel && <ExpandedDetails panel={focusPanel} rows={focusPanel.rows} actions={focusActions.transactions} />}
-            {focusedPanel !== "transactions" && (recentTransactions.length ? <div className="finance-bento-timeline">
+            {recentTransactions.length ? <div className="finance-bento-timeline">
               {recentTransactions.slice(0, 3).map((tx) => {
                 const isInflow = tx.direction === "INFLOW";
                 return <article key={tx.id}>
@@ -426,19 +429,19 @@ export function DashboardView(props: DashboardViewProps) {
                   <b>{isInflow ? "+" : "−"}{formatMoney(toNumber(tx.amount), tx.currency)}</b>
                 </article>;
               })}
-            </div> : <div className="finance-bento-empty"><ArrowDownLeft aria-hidden="true" /><span>Los movimientos aparecerán aquí cuando registres actividad.</span><button type="button" onClick={() => actionByKey.tx?.onClick()}>Registrar transacción</button></div>)}
+            </div> : <div className="finance-bento-empty"><ArrowDownLeft aria-hidden="true" /><span>Los movimientos aparecerán aquí cuando registres actividad.</span><button type="button" onClick={() => actionByKey.tx?.onClick()}>Registrar transacción</button></div>}
           </section>
 
           <section data-finance-panel="accounts" className={`finance-bento-tile finance-bento-accounts${focusedPanel === "accounts" ? " is-focused" : ""}`} aria-label="Cuentas; ampliar para ver el detalle" aria-expanded={focusedPanel === "accounts"} aria-labelledby="finance-bento-accounts-title" aria-roledescription="Panel ampliable" tabIndex={0} role="group" onClick={openTileOnClick("accounts")} onKeyDown={openTileOnKey("accounts")}>
             <header className="finance-bento-tile-head"><div><p>05 / SALDO CONSOLIDADO</p><h3 id="finance-bento-accounts-title">{monthFlow.balance}</h3><span className="finance-bento-account-caption">Dinero en varios lugares</span></div>{focusControl("accounts", "los saldos por cuenta")}</header>
             {focusedPanel === "accounts" && focusPanel && <ExpandedDetails panel={focusPanel} rows={focusPanel.rows} actions={focusActions.accounts} />}
-            {focusedPanel !== "accounts" && (topAccounts.length ? <div className="finance-bento-account-list">
+            {topAccounts.length ? <div className="finance-bento-account-list">
               {topAccounts.slice(0, 3).map((account) => {
                 const balance = toNumber(account.balance_current);
                 const ratio = Math.min(100, Math.round((Math.abs(balance) / maximumAccountBalance) * 100));
                 return <article key={account.id}><div><span>{account.name}</span><strong>{formatMoney(balance, account.currency)}</strong></div><i><b style={{ width: `${ratio}%` }} /></i></article>;
               })}
-            </div> : <div className="finance-bento-empty"><Wallet aria-hidden="true" /><span>Agrega una cuenta para ver dónde está tu dinero.</span></div>)}
+            </div> : <div className="finance-bento-empty"><Wallet aria-hidden="true" /><span>Agrega una cuenta para ver dónde está tu dinero.</span></div>}
           </section>
 
           <section data-finance-panel="payments" className={`finance-bento-tile finance-bento-payments${focusedPanel === "payments" ? " is-focused" : ""}`} aria-label="Próximos pagos; ampliar para ver el detalle" aria-expanded={focusedPanel === "payments"} aria-labelledby="finance-bento-payments-title" aria-roledescription="Panel ampliable" tabIndex={0} role="group" onClick={openTileOnClick("payments")} onKeyDown={openTileOnKey("payments")}>
@@ -447,7 +450,7 @@ export function DashboardView(props: DashboardViewProps) {
               <div className="finance-bento-pager"><span>{upcomingCommitments.length} activos</span><button className="finance-bento-see-all" type="button" onClick={onReviewPayments}>Ver agenda</button>{focusControl("payments", "los próximos pagos")}</div>
             </header>
             {focusedPanel === "payments" && focusPanel && <ExpandedDetails panel={focusPanel} rows={focusPanel.rows} actions={focusActions.payments} />}
-            {focusedPanel !== "payments" && (upcomingCommitments.length ? <div className="finance-bento-payment-list">
+            {upcomingCommitments.length ? <div className="finance-bento-payment-list">
               {upcomingCommitments.slice(0, 3).map((item) => (
                 <article key={item.id}>
                   <time>{formatDate(item.next_run_at)}</time>
@@ -455,7 +458,7 @@ export function DashboardView(props: DashboardViewProps) {
                   <b>{formatMoney(Number(item.payload.amount || 0), item.payload.currency || "COP")}</b>
                 </article>
               ))}
-            </div> : <div className="finance-bento-empty"><Clock3 aria-hidden="true" /><span>No tienes pagos próximos programados.</span><button type="button" onClick={() => actionByKey.commitment?.onClick()}>Agregar pago</button></div>)}
+            </div> : <div className="finance-bento-empty"><Clock3 aria-hidden="true" /><span>No tienes pagos próximos programados.</span><button type="button" onClick={() => actionByKey.commitment?.onClick()}>Agregar pago</button></div>}
           </section>
         </div>
         </div>

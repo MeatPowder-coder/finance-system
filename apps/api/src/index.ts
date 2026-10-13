@@ -112,6 +112,18 @@ app.addHook("onRequest", async (req, reply) => {
     });
   }
 
+  if (await isLegacyJournalSchema()) {
+    const workspaceUsers = await query<{ id: string }>(
+      `SELECT id FROM auth_users ORDER BY created_at ASC, id ASC LIMIT 2`
+    );
+    if (workspaceUsers.rows.length !== 1 || workspaceUsers.rows[0].id !== session.userId) {
+      return reply.code(403).send({
+        error: "Este esquema legacy permite una sola cuenta autenticada; completa la migración de propiedad antes de habilitar más usuarios.",
+        code: "LEGACY_SINGLE_USER_REQUIRED",
+      });
+    }
+  }
+
   (req as any).auth = session;
 });
 
@@ -653,6 +665,26 @@ function slugify(value: string) {
 
 let legacySchemaCache: boolean | null = null;
 let planningTablesCache: boolean | null = null;
+const tableColumnCache = new Map<string, Promise<boolean>>();
+
+async function hasTableColumn(table: string, column: string) {
+  const key = `${table}.${column}`;
+  let pending = tableColumnCache.get(key);
+  if (!pending) {
+    pending = query<{ exists: boolean }>(
+      `SELECT EXISTS (
+         SELECT 1
+           FROM information_schema.columns
+          WHERE table_schema = current_schema()
+            AND table_name = $1
+            AND column_name = $2
+       ) AS exists`,
+      [table, column]
+    ).then((result) => Boolean(result.rows[0]?.exists));
+    tableColumnCache.set(key, pending);
+  }
+  return pending;
+}
 
 async function isLegacyJournalSchema() {
   if (legacySchemaCache !== null) return legacySchemaCache;
@@ -719,13 +751,16 @@ function buildAvailableCategoryCode(baseCode: string, usedCodes: Set<string>) {
 }
 
 async function syncLegacyCategories(db: DbExecutor, ownerUserId: string) {
+  const ownerColumnExists = await hasTableColumn("categories", "owner_user_id");
+  const categoryScope = ownerColumnExists ? "WHERE owner_user_id = $1" : "";
+  const categoryScopeValues = ownerColumnExists ? [ownerUserId] : [];
   if (!(await isLegacyJournalSchema()) || !(await hasPlanningTables())) {
     const existing = await db.query(
       `SELECT id, code, name, direction, created_at
          FROM categories
-        WHERE owner_user_id = $1
+        ${categoryScope}
         ORDER BY name ASC`,
-      [ownerUserId]
+      categoryScopeValues
     );
     return existing.rows;
   }
@@ -741,9 +776,9 @@ async function syncLegacyCategories(db: DbExecutor, ownerUserId: string) {
     db.query<{ id: number; code: string; name: string; direction: string; created_at: string }>(
       `SELECT id, code, name, direction, created_at
          FROM categories
-        WHERE owner_user_id = $1
+        ${categoryScope}
         ORDER BY name ASC`,
-      [ownerUserId]
+      categoryScopeValues
     ),
   ]);
 
@@ -759,10 +794,14 @@ async function syncLegacyCategories(db: DbExecutor, ownerUserId: string) {
 
     const code = buildAvailableCategoryCode(buildLegacyCategoryCode(rawName), usedCodes);
     const inserted = await db.query<{ id: number; code: string; name: string; direction: string; created_at: string }>(
-      `INSERT INTO categories (owner_user_id, code, name, direction)
-       VALUES ($1, $2, $3, 'BOTH')
-       RETURNING id, code, name, direction, created_at`,
-      [ownerUserId, code, rawName]
+      ownerColumnExists
+        ? `INSERT INTO categories (owner_user_id, code, name, direction)
+           VALUES ($1, $2, $3, 'BOTH')
+           RETURNING id, code, name, direction, created_at`
+        : `INSERT INTO categories (code, name, direction)
+           VALUES ($1, $2, 'BOTH')
+           RETURNING id, code, name, direction, created_at`,
+      ownerColumnExists ? [ownerUserId, code, rawName] : [code, rawName]
     );
 
     const row = inserted.rows[0];
@@ -774,9 +813,9 @@ async function syncLegacyCategories(db: DbExecutor, ownerUserId: string) {
   const finalRows = await db.query<{ id: number; code: string; name: string; direction: string; created_at: string }>(
     `SELECT id, code, name, direction, created_at
        FROM categories
-      WHERE owner_user_id = $1
+      ${categoryScope}
       ORDER BY name ASC`,
-    [ownerUserId]
+    categoryScopeValues
   );
   return finalRows.rows;
 }
@@ -1017,7 +1056,8 @@ async function loadBudgetEvaluationsForMonth(
 }
 
 async function syncBudgetDeficitEvents(db: DbExecutor, month: string, ownerUserId?: string) {
-  const evaluations = await loadBudgetEvaluationsForMonth(db, month, ownerUserId);
+  const effectiveOwnerUserId = ownerUserId && (await hasTableColumn("budgets", "owner_user_id")) ? ownerUserId : undefined;
+  const evaluations = await loadBudgetEvaluationsForMonth(db, month, effectiveOwnerUserId);
   if (evaluations.length === 0) return evaluations;
 
   const budgetIds = evaluations.map((budget) => budget.id);
@@ -1037,9 +1077,9 @@ async function syncBudgetDeficitEvents(db: DbExecutor, month: string, ownerUserI
       FROM budget_deficit_events
       WHERE period_month = $1
         AND budget_id = ANY($2::bigint[])
-        ${ownerUserId ? "AND owner_user_id = $3" : ""}
+        ${effectiveOwnerUserId ? "AND owner_user_id = $3" : ""}
       ORDER BY detected_at ASC, id ASC`,
-    ownerUserId ? [month, budgetIds, ownerUserId] : [month, budgetIds]
+    effectiveOwnerUserId ? [month, budgetIds, effectiveOwnerUserId] : [month, budgetIds]
   );
 
   const existingByBudget = new Map<number, any[]>();
@@ -5020,11 +5060,9 @@ app.get("/v1/summary", async (req) => {
 
 app.get("/v1/reports/cashflow", async (req) => {
   const parsed = reportRangeSchema.parse((req as any).query || {});
-  const ownerUserId = await getRequestOwnerUserId(req);
-  let values: any[] = [ownerUserId];
-  const where: string[] = [`owner_user_id = $1`];
-
   if (await isLegacyJournalSchema()) {
+    const values: any[] = [];
+    const where: string[] = [];
     if (parsed.from) {
       values.push(parsed.from);
       where.push(`fecha_transaccion >= $${values.length}::date`);
@@ -5061,6 +5099,10 @@ app.get("/v1/reports/cashflow", async (req) => {
       })),
     };
   }
+
+  const ownerUserId = await getRequestOwnerUserId(req);
+  let values: any[] = [ownerUserId];
+  const where: string[] = [`owner_user_id = $1`];
 
   if (parsed.from) {
     values.push(parsed.from);
