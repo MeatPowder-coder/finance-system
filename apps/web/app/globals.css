@@ -6168,3 +6168,84 @@ body:has(.finance-bento-preview.has-focus) .welcome-screen-quiet .welcome-footer
   .finance-bento-grid.is-focused > .finance-bento-tile:not(.is-focused),
   .finance-bento-preview-grid.is-focused > .finance-bento-preview-tile:not(.is-focused) { filter:blur(2px); opacity:.3; }
 }
+
+/* Reference-led dark palette: deep ink stays behind the interface while each
+   Bento surface carries a clear editorial color, like the supplied mockups. */
+.theme-dark {
+  --ui-editorial-flow:#d8ff63;
+  --ui-editorial-budget:#e8eadf;
+  --ui-editorial-movements:#df5a43;
+  --ui-editorial-accounts:#afd3dc;
+  --ui-editorial-payments:#e3a5dc;
+  --ui-editorial-card-ink:#171717;
+  --ui-editorial-card-text:#171717;
+}
+
+/* The expanded card remains in the dashboard flow. Keep every detail row in
+   the page scroll, and let adjacent cards soften around it rather than
+   clipping the useful content into a second, modal-like scroll area. */
+.finance-bento-tile.is-focused .finance-bento-expanded-rows,
+.finance-bento-preview-tile.is-focused .finance-bento-preview-expanded-rows {
+  max-height:none !important;
+  overflow:visible !important;
+}
+.finance-bento-grid.is-focused > .finance-bento-tile:not(.is-focused),
+.finance-bento-preview-grid.is-focused > .finance-bento-preview-tile:not(.is-focused) {
+  filter:blur(2.5px) saturate(.78) !important;
+  opacity:.34 !important;
+  transform:scale(.985);
+  pointer-events:auto !important;
+  transition:filter .46s cubic-bezier(.2,.8,.2,1),opacity .46s ease,transform .46s ease;
+}
+.finance-bento-grid.is-focused > .finance-bento-tile.is-focused,
+.finance-bento-preview-grid.is-focused > .finance-bento-preview-tile.is-focused {
+  grid-column:1 / -1 !important;
+  grid-row:auto !important;
+  min-height:clamp(430px,62vh,720px) !important;
+  height:auto !important;
+  max-width:none !important;
+  overflow:visible !important;
+  padding:clamp(22px,3vw,42px) !important;
+  box-shadow:8px 9px 0 var(--ui-editorial-card-shadow),0 20px 48px rgba(0,0,0,.2) !important;
+  transition:min-height .48s cubic-bezier(.2,.8,.2,1),padding .42s ease,box-shadow .42s ease;
+}
+.finance-bento-expanded-summary { font-size:1.02rem !important; line-height:1.55; }
+.finance-bento-expanded-toolbar button { min-height:44px; padding-inline:14px; font-size:.72rem; }
+.finance-bento-expanded-rows { gap:12px !important; }
+.finance-bento-expanded-rows article { min-height:118px !important; padding:16px !important; }
+.finance-bento-expanded-rows article span { font-size:.74rem !important; }
+.finance-bento-expanded-rows article strong { font-size:clamp(1.15rem,1.9vw,1.7rem) !important; }
+.finance-bento-expanded-rows article small { font-size:.8rem !important; line-height:1.45; }
+
+/* Raise the dashboard's reading scale to match the large, close-packed
+   typography in the reference while retaining the six-panel composition. */
+.finance-bento-tile-head > p,
+.finance-bento-tile-head > div > p { font-size:.68rem !important; }
+.finance-bento-flow-figures p { font-size:.62rem !important; }
+.finance-bento-flow-figures strong { font-size:.86rem !important; }
+.finance-bento-budget-main strong { font-size:.76rem !important; }
+.finance-bento-budget-main em { font-size:.58rem !important; }
+.finance-bento-budget-main small { font-size:.58rem !important; }
+.finance-bento-timeline time { font-size:.59rem !important; }
+.finance-bento-timeline article > strong { font-size:.84rem !important; }
+.finance-bento-timeline article > b { font-size:.67rem !important; }
+.finance-bento-account-list article > div { font-size:.72rem !important; }
+.finance-bento-account-list article > div strong { font-size:.69rem !important; }
+.finance-bento-payment-list strong { font-size:.72rem !important; }
+.finance-bento-payment-list b { font-size:.67rem !important; }
+.finance-bento-preview-tile h3 { font-size:clamp(1.2rem,1.65vw,1.7rem) !important; }
+.finance-bento-preview-label { font-size:.7rem !important; }
+.finance-bento-preview-budget-list > div { font-size:.82rem !important; }
+.finance-bento-preview-account { font-size:.76rem !important; }
+.finance-bento-preview-timeline b { font-size:.84rem !important; }
+.finance-bento-preview-payment { font-size:.76rem !important; }
+
+@media(max-width:760px) {
+  .finance-bento-grid.is-focused > .finance-bento-tile.is-focused,
+  .finance-bento-preview-grid.is-focused > .finance-bento-preview-tile.is-focused {
+    grid-column:1 / -1 !important;
+    min-height:0 !important;
+    padding:20px !important;
+  }
+  .finance-bento-expanded-rows { grid-template-columns:minmax(0,1fr) !important; }
+}

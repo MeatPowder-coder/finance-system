@@ -144,10 +144,31 @@ const TAB_META: Record<
   settings: { label: "Configuracion", caption: "Perfil, temas y accesos", icon: Settings },
 };
 
+async function readApiResponsePayload(response: Response) {
+  const contentType = response.headers.get("content-type") || "";
+  if (contentType.includes("application/json")) {
+    return response.json().catch(() => ({}));
+  }
+
+  const responseText = await response.text().catch(() => "");
+  if (response.ok) return {};
+
+  // Vite/Next proxy failures can return an HTML page containing the literal
+  // "Failed to fetch". Keep that transport detail out of the product UI and
+  // report the actionable endpoint/status instead.
+  if (/failed to fetch|networkerror|econnrefused/i.test(responseText)) {
+    return { error: "El servicio de datos no respondió. Revisa la conexión con la API." };
+  }
+  if (response.status >= 500) {
+    return { error: `La API encontró un error interno (HTTP ${response.status}).` };
+  }
+  return { error: `La API respondió HTTP ${response.status}.` };
+}
+
 async function apiGet<T>(path: string) {
   try {
     const res = await requestFinanceApi(`${API_BASE}${path}`, { headers: buildFinanceHeaders(), cache: "no-store" });
-    const json = await res.json().catch(() => ({}));
+    const json = await readApiResponsePayload(res);
     if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
     return json.data as T;
   } catch (error) {
@@ -163,7 +184,7 @@ async function apiPost<T>(path: string, body: unknown) {
       body: JSON.stringify(body),
       cache: "no-store",
     });
-    const json = await res.json().catch(() => ({}));
+    const json = await readApiResponsePayload(res);
     if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
     return json.data as T;
   } catch (error) {
@@ -179,7 +200,7 @@ async function apiPatch<T>(path: string, body: unknown) {
       body: JSON.stringify(body),
       cache: "no-store",
     });
-    const json = await res.json().catch(() => ({}));
+    const json = await readApiResponsePayload(res);
     if (!res.ok) throw new Error(json?.error || `HTTP ${res.status}`);
     return json.data as T;
   } catch (error) {
