@@ -6249,3 +6249,129 @@ body:has(.finance-bento-preview.has-focus) .welcome-screen-quiet .welcome-footer
   }
   .finance-bento-expanded-rows { grid-template-columns:minmax(0,1fr) !important; }
 }
+
+/* Each named palette recolors the Bento surfaces as a system, not only the
+   page background. Dark palettes keep the canvas dark and use bright tiles. */
+.theme-light {
+  --ui-editorial-flow:#d8ff63; --ui-editorial-budget:#e8eadf; --ui-editorial-movements:#df5a43;
+  --ui-editorial-accounts:#afd3dc; --ui-editorial-payments:#e3a5dc; --ui-editorial-card-ink:#171717; --ui-editorial-card-text:#171717;
+}
+.theme-dark {
+  --ui-editorial-flow:#d8ff63; --ui-editorial-budget:#e8eadf; --ui-editorial-movements:#df5a43;
+  --ui-editorial-accounts:#afd3dc; --ui-editorial-payments:#e3a5dc; --ui-editorial-card-ink:#171717; --ui-editorial-card-text:#171717;
+}
+.theme-sand {
+  --ui-editorial-flow:#edcf63; --ui-editorial-budget:#fff1d8; --ui-editorial-movements:#d86b4e;
+  --ui-editorial-accounts:#b8d1c4; --ui-editorial-payments:#e5b2a3; --ui-editorial-card-ink:#241e19; --ui-editorial-card-text:#241e19;
+}
+.theme-lavender {
+  --ui-editorial-flow:#e4ed72; --ui-editorial-budget:#eee7f5; --ui-editorial-movements:#e36b76;
+  --ui-editorial-accounts:#b7c6ec; --ui-editorial-payments:#d6a9e4; --ui-editorial-card-ink:#211d2b; --ui-editorial-card-text:#211d2b;
+}
+.theme-mint {
+  --ui-editorial-flow:#d5ef72; --ui-editorial-budget:#e1eee5; --ui-editorial-movements:#cf6559;
+  --ui-editorial-accounts:#a8d6d0; --ui-editorial-payments:#e2a8b8; --ui-editorial-card-ink:#182420; --ui-editorial-card-text:#182420;
+}
+.theme-graphite {
+  --ui-editorial-flow:#d3e96f; --ui-editorial-budget:#e2e5dd; --ui-editorial-movements:#d66b56;
+  --ui-editorial-accounts:#a2c4c8; --ui-editorial-payments:#d5929f; --ui-editorial-card-ink:#171d1b; --ui-editorial-card-text:#171d1b;
+}
+.theme-midnight {
+  --ui-editorial-flow:#c7e879; --ui-editorial-budget:#dce4ed; --ui-editorial-movements:#e46d57;
+  --ui-editorial-accounts:#a8c3e1; --ui-editorial-payments:#d6a2d7; --ui-editorial-card-ink:#111a26; --ui-editorial-card-text:#111a26;
+}
+.theme-ocean {
+  --ui-editorial-flow:#8fe8dc; --ui-editorial-budget:#dceced; --ui-editorial-movements:#e06a55;
+  --ui-editorial-accounts:#9fd8ed; --ui-editorial-payments:#e8a3be; --ui-editorial-card-ink:#102326; --ui-editorial-card-text:#102326;
+}
+.theme-forest {
+  --ui-editorial-flow:#c9e56c; --ui-editorial-budget:#e1e9d8; --ui-editorial-movements:#dc7058;
+  --ui-editorial-accounts:#a7c7b3; --ui-editorial-payments:#dda3a0; --ui-editorial-card-ink:#14251a; --ui-editorial-card-text:#14251a;
+}
+.theme-ember {
+  --ui-editorial-flow:#f1d36b; --ui-editorial-budget:#f4e4d6; --ui-editorial-movements:#eb7452;
+  --ui-editorial-accounts:#b8c5c8; --ui-editorial-payments:#e3a18f; --ui-editorial-card-ink:#281b16; --ui-editorial-card-text:#281b16;
+}
+.theme-neon {
+  --ui-editorial-flow:#dcff43; --ui-editorial-budget:#e8d9f1; --ui-editorial-movements:#ff6177;
+  --ui-editorial-accounts:#83dfe9; --ui-editorial-payments:#ff91e8; --ui-editorial-card-ink:#17121e; --ui-editorial-card-text:#17121e;
+}
+
+/* Expansion is an in-grid reflow: the tile grows to a wide Bento cell where
+   it already lives, while the remaining cards stay visible around it. */
+.finance-bento-grid.is-focused,
+.finance-bento-preview-grid.is-focused {
+  grid-template-columns:repeat(12,minmax(0,1fr)) !important;
+  grid-template-rows:none !important;
+  grid-template-areas:none !important;
+  grid-auto-flow:row dense !important;
+  grid-auto-rows:minmax(165px,auto) !important;
+  align-items:start !important;
+}
+.finance-bento-grid.is-focused > .finance-bento-tile,
+.finance-bento-preview-grid.is-focused > .finance-bento-preview-tile {
+  grid-area:auto !important;
+  grid-row:auto !important;
+  align-self:start;
+}
+.finance-bento-grid.is-focused > .finance-bento-hero,
+.finance-bento-grid.is-focused > .finance-bento-budgets,
+.finance-bento-grid.is-focused > .finance-bento-movements,
+.finance-bento-preview-grid.is-focused > [data-preview-panel="balance"],
+.finance-bento-preview-grid.is-focused > [data-preview-panel="budgets"],
+.finance-bento-preview-grid.is-focused > [data-preview-panel="movements"] { grid-column:span 8 !important; }
+.finance-bento-grid.is-focused > .finance-bento-flow,
+.finance-bento-grid.is-focused > .finance-bento-accounts,
+.finance-bento-grid.is-focused > .finance-bento-payments,
+.finance-bento-preview-grid.is-focused > [data-preview-panel="flow"],
+.finance-bento-preview-grid.is-focused > [data-preview-panel="accounts"],
+.finance-bento-preview-grid.is-focused > [data-preview-panel="payments"] { grid-column:span 4 !important; }
+.finance-bento-grid.is-focused > .finance-bento-tile.is-focused,
+.finance-bento-preview-grid.is-focused > .finance-bento-preview-tile.is-focused {
+  position:relative !important;
+  inset:auto !important;
+  translate:none !important;
+  z-index:3 !important;
+  grid-column:span 9 !important;
+  grid-row:auto !important;
+  width:auto !important;
+  max-width:none !important;
+  min-height:clamp(330px,44vh,500px) !important;
+  height:auto !important;
+  margin:0 !important;
+  overflow:visible !important;
+  padding:clamp(18px,2.2vw,30px) !important;
+  border-radius:3px !important;
+  box-shadow:7px 8px 0 var(--ui-editorial-card-shadow) !important;
+  animation:finance-detail-reveal .44s cubic-bezier(.16,.8,.3,1) both !important;
+  scroll-margin-block:12vh;
+}
+.finance-bento-expanded-rows { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+.finance-bento-preview-expanded-rows { grid-template-columns:repeat(2,minmax(0,1fr)) !important; }
+.finance-bento-expanded-rows article,
+.finance-bento-preview-expanded-rows article { min-height:104px !important; padding:14px !important; }
+.finance-bento-expanded-rows article span,
+.finance-bento-preview-expanded-rows article span { font-size:.78rem !important; }
+.finance-bento-expanded-rows article strong,
+.finance-bento-preview-expanded-rows article strong { font-size:clamp(1.12rem,1.8vw,1.55rem) !important; }
+.finance-bento-expanded-rows article small,
+.finance-bento-preview-expanded-rows article small { font-size:.78rem !important; line-height:1.45; }
+.finance-bento-tile-head > p,
+.finance-bento-tile-head > div > p { font-size:.72rem !important; }
+.finance-bento-flow-figures p { font-size:.7rem !important; }
+.finance-bento-flow-figures strong { font-size:.95rem !important; }
+.finance-bento-budget-main strong { font-size:.82rem !important; }
+.finance-bento-budget-main em,.finance-bento-budget-main small { font-size:.68rem !important; }
+.finance-bento-timeline time { font-size:.68rem !important; }
+.finance-bento-timeline article > strong { font-size:.9rem !important; }
+.finance-bento-timeline article > b { font-size:.73rem !important; }
+.finance-bento-account-list article > div { font-size:.8rem !important; }
+.finance-bento-account-list article > div strong { font-size:.77rem !important; }
+.finance-bento-payment-list strong { font-size:.78rem !important; }
+.finance-bento-payment-list b { font-size:.73rem !important; }
+.finance-primary-tabs { position:sticky; top:0; z-index:24; }
+@media(max-width:760px) {
+  .finance-bento-grid.is-focused > .finance-bento-tile.is-focused,
+  .finance-bento-preview-grid.is-focused > .finance-bento-preview-tile.is-focused { grid-column:1 / -1 !important; min-height:0 !important; }
+  .finance-bento-expanded-rows,.finance-bento-preview-expanded-rows { grid-template-columns:minmax(0,1fr) !important; }
+}
