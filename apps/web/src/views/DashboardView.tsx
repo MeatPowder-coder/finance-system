@@ -169,10 +169,12 @@ export function DashboardView(props: DashboardViewProps) {
       const tile = gridRef.current?.querySelector<HTMLElement>(".finance-bento-tile.is-focused");
       if (tile) {
         const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        // Let the selected Bento tile grow where it lives. Only scroll the
-        // smallest amount needed to keep it visible; centering it in the
-        // viewport made the interaction read like a modal takeover.
-        tile.scrollIntoView({ block: "nearest", inline: "nearest", behavior: reducedMotion ? "auto" : "smooth" });
+        // Keep the tile in the grid. Center it when its expanded content fits;
+        // for taller details, align its top so the heading and close control stay visible.
+        const scrollHost = document.querySelector<HTMLElement>(".finance-app-scroll");
+        const visibleHeight = scrollHost?.clientHeight ?? window.innerHeight;
+        const block = tile.getBoundingClientRect().height <= visibleHeight * 0.82 ? "center" : "start";
+        tile.scrollIntoView({ block, inline: "nearest", behavior: reducedMotion ? "auto" : "smooth" });
       }
       tile?.querySelector<HTMLButtonElement>(".finance-bento-close")?.focus({ preventScroll: true });
     });

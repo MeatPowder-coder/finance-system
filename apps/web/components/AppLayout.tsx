@@ -74,7 +74,7 @@ export default function AppLayout({
         !isDesktopEmbed && !isChat
             ? copilotRailOpen
                 ? "md:pr-80"
-                : "md:pr-0"
+                : "md:pr-12"
             : "md:pr-0";
 
     return (

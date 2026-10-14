@@ -98,10 +98,12 @@ export function EditorialFinancePreview({ className = "", returnTo = "/" }: Edit
     if (focusedPanel) {
       const tile = gridRef.current?.querySelector<HTMLElement>("[data-preview-panel].is-focused");
       requestAnimationFrame(() => {
-        // Keep the selected tile in its natural Bento position. Reveal it only
-        // when the expanded content would otherwise be outside the viewport.
+        // Keep the selected tile in the Bento grid. Center it when its details
+        // fit; align the top for taller content so its heading stays visible.
+        const visibleHeight = window.innerHeight;
+        const block = tile && tile.getBoundingClientRect().height <= visibleHeight * 0.82 ? "center" : "start";
         tile?.scrollIntoView({
-          block: "nearest",
+          block,
           inline: "nearest",
           behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth",
         });

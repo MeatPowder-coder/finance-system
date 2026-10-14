@@ -6375,3 +6375,106 @@ body:has(.finance-bento-preview.has-focus) .welcome-screen-quiet .welcome-footer
   .finance-bento-preview-grid.is-focused > .finance-bento-preview-tile.is-focused { grid-column:1 / -1 !important; min-height:0 !important; }
   .finance-bento-expanded-rows,.finance-bento-preview-expanded-rows { grid-template-columns:minmax(0,1fr) !important; }
 }
+
+/* A focused tile stays in normal grid flow. Blur the surrounding app chrome
+   as well as its neighboring tiles so attention lands on the expanded card. */
+body:has(.finance-bento-dashboard.has-focus) .finance-app-sidebar,
+body:has(.finance-bento-dashboard.has-focus) .finance-mobile-header,
+body:has(.finance-bento-dashboard.has-focus) .finance-notification,
+body:has(.finance-bento-dashboard.has-focus) .copilot-rail,
+body:has(.finance-bento-dashboard.has-focus) .finance-primary-tabs,
+body:has(.finance-bento-dashboard.has-focus) .finance-dashboard-heading,
+body:has(.finance-bento-dashboard.has-focus) .finance-dashboard-metrics,
+body:has(.finance-bento-dashboard.has-focus) .finance-dashboard-error {
+  filter:blur(2.5px) saturate(.75) !important;
+  opacity:.42 !important;
+  transition:filter .42s cubic-bezier(.2,.8,.3,1),opacity .42s ease;
+}
+
+.finance-bento-dashboard.has-focus .finance-bento-rail {
+  filter:blur(2.5px) saturate(.75) !important;
+  opacity:.42 !important;
+  pointer-events:auto !important;
+}
+
+.finance-bento-grid.is-focused > .finance-bento-tile:not(.is-focused) {
+  filter:blur(3px) saturate(.72) !important;
+  opacity:.28 !important;
+}
+
+.finance-bento-grid.is-focused > .finance-bento-tile.is-focused {
+  grid-column:1 / -1 !important;
+  z-index:4 !important;
+  align-self:start !important;
+  min-height:clamp(400px,58vh,680px) !important;
+  max-height:none !important;
+  overflow:visible !important;
+  box-shadow:8px 9px 0 var(--ui-editorial-card-shadow),0 18px 44px rgba(0,0,0,.17) !important;
+  scroll-margin-block-start:clamp(16px,5vh,56px);
+}
+
+.finance-bento-account-list article > div > span {
+  flex:1 1 auto;
+  min-width:0;
+}
+
+.finance-bento-account-list article > div > strong {
+  flex:0 0 auto;
+  max-width:58%;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+
+/* Keep each palette name readable without forcing the user to hunt a strip
+   that clips every option to a few letters. */
+.finance-header-palette .theme-palette-gallery {
+  display:grid;
+  grid-template-columns:repeat(6,minmax(0,1fr));
+  gap:6px;
+  overflow:visible;
+}
+.finance-header-palette .theme-palette-chip {
+  width:100%;
+  min-width:0;
+  height:48px;
+  grid-template-rows:17px 1fr;
+  padding:4px;
+}
+.finance-header-palette .theme-palette-chip-name { overflow:visible; font-size:.62rem; text-overflow:clip; }
+
+@media(max-width:1100px) {
+  .finance-header-palette .theme-palette-gallery { grid-template-columns:repeat(3,minmax(0,1fr)); }
+}
+
+.finance-editorial-metrics .finance-dashboard-metric:not(.finance-dashboard-metric-balance),
+.finance-editorial-metrics .finance-dashboard-metric:not(.finance-dashboard-metric-balance) [class*="text-"],
+.finance-editorial-metrics .finance-dashboard-metric:not(.finance-dashboard-metric-balance) svg {
+  color:var(--ui-editorial-card-ink) !important;
+  text-shadow:none !important;
+}
+
+@media(max-width:760px) {
+  .finance-header-palette .theme-palette-gallery { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .finance-bento-grid.is-focused > .finance-bento-tile.is-focused {
+    grid-column:1 / -1 !important;
+    min-height:0 !important;
+  }
+}
+
+@media(max-width:480px) {
+  .finance-header-palette .theme-palette-gallery { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
+
+@media(prefers-reduced-motion:reduce) {
+  body:has(.finance-bento-dashboard.has-focus) .finance-app-sidebar,
+  body:has(.finance-bento-dashboard.has-focus) .finance-mobile-header,
+  body:has(.finance-bento-dashboard.has-focus) .finance-notification,
+  body:has(.finance-bento-dashboard.has-focus) .copilot-rail,
+  body:has(.finance-bento-dashboard.has-focus) .finance-primary-tabs,
+  body:has(.finance-bento-dashboard.has-focus) .finance-dashboard-heading,
+  body:has(.finance-bento-dashboard.has-focus) .finance-dashboard-metrics,
+  body:has(.finance-bento-dashboard.has-focus) .finance-dashboard-error,
+  .finance-bento-grid.is-focused > .finance-bento-tile:not(.is-focused) {
+    transition:none !important;
+  }
+}
