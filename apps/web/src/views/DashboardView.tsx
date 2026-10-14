@@ -48,6 +48,7 @@ export interface DashboardViewProps {
   openEditBudgetDialog: (budgetId: number) => void;
   upcomingCommitments: Commitment[];
   nextCommitment?: Commitment;
+  monthTransactions: Transaction[];
   onReviewExpenses: () => void;
   onReviewPayments: () => void;
   onReviewPlanning: () => void;
@@ -93,6 +94,7 @@ export function DashboardView(props: DashboardViewProps) {
     openEditBudgetDialog,
     upcomingCommitments,
     nextCommitment,
+    monthTransactions,
     onReviewExpenses,
     onReviewPayments,
     onReviewPlanning,
@@ -193,18 +195,22 @@ export function DashboardView(props: DashboardViewProps) {
     dashboardActions.forEach((action) => { map[action.key] = action; });
     return map;
   }, [dashboardActions]);
+  const monthInflowCount = monthTransactions.filter((transaction) => transaction.direction === "INFLOW").length;
+  const monthOutflowCount = monthTransactions.length - monthInflowCount;
+  const activeAccountCount = accounts.filter((account) => account.is_active).length;
   const focusCopy = {
     month: {
       title: positiveMonth ? "El mes va a favor" : "El mes pide pausa",
       eyebrow: "Lectura del mes",
       summary: monthCoach.detail,
       rows: [
-        { label: "Resultado del mes", value: monthCoach.amount },
-        { label: "Estado", value: monthCoach.badge },
-        { label: "Contexto", value: monthCoach.caption },
+        { label: "Neto del mes", value: monthCoach.amount, detail: monthCoach.badge },
+        { label: "Entradas registradas", value: String(monthInflowCount), detail: monthFlow.income },
+        { label: "Salidas registradas", value: String(monthOutflowCount), detail: monthFlow.expense },
         { label: "Presupuestos activos", value: String(dashboardBudgets.length), detail: "Sobres del periodo actual" },
+        { label: "Cuentas activas", value: String(activeAccountCount), detail: "Bancos, efectivo e inversión" },
         { label: "Próximo pago", value: nextCommitment?.name || "Sin pagos cercanos", detail: nextCommitment ? `${formatDate(nextCommitment.next_run_at)} · ${formatMoney(Number(nextCommitment.payload.amount || 0), nextCommitment.payload.currency || "COP")}` : "Tu agenda está despejada" },
-        { label: "Último movimiento", value: latestTransaction?.description || (latestTransaction ? "Movimiento reciente" : "Sin movimientos aún"), detail: latestTransaction ? `${latestTransaction.account_name} · ${formatDate(latestTransaction.transaction_date)}` : "Al registrar uno aparecerá aquí" },
+        { label: "Último movimiento", value: latestTransaction?.description || "Sin movimientos aún", detail: latestTransaction ? `${latestTransaction.account_name} · ${formatDate(latestTransaction.transaction_date)}` : "Al registrar uno aparecerá aquí" },
       ],
     },
     flow: {
@@ -217,6 +223,8 @@ export function DashboardView(props: DashboardViewProps) {
         { label: "Balance disponible", value: monthFlow.balance },
         { label: "Ingreso gastado", value: `${Math.round(monthFlow.spentPercent)}%` },
         { label: "Ingreso sin gastar", value: `${Math.max(0, 100 - Math.round(monthFlow.spentPercent))}%` },
+        { label: "Movimientos del mes", value: String(monthTransactions.length), detail: `${monthInflowCount} entradas · ${monthOutflowCount} salidas` },
+        { label: "Cuentas con saldo", value: String(accounts.filter((account) => toNumber(account.balance_current) !== 0).length) },
         { label: "Próximo compromiso", value: nextCommitment?.name || "Sin pagos cercanos", detail: nextCommitment ? `${formatDate(nextCommitment.next_run_at)} · ${formatMoney(Number(nextCommitment.payload.amount || 0), nextCommitment.payload.currency || "COP")}` : "La agenda está despejada" },
       ],
     },
@@ -227,6 +235,7 @@ export function DashboardView(props: DashboardViewProps) {
       rows: dashboardBudgets.map((budget) => ({
         label: budget.name,
         value: `${Math.round(budget.allocated_amount ? toNumber(budget.actual_amount) / toNumber(budget.allocated_amount) * 100 : 0)}% usado · ${formatMoney(Math.max(0, toNumber(budget.allocated_amount) - toNumber(budget.actual_amount)), budget.currency)} libre`,
+        detail: `${budgetStatusLabel(budget.deficit_summary.status)} · ${budgetCategorySummary(budget)} · ${formatMoney(toNumber(budget.actual_amount), budget.currency)} gastado de ${formatMoney(toNumber(budget.allocated_amount), budget.currency)}`,
       })),
     },
     payments: {
@@ -256,7 +265,7 @@ export function DashboardView(props: DashboardViewProps) {
       rows: accounts.map((account) => ({
         label: account.name,
         value: formatMoney(toNumber(account.balance_current), account.currency),
-        detail: `${getAccountTypeLabel(account.account_type)} · ${account.code} · ${account.currency}`,
+        detail: `${getAccountTypeLabel(account.account_type)} · ${account.code} · ${account.currency} · ${account.is_active ? "Activa" : "Inactiva"}`,
       })),
     },
   };

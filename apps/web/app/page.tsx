@@ -721,6 +721,11 @@ function HomeContent() {
       .slice(0, 10);
   }, [transactions]);
 
+  const dashboardMonthTransactions = useMemo(
+    () => transactions.filter((transaction) => String(transaction.transaction_date).slice(0, 7) === planningMonth),
+    [transactions, planningMonth]
+  );
+
   const topAccounts = useMemo(() => {
     return [...accounts]
       .sort((a, b) => Math.abs(toNumber(b.balance_current)) - Math.abs(toNumber(a.balance_current)));
@@ -1060,7 +1065,7 @@ function HomeContent() {
               <strong>F/S</strong><span>Cuaderno financiero</span>
               <small>Bogotá · {new Intl.DateTimeFormat("es-CO", { day: "2-digit", month: "short", year: "numeric", timeZone: "America/Bogota" }).format(new Date())} · Personal / COP</small>
             </div>
-            <div className="finance-header-palette"><ThemeSelector showCurrentTheme /></div>
+            <div className="finance-header-palette"><ThemeSelector showCurrentTheme showSwatches /></div>
           </div>
           <div className="finance-primary-tab-list">
             {TABS.map((item, index) => {
@@ -1596,6 +1601,7 @@ function HomeContent() {
             openEditBudgetDialog={openEditBudgetDialog}
             upcomingCommitments={upcomingCommitments}
             nextCommitment={nextCommitment}
+            monthTransactions={dashboardMonthTransactions}
             onReviewExpenses={() => goTab("transactions")}
             onReviewPlanning={() => goTab("planning")}
             onReviewAccounts={() => goTab("accounts")}

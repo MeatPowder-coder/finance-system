@@ -6879,6 +6879,107 @@ body:has(.finance-bento-dashboard.has-focus) .finance-app-sidebar {
 }
 .finance-bento-grid.is-focused > .finance-bento-hero.is-focused::after { display:none !important; }
 
+/* Keep all palette choices visible in the masthead instead of hiding them
+   behind a menu. The compact grid makes all 11 options discoverable without
+   taking over the dashboard. */
+.finance-nav-masthead { flex-wrap:wrap !important; row-gap:10px !important; }
+.finance-header-palette { flex:1 0 100% !important; min-width:0; }
+.finance-header-palette .theme-palette-control { display:grid; grid-template-columns:auto minmax(0,1fr); align-items:center; gap:8px 14px; width:100%; }
+.finance-header-palette .theme-palette-gallery-heading { display:flex; min-width:120px; flex-direction:column; gap:2px; }
+.finance-header-palette .theme-palette-gallery-heading > span { font-size:.56rem; letter-spacing:.12em; }
+.finance-header-palette .theme-palette-gallery-heading > strong { font-size:.68rem; }
+.finance-header-palette .theme-palette-gallery-heading > small { display:none; }
+.finance-header-palette .theme-palette-gallery {
+  display:grid !important;
+  grid-template-columns:repeat(auto-fit,minmax(68px,1fr));
+  grid-auto-rows:44px;
+  min-width:0;
+  gap:5px;
+  overflow:visible !important;
+  padding:3px 2px 7px;
+}
+.finance-header-palette .theme-palette-chip {
+  display:flex !important;
+  min-width:0;
+  width:100%;
+  height:44px;
+  flex-direction:column;
+  align-items:stretch;
+  justify-content:center;
+  gap:4px;
+  padding:4px 6px;
+}
+.finance-header-palette .theme-palette-chip-preview { width:100%; height:13px; flex:0 0 13px; }
+.finance-header-palette .theme-palette-chip-copy { min-width:0; }
+.finance-header-palette .theme-palette-chip-name { display:block; overflow:hidden; font-size:.56rem; line-height:1.1; text-overflow:ellipsis; white-space:nowrap; }
+.finance-header-palette .theme-palette-chip-copy small,
+.finance-header-palette .theme-palette-chip-selected { display:none !important; }
+
+/* Restore the reference's colored editorial cards in the night palette too. */
+:is(.theme-dark,.theme-graphite,.theme-midnight,.theme-ocean,.theme-forest,.theme-ember,.theme-neon) {
+  --ui-editorial-flow:var(--ui-editorial-lime);
+  --ui-editorial-budget:color-mix(in srgb,var(--ui-editorial-paper) 12%,#f0eee2);
+  --ui-editorial-movements:var(--ui-editorial-coral);
+  --ui-editorial-accounts:color-mix(in srgb,var(--ui-editorial-blue) 20%,#b6d2da);
+  --ui-editorial-payments:color-mix(in srgb,var(--ui-editorial-pink) 18%,#ead0e6);
+  --ui-editorial-card-ink:#171717;
+  --ui-editorial-card-text:#171717;
+}
+:is(.theme-dark,.theme-graphite,.theme-midnight,.theme-ocean,.theme-forest,.theme-ember,.theme-neon) .finance-bento-flow,
+:is(.theme-dark,.theme-graphite,.theme-midnight,.theme-ocean,.theme-forest,.theme-ember,.theme-neon) .finance-bento-budgets,
+:is(.theme-dark,.theme-graphite,.theme-midnight,.theme-ocean,.theme-forest,.theme-ember,.theme-neon) .finance-bento-movements,
+:is(.theme-dark,.theme-graphite,.theme-midnight,.theme-ocean,.theme-forest,.theme-ember,.theme-neon) .finance-bento-accounts,
+:is(.theme-dark,.theme-graphite,.theme-midnight,.theme-ocean,.theme-forest,.theme-ember,.theme-neon) .finance-bento-payments { color:var(--ui-editorial-card-ink) !important; }
+:is(.theme-dark,.theme-graphite,.theme-midnight,.theme-ocean,.theme-forest,.theme-ember,.theme-neon) .finance-bento-flow { background:var(--ui-editorial-flow) !important; }
+:is(.theme-dark,.theme-graphite,.theme-midnight,.theme-ocean,.theme-forest,.theme-ember,.theme-neon) .finance-bento-budgets { background:var(--ui-editorial-budget) !important; }
+:is(.theme-dark,.theme-graphite,.theme-midnight,.theme-ocean,.theme-forest,.theme-ember,.theme-neon) .finance-bento-movements { background:var(--ui-editorial-movements) !important; }
+:is(.theme-dark,.theme-graphite,.theme-midnight,.theme-ocean,.theme-forest,.theme-ember,.theme-neon) .finance-bento-accounts { background:var(--ui-editorial-accounts) !important; }
+:is(.theme-dark,.theme-graphite,.theme-midnight,.theme-ocean,.theme-forest,.theme-ember,.theme-neon) .finance-bento-payments { background:var(--ui-editorial-payments) !important; }
+:is(.theme-dark,.theme-graphite,.theme-midnight,.theme-ocean,.theme-forest,.theme-ember,.theme-neon) .finance-bento-flow .finance-bento-next-payment,
+:is(.theme-dark,.theme-graphite,.theme-midnight,.theme-ocean,.theme-forest,.theme-ember,.theme-neon) .finance-bento-flow .finance-bento-flow-figures p,
+:is(.theme-dark,.theme-graphite,.theme-midnight,.theme-ocean,.theme-forest,.theme-ember,.theme-neon) .finance-bento-tile-head > p { color:inherit !important; }
+
+/* Keep the selected tile in DOM/grid order, so it grows where it was clicked. */
+.finance-bento-grid.is-focused > .finance-bento-tile { order:initial !important; }
+.finance-bento-grid.is-focused > .finance-bento-tile.is-focused[data-finance-panel] { order:initial !important; }
+
+/* The navigation and theme controls remain crisp and usable while a tile is focused. */
+body:has(.finance-bento-dashboard.has-focus) .finance-primary-tabs,
+body:has(.finance-bento-dashboard.has-focus) .finance-app-sidebar,
+body:has(.finance-bento-dashboard.has-focus) .finance-mobile-header,
+body:has(.finance-bento-dashboard.has-focus) .copilot-rail {
+  filter:none !important;
+  opacity:1 !important;
+  pointer-events:auto !important;
+}
+body:has(.finance-bento-dashboard.has-focus) .finance-dashboard-heading,
+body:has(.finance-bento-dashboard.has-focus) .finance-dashboard-metrics,
+body:has(.finance-bento-dashboard.has-focus) .finance-dashboard-error {
+  filter:blur(3px) saturate(.72) !important;
+  opacity:.3 !important;
+}
+
+/* Enlarge the small editorial labels that were hard to read at laptop width. */
+.finance-bento-tile-head > p,
+.finance-bento-tile-head > div > p { font-size:.66rem !important; }
+.finance-bento-flow-figures p { font-size:.64rem !important; }
+.finance-bento-flow-figures strong { font-size:.9rem !important; }
+.finance-bento-donut span { font-size:.54rem !important; }
+.finance-bento-budget-main strong { font-size:.76rem !important; }
+.finance-bento-budget-main em,
+.finance-bento-budget-main small { font-size:.58rem !important; }
+.finance-bento-expanded-rows article > span { font-size:.66rem !important; letter-spacing:.09em; }
+.finance-bento-expanded-rows article > small { font-size:.76rem !important; line-height:1.45; }
+.finance-bento-grid.is-focused .finance-bento-expanded-rows article { min-height:138px !important; }
+
+@media(max-width:760px) {
+  .finance-header-palette .theme-palette-control { grid-template-columns:minmax(0,1fr); }
+  .finance-header-palette .theme-palette-gallery-heading { flex-direction:row; align-items:baseline; gap:8px; }
+  .finance-header-palette .theme-palette-gallery-heading > strong { margin-left:auto; }
+  .finance-header-palette .theme-palette-gallery { grid-template-columns:repeat(5,minmax(0,1fr)); }
+  .finance-bento-grid.is-focused > .finance-bento-tile.is-focused[data-finance-panel] { grid-column:1 / -1 !important; }
+}
+
 @media(min-width:761px) and (max-width:1024px) {
   .finance-bento-grid:not(.is-focused) {
     grid-template-areas:
