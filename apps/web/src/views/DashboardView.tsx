@@ -42,6 +42,8 @@ export interface DashboardViewProps {
   dashboardBudgetMaxStart: number;
   dashboardBudgetCanPrev: boolean;
   dashboardBudgetCanNext: boolean;
+  dashboardBudgetUnavailable?: boolean;
+  retryDashboard?: () => void;
   startBudgetExpense: (budget: Budget) => void;
   openEditBudgetDialog: (budgetId: number) => void;
   upcomingCommitments: Commitment[];
@@ -85,6 +87,8 @@ export function DashboardView(props: DashboardViewProps) {
     dashboardBudgetMaxStart,
     dashboardBudgetCanPrev,
     dashboardBudgetCanNext,
+    dashboardBudgetUnavailable = false,
+    retryDashboard,
     startBudgetExpense,
     openEditBudgetDialog,
     upcomingCommitments,
@@ -396,7 +400,7 @@ export function DashboardView(props: DashboardViewProps) {
                 {focusControl("budgets", "los presupuestos")}
               </div>
             </header>
-            {focusedPanel === "budgets" && focusPanel && <ExpandedDetails panel={focusPanel} rows={focusPanel.rows} actions={focusActions.budgets} budgets={dashboardBudgets} onBudgetExpense={startBudgetExpense} onBudgetEdit={openEditBudgetDialog} />}
+            {focusedPanel === "budgets" && focusPanel && <ExpandedDetails panel={focusPanel} rows={focusPanel.rows} actions={focusActions.budgets} budgets={dashboardBudgets} onBudgetExpense={startBudgetExpense} onBudgetEdit={openEditBudgetDialog} unavailable={dashboardBudgetUnavailable} onRetry={retryDashboard} />}
             {visibleBudgets.length ? <div className="finance-bento-budget-list">
               {visibleBudgets.map((budget) => {
                 const allocated = Math.max(0, toNumber(budget.allocated_amount));
@@ -412,7 +416,7 @@ export function DashboardView(props: DashboardViewProps) {
                   <button type="button" className="finance-bento-edit" onClick={() => openEditBudgetDialog(budget.id)} aria-label={`Editar presupuesto ${budget.name}`}>↗</button>
                 </article>;
               })}
-            </div> : <div className="finance-bento-empty"><Wallet aria-hidden="true" /><span>Aún no tienes sobres activos este mes.</span><button type="button" onClick={() => actionByKey.budget?.onClick()}>Crear presupuesto</button></div>}
+            </div> : <div className="finance-bento-empty"><Wallet aria-hidden="true" /><span>{dashboardBudgetUnavailable ? "No pudimos cargar los presupuestos de este mes." : "Aún no tienes sobres activos este mes."}</span>{dashboardBudgetUnavailable ? <button type="button" onClick={retryDashboard}>Reintentar carga</button> : <button type="button" onClick={() => actionByKey.budget?.onClick()}>Crear presupuesto</button>}</div>}
           </section>
 
           <section data-finance-panel="transactions" className={`finance-bento-tile finance-bento-movements${focusedPanel === "transactions" ? " is-focused" : ""}`} aria-label="Movimientos recientes; ampliar para ver el detalle" aria-expanded={focusedPanel === "transactions"} aria-labelledby="finance-bento-movements-title" aria-roledescription="Panel ampliable" tabIndex={0} role="group" onClick={openTileOnClick("transactions")} onKeyDown={openTileOnKey("transactions")}>
@@ -468,7 +472,7 @@ export function DashboardView(props: DashboardViewProps) {
   );
 }
 
-function ExpandedDetails({ panel, rows, actions = [], budgets, onBudgetExpense, onBudgetEdit }: { panel: { title: string; eyebrow: string; summary: string; rows: { label: string; value: string; detail?: string }[] }; rows: { label: string; value: string; detail?: string }[]; actions?: { label: string; onClick: () => void }[]; budgets?: Budget[]; onBudgetExpense?: (budget: Budget) => void; onBudgetEdit?: (budgetId: number) => void }) {
+function ExpandedDetails({ panel, rows, actions = [], budgets, onBudgetExpense, onBudgetEdit, unavailable = false, onRetry }: { panel: { title: string; eyebrow: string; summary: string; rows: { label: string; value: string; detail?: string }[] }; rows: { label: string; value: string; detail?: string }[]; actions?: { label: string; onClick: () => void }[]; budgets?: Budget[]; onBudgetExpense?: (budget: Budget) => void; onBudgetEdit?: (budgetId: number) => void; unavailable?: boolean; onRetry?: () => void }) {
   const hasBudgets = Boolean(budgets?.length);
   const emptyMessage = panel.title === "Presupuestos en tensión"
     ? "Aún no tienes presupuestos activos en este periodo."
@@ -487,7 +491,7 @@ function ExpandedDetails({ panel, rows, actions = [], budgets, onBudgetExpense, 
       <p className="finance-bento-expanded-summary">{panel.summary}</p>
       {actions.length > 0 && <div className="finance-bento-expanded-toolbar">{actions.map((action) => <button type="button" key={action.label} onClick={action.onClick}>{action.label}<span aria-hidden="true">↗</span></button>)}</div>}
       <div className="finance-bento-expanded-rows" aria-live="polite">
-        {hasBudgets ? budgets!.map((budget, index) => {
+        {unavailable && panel.title === "Presupuestos en tensión" ? <article className="finance-bento-expanded-empty"><span>Presupuestos del mes</span><strong>No pudimos leer estos datos.</strong><small>Intenta cargar de nuevo para ver límites, gastos y saldos disponibles.</small>{onRetry && <button type="button" onClick={onRetry}>Reintentar carga</button>}</article> : hasBudgets ? budgets!.map((budget, index) => {
           const allocated = Math.max(0, toNumber(budget.allocated_amount));
           const spent = Math.max(0, toNumber(budget.actual_amount));
           const ratio = allocated ? Math.min(100, Math.round((spent / allocated) * 100)) : 0;

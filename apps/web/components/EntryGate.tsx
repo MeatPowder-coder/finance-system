@@ -85,6 +85,47 @@ export default function EntryGate({ children }: EntryGateProps) {
       setMessage("Estamos preparando tu espacio privado.");
 
       try {
+        const token = readFinanceAuthToken();
+
+        // An existing session is the authoritative signal that the app can
+        // proceed. Requiring /health first creates a false offline banner when
+        // that optional probe is unavailable but authenticated API routes work.
+        if (token) {
+          const sessionResponse = await requestFinanceApi(`${apiBaseUrl}/v1/auth/me`, {
+            cache: "no-store",
+            headers: buildFinanceHeaders(),
+            signal: controller.signal,
+          });
+
+          if (cancelled) return;
+          if (sessionResponse.status === 401) {
+            if (await recoverAuthSession()) {
+              const retryResponse = await requestFinanceApi(`${apiBaseUrl}/v1/auth/me`, {
+                cache: "no-store",
+                headers: buildFinanceHeaders(),
+                signal: controller.signal,
+              });
+              if (cancelled) return;
+              if (retryResponse.ok) {
+                setState("authenticated");
+                return;
+              }
+            }
+            if (cancelled) return;
+            clearAuthSession();
+            const loginUrl = new URLSearchParams({
+              auth: "login",
+              authError: "session-rejected",
+              returnTo,
+            });
+            router.replace(`/?${loginUrl.toString()}`);
+            return;
+          }
+          if (!sessionResponse.ok) throw new Error(`Sesion HTTP ${sessionResponse.status}`);
+          setState("authenticated");
+          return;
+        }
+
         const healthResponse = await requestFinanceApi(`${apiBaseUrl}/health`, {
           cache: "no-store",
           signal: controller.signal,
@@ -106,45 +147,7 @@ export default function EntryGate({ children }: EntryGateProps) {
         }
         await authConfigResponse.json();
         if (cancelled) return;
-
-        const token = readFinanceAuthToken();
-        if (!token) {
-          setState("unauthenticated");
-          return;
-        }
-
-        const sessionResponse = await requestFinanceApi(`${apiBaseUrl}/v1/auth/me`, {
-          cache: "no-store",
-          headers: buildFinanceHeaders(),
-          signal: controller.signal,
-        });
-
-        if (cancelled) return;
-        if (sessionResponse.status === 401) {
-          if (await recoverAuthSession()) {
-            const retryResponse = await requestFinanceApi(`${apiBaseUrl}/v1/auth/me`, {
-              cache: "no-store",
-              headers: buildFinanceHeaders(),
-              signal: controller.signal,
-            });
-            if (cancelled) return;
-            if (retryResponse.ok) {
-              setState("authenticated");
-              return;
-            }
-          }
-          if (cancelled) return;
-          clearAuthSession();
-          const loginUrl = new URLSearchParams({
-            auth: "login",
-            authError: "session-rejected",
-            returnTo,
-          });
-          router.replace(`/?${loginUrl.toString()}`);
-          return;
-        }
-        if (!sessionResponse.ok) throw new Error(`Sesion HTTP ${sessionResponse.status}`);
-        setState("authenticated");
+        setState("unauthenticated");
       } catch (entryError) {
         if (cancelled) return;
         offlineRef.current = true;

@@ -303,6 +303,7 @@ export function ThemeSelector({ collapsed, showCurrentTheme = false, showSwatche
           size={collapsed && !showCurrentTheme ? "icon" : "default"}
           className={cn("theme-selector-trigger h-9 gap-2", collapsed && !showCurrentTheme ? "w-9" : showCurrentTheme ? "w-auto px-2" : "w-full justify-start px-2")}
           aria-label={`Paleta activa: ${currentTheme.label}. Cambiar paleta de colores.`}
+          title={`Cambiar paleta · ${THEME_OPTIONS.length} opciones`}
         >
           <Palette className="h-4 w-4 shrink-0 text-current opacity-75" />
           {(!collapsed || showCurrentTheme) && (
@@ -316,12 +317,13 @@ export function ThemeSelector({ collapsed, showCurrentTheme = false, showSwatche
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        align={collapsed && !showCurrentTheme ? "center" : "start"}
-        side={collapsed && !showCurrentTheme ? "right" : "top"}
-        className="theme-menu w-80 max-h-[min(72vh,44rem)] overflow-y-auto finance-scrollbar p-2"
+        align={collapsed && !showCurrentTheme ? "center" : "end"}
+        side={collapsed && !showCurrentTheme ? "right" : "bottom"}
+        sideOffset={8}
+        className="theme-menu w-[min(26rem,calc(100vw-2rem))] max-h-[min(72vh,44rem)] overflow-y-auto finance-scrollbar p-2"
       >
         <DropdownMenuLabel className="px-2 pb-2 text-xs uppercase tracking-[0.24em] text-zinc-500">
-          Temas
+          Elige entre {THEME_OPTIONS.length} paletas
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         {THEME_OPTIONS.map((option) => {

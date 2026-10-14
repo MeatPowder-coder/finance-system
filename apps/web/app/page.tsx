@@ -300,6 +300,7 @@ function HomeContent() {
   const [copilotModels, setCopilotModels] = useState<CopilotModelsConfig | null>(null);
   const [copilotModel, setCopilotModel] = useState("");
   const [cashflowReport, setCashflowReport] = useState<CashflowReportItem[]>([]);
+  const [dashboardMonthlyFlow, setDashboardMonthlyFlow] = useState<CashflowReportItem | null>(null);
   const [categoryBreakdown, setCategoryBreakdown] = useState<CategoryBreakdownItem[]>([]);
   const [reportsLoading, setReportsLoading] = useState(false);
   const [planningLoading, setPlanningLoading] = useState(false);
@@ -340,9 +341,9 @@ function HomeContent() {
     monthlyInvestmentGoal: "0",
   });
 
-  async function refreshData(retryAfterSessionRefresh = true) {
+  async function refreshData(retryAfterSessionRefresh = true, reportErrors = true): Promise<string[]> {
     setLoading(true);
-    setError(null);
+    if (reportErrors) setError(null);
     const results = await Promise.allSettled([
       apiGet<Summary>("/v1/summary"),
       apiGet<Account[]>("/v1/accounts"),
@@ -358,13 +359,13 @@ function HomeContent() {
       const rawMessage = authFailure instanceof Error ? authFailure.message : String(authFailure);
       if (/autenticaci[oó]n requerida|unauthorized/i.test(rawMessage)) {
         if (retryAfterSessionRefresh && await recoverAuthSession()) {
-          return refreshData(false);
+          return refreshData(false, reportErrors);
         }
         clearAuthSession();
         router.replace(`/?auth=login&authError=session-rejected&returnTo=${encodeURIComponent(window.location.pathname + window.location.search)}`);
       }
       setLoading(false);
-      return;
+      return [];
     }
 
     if (results[0].status === "fulfilled") setSummary(results[0].value);
@@ -378,9 +379,12 @@ function HomeContent() {
     if (rejected.length) {
       const failures = rejected.slice(0, 3).map(describeEndpointFailure);
       const remaining = rejected.length - failures.length;
-      setError(`No se pudieron cargar ${failures.join(" · ")}${remaining > 0 ? ` · y ${remaining} servicio(s) más` : ""}. Los datos disponibles siguen visibles.`);
+      if (reportErrors) setError(`No se pudieron cargar ${failures.join(" · ")}${remaining > 0 ? ` · y ${remaining} servicio(s) más` : ""}. Los datos disponibles siguen visibles.`);
+      setLoading(false);
+      return [...failures, ...(remaining > 0 ? [`${remaining} servicio(s) más`] : [])];
     }
     setLoading(false);
+    return [];
   }
 
   async function refreshSessions() {
@@ -422,9 +426,9 @@ function HomeContent() {
     setReportsLoading(false);
   }
 
-  async function refreshPlanning() {
+  async function refreshPlanning(reportErrors = true): Promise<string[]> {
     setPlanningLoading(true);
-    setError(null);
+    if (reportErrors) setError(null);
     const results = await Promise.allSettled([
       apiGet<Budget[]>(`/v1/budgets?month=${planningMonth}`),
       apiGet<BudgetDeficitEvent[]>(`/v1/budget-deficits?month=${planningMonth}`),
@@ -439,8 +443,43 @@ function HomeContent() {
     if (results[4].status === "fulfilled") setMonthlyFinanceSummary(results[4].value);
     const failedEndpoints = results
       .flatMap((result) => result.status === "rejected" ? [describeEndpointFailure(result.reason)] : []);
-    if (failedEndpoints.length) setError(`No se pudieron actualizar ${failedEndpoints.join(", ")}. Las demás secciones siguen disponibles.`);
+    if (reportErrors && failedEndpoints.length) setError(`No se pudieron actualizar ${failedEndpoints.join(", ")}. Las demás secciones siguen disponibles.`);
     setPlanningLoading(false);
+    return failedEndpoints;
+  }
+
+  async function refreshDashboardMonthlyFlow(reportErrors = true): Promise<string | null> {
+    setDashboardMonthlyFlow(null);
+    const monthStart = `${planningMonth}-01`;
+    const parsedMonth = new Date(`${monthStart}T00:00:00Z`);
+    if (Number.isNaN(parsedMonth.getTime())) return null;
+    const monthEnd = new Date(Date.UTC(parsedMonth.getUTCFullYear(), parsedMonth.getUTCMonth() + 1, 0)).toISOString().slice(0, 10);
+    const query = new URLSearchParams({ from: monthStart, to: monthEnd });
+    try {
+      const rows = await apiGet<CashflowReportItem[]>(`/v1/reports/cashflow?${query.toString()}`);
+      setDashboardMonthlyFlow(rows.find((row) => row.period === planningMonth) || {
+        period: planningMonth,
+        inflow: 0,
+        outflow: 0,
+        net: 0,
+      });
+      return null;
+    } catch (flowError) {
+      const failure = `No se pudo cargar el flujo de ${formatMonthLabel(planningMonth)}: ${describeEndpointFailure(flowError)}`;
+      if (reportErrors) setError(`${failure}.`);
+      return failure;
+    }
+  }
+
+  async function refreshDashboardData() {
+    setError(null);
+    const [financeFailures, planningFailures, flowFailure] = await Promise.all([
+      refreshData(true, false),
+      refreshPlanning(false),
+      refreshDashboardMonthlyFlow(false),
+    ]);
+    const failures = [...new Set([...financeFailures, ...planningFailures, ...(flowFailure ? [flowFailure] : [])])];
+    if (failures.length) setError(`No se pudieron actualizar ${failures.join(" · ")}. Los datos disponibles siguen visibles.`);
   }
 
   function resetBudgetDialogState() {
@@ -553,7 +592,7 @@ function HomeContent() {
   }
 
   useEffect(() => {
-    void refreshData();
+    if (tab !== "dashboard") void refreshData();
   }, []);
 
   useEffect(() => {
@@ -576,18 +615,21 @@ function HomeContent() {
   }, [tab]);
 
   useEffect(() => {
-    if (tab === "planning" || tab === "dashboard") {
+    if (tab === "planning") {
       void refreshPlanning();
+    }
+  }, [tab, planningMonth]);
+
+  useEffect(() => {
+    if (tab === "dashboard") {
+      void refreshDashboardData();
     }
   }, [tab, planningMonth]);
 
   useEffect(() => {
     if (tab !== "dashboard") return;
 
-    const refreshLive = () => {
-      void refreshData();
-      void refreshPlanning();
-    };
+    const refreshLive = () => void refreshDashboardData();
 
     const intervalId = window.setInterval(refreshLive, 12000);
     const onFocus = () => refreshLive();
@@ -733,6 +775,7 @@ function HomeContent() {
   const dashboardBudgetMaxStart = Math.max(0, dashboardBudgets.length - DASHBOARD_BUDGET_PAGE_SIZE);
   const dashboardBudgetCanPrev = dashboardBudgetStart > 0;
   const dashboardBudgetCanNext = dashboardBudgetStart < dashboardBudgetMaxStart;
+  const dashboardBudgetUnavailable = Boolean(error && /\/v1\/budgets(?:\?|:)/.test(error));
 
   useEffect(() => {
     setDashboardBudgetStart((prev) => Math.min(prev, dashboardBudgetMaxStart));
@@ -761,7 +804,9 @@ function HomeContent() {
     router.replace(`/?${params.toString()}`, { scroll: false });
   }
 
-  const monthNet = (summary?.monthInflow || 0) - (summary?.monthOutflow || 0);
+  const monthInflow = dashboardMonthlyFlow?.inflow ?? summary?.monthInflow ?? 0;
+  const monthOutflow = dashboardMonthlyFlow?.outflow ?? summary?.monthOutflow ?? 0;
+  const monthNet = dashboardMonthlyFlow?.net ?? (monthInflow - monthOutflow);
   const positiveMonth = monthNet >= 0;
   const latestTransaction = recentTransactions[0];
   const nextCommitment = upcomingCommitments[0];
@@ -1053,8 +1098,8 @@ function HomeContent() {
             </div>
 
             <div className="finance-section-masthead-controls flex items-center gap-2">
-                {tab !== "dashboard" && <Select value={planningMonth} onValueChange={setPlanningMonth}>
-                  <SelectTrigger className="ui-control h-11 w-[170px] rounded-2xl px-4">
+                <Select value={planningMonth} onValueChange={setPlanningMonth}>
+                  <SelectTrigger aria-label="Mes del resumen" className="ui-control h-9 w-[150px] rounded-none px-2">
                     <div className="flex items-center gap-2">
                       <CalendarDays className="h-4 w-4 text-zinc-400" />
                       <SelectValue placeholder={formatMonthLabel(planningMonth)} />
@@ -1067,10 +1112,10 @@ function HomeContent() {
                     </SelectItem>
                   ))}
                 </SelectContent>
-              </Select>}
+                </Select>
               <Button
                 variant="outline"
-                onClick={() => void refreshData()}
+                onClick={() => void refreshDashboardData()}
                 disabled={loading}
                 className="ui-action h-11 rounded-2xl px-3"
                 aria-label="Actualizar informacion"
@@ -1171,6 +1216,7 @@ function HomeContent() {
               <Button type="button" variant="outline" size="sm" onClick={() => {
                 if (tab === "reports") void refreshReports();
                 else if (tab === "planning") void refreshPlanning();
+                else if (tab === "dashboard") void refreshDashboardData();
                 else void refreshData();
               }}>
                 <RefreshCw className="mr-2 h-4 w-4" /> Reintentar
@@ -1529,10 +1575,10 @@ function HomeContent() {
             monthCoach={monthCoach}
             monthFlow={{
               balance: formatMoney(summary?.totalBalance || 0, "COP"),
-              income: formatMoney(summary?.monthInflow || 0, "COP"),
-              expense: formatMoney(summary?.monthOutflow || 0, "COP"),
-              spentPercent: Number(summary?.monthInflow || 0) > 0
-                ? (Number(summary?.monthOutflow || 0) / Number(summary?.monthInflow || 0)) * 100
+              income: formatMoney(monthInflow, "COP"),
+              expense: formatMoney(monthOutflow, "COP"),
+              spentPercent: Number(monthInflow || 0) > 0
+                ? (Number(monthOutflow || 0) / Number(monthInflow || 0)) * 100
                 : 0,
             }}
             positiveMonth={positiveMonth}
@@ -1544,6 +1590,8 @@ function HomeContent() {
             dashboardBudgetMaxStart={dashboardBudgetMaxStart}
             dashboardBudgetCanPrev={dashboardBudgetCanPrev}
             dashboardBudgetCanNext={dashboardBudgetCanNext}
+            dashboardBudgetUnavailable={dashboardBudgetUnavailable}
+            retryDashboard={() => void refreshDashboardData()}
             startBudgetExpense={startBudgetExpense}
             openEditBudgetDialog={openEditBudgetDialog}
             upcomingCommitments={upcomingCommitments}
