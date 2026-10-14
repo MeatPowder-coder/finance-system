@@ -6695,3 +6695,15 @@ body:has(.finance-bento-dashboard.has-focus) .finance-app-sidebar {
   height:auto !important;
   margin:clamp(8px,2vh,20px) auto !important;
 }
+
+@media(max-width:950px) and (min-width:761px) {
+  .finance-bento-flow { min-width:0; }
+  .finance-bento-flow .finance-bento-tile-head > p { white-space:nowrap; font-size:.5rem !important; letter-spacing:.09em !important; }
+  .finance-bento-flow .finance-bento-tile-head h3 { max-width:none; font-size:clamp(.9rem,1.3vw,1.08rem) !important; }
+  .finance-bento-flow-layout { gap:8px; }
+  .finance-bento-flow .finance-bento-donut { width:clamp(68px,8vw,88px); }
+  .finance-bento-flow-figures { min-width:0; }
+  .finance-bento-flow-figures h3 { font-size:clamp(.88rem,1.18vw,1.02rem) !important; }
+  .finance-bento-flow-figures p { font-size:.56rem !important; }
+  .finance-bento-flow-figures strong { font-size:.76rem !important; }
+}
