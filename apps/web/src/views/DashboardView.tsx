@@ -174,13 +174,16 @@ export function DashboardView(props: DashboardViewProps) {
     requestAnimationFrame(() => {
       const tile = gridRef.current?.querySelector<HTMLElement>(".finance-bento-tile.is-focused");
       if (tile) {
-        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        // Keep the tile in the grid. Center it when its expanded content fits;
-        // for taller details, align its top so the heading and close control stay visible.
         const scrollHost = document.querySelector<HTMLElement>(".finance-app-scroll");
-        const visibleHeight = scrollHost?.clientHeight ?? window.innerHeight;
-        const block = tile.getBoundingClientRect().height <= visibleHeight * 0.82 ? "center" : "start";
-        tile.scrollIntoView({ block, inline: "nearest", behavior: reducedMotion ? "auto" : "smooth" });
+        const tileRect = tile.getBoundingClientRect();
+        const viewportTop = scrollHost?.getBoundingClientRect().top ?? 0;
+        const viewportBottom = scrollHost?.getBoundingClientRect().bottom ?? window.innerHeight;
+        // The tile was clicked while visible, so leave the page at that exact
+        // reading position. Only scroll if a layout change moves it entirely
+        // outside the viewport; this keeps expansion from feeling like a modal.
+        if (tileRect.bottom <= viewportTop || tileRect.top >= viewportBottom) {
+          tile.scrollIntoView({ block: "nearest", inline: "nearest", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+        }
       }
       tile?.querySelector<HTMLButtonElement>(".finance-bento-close")?.focus({ preventScroll: true });
     });
