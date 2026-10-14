@@ -1015,7 +1015,7 @@ function HomeContent() {
               <strong>F/S</strong><span>Cuaderno financiero</span>
               <small>Bogotá · {new Intl.DateTimeFormat("es-CO", { day: "2-digit", month: "short", year: "numeric", timeZone: "America/Bogota" }).format(new Date())} · Personal / COP</small>
             </div>
-            <div className="finance-header-palette"><ThemeSelector showCurrentTheme showSwatches /></div>
+            <div className="finance-header-palette"><ThemeSelector showCurrentTheme /></div>
           </div>
           <div className="finance-primary-tab-list">
             {TABS.map((item, index) => {
